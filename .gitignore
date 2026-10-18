@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+publish/
+
+# IDEs and editors
+.vs/
+.idea/
+.run/
+.vscode/
+*.user
+*.suo
+*.DotSettings.user
+
+# OS
+Thumbs.db
+desktop.ini
