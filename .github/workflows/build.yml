@@ -2,8 +2,13 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
+    branches: [ master ]
+
+# Read-only token: this workflow only compiles the code.
+permissions:
+  contents: read
 
 jobs:
   build:

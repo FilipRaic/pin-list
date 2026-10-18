@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v1.1.0 to build the exe and publish a GitHub release.
+# Push a tag like v1.1.0 (on a commit that is on master) to build the exe and publish a GitHub release.
 on:
   push:
     tags: [ 'v*' ]
@@ -13,6 +13,17 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, needed for the master check below
+
+      - name: Make sure the tag points to a commit on master
+        shell: pwsh
+        run: |
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/master
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error "Tag ${{ github.ref_name }} is not on master - no release is created."
+            exit 1
+          }
 
       - uses: actions/setup-dotnet@v4
         with:
