@@ -25,24 +25,40 @@ jobs:
             exit 1
           }
 
+      - name: Make sure the tag matches the version in PinList.csproj
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart('v')
+          $version = ([xml](Get-Content src/PinList/PinList.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          if ($tag -ne $version) {
+            Write-Error "Tag v$tag doesn't match <Version>$version</Version> in PinList.csproj. Update the csproj (and CHANGELOG.md) first."
+            exit 1
+          }
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
+      - name: Test
+        run: dotnet test PinList.sln -c Release
+
       - name: Publish
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
-          $project = "src/PinList/PinList.csproj"
-
           # Single-file exe; needs the .NET 10 Desktop Runtime on the user's PC
-          dotnet publish $project -c Release -r win-x64 --self-contained false `
-            -p:PublishSingleFile=true -p:Version=$version -o out
+          dotnet publish src/PinList/PinList.csproj -c Release -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true -o out
 
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item out/PinList.exe release/PinList.exe
 
+          # Checksum file, so downloads can be verified (see README)
+          $hash = (Get-FileHash release/PinList.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  PinList.exe" | Out-File release/PinList.exe.sha256 -Encoding ascii -NoNewline
+
       - uses: softprops/action-gh-release@v2
         with:
-          files: release/*.exe
+          files: |
+            release/PinList.exe
+            release/PinList.exe.sha256
           generate_release_notes: true

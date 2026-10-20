@@ -25,16 +25,34 @@ static class Native
     const long WS_EX_TOOLWINDOW = 0x00000080;
     const long WS_EX_APPWINDOW = 0x00040000;
 
+    /// <summary>The desktop window ("Progman") the widgets belong to. Tests point this at a window of their own.</summary>
+    internal static Func<IntPtr> FindDesktopWindow { get; set; } = () => FindWindow("Progman", null);
+
+    /// <summary>Extended window style (to check the tool-window flag).</summary>
+    internal static long GetExStyle(Window window) =>
+        GetWindowLongPtr(new WindowInteropHelper(window).Handle, GWL_EXSTYLE).ToInt64();
+
+    internal const long ToolWindowStyle = WS_EX_TOOLWINDOW;
+
     /// <summary>Must be called before Show().</summary>
     public static void PinToDesktop(Window window)
     {
-        var progman = FindWindow("Progman", null);
+        var progman = FindDesktopWindow();
         if (progman != IntPtr.Zero)
             new WindowInteropHelper(window).Owner = progman;
     }
 
     [DllImport("user32.dll")]
     static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+    /// <summary>
+    /// Lets the already running PinList bring its widgets to the front. Windows only allows that for a
+    /// process the user just interacted with, so the second instance (which the user just started) passes it on.
+    /// </summary>
+    public static void AllowAnyForeground() => AllowSetForegroundWindow(-1); // ASFW_ANY
 
     [StructLayout(LayoutKind.Sequential)]
     struct POINT { public int X, Y; }
@@ -66,14 +84,11 @@ static class Native
     {
         var hwnd = new WindowInteropHelper(window).Handle;
         if (hwnd == IntPtr.Zero) return;
-        try
-        {
-            int d = dark ? 1 : 0;
-            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int));
-            int c = caption.R | (caption.G << 8) | (caption.B << 16); // COLORREF = 0x00BBGGRR
-            DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref c, sizeof(int));
-        }
-        catch { }
+        // These return an error code instead of throwing (e.g. the caption color on Windows 10); that's fine
+        int d = dark ? 1 : 0;
+        DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref d, sizeof(int));
+        int c = caption.R | (caption.G << 8) | (caption.B << 16); // COLORREF = 0x00BBGGRR
+        DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref c, sizeof(int));
     }
 
     public static void MakeToolWindow(Window window)

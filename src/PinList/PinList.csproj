@@ -11,6 +11,9 @@
     <AssemblyName>PinList</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 asks WinForms apps to set DPI awareness in code. This is a WPF app (WinForms is only used for
+         the tray icon), and WPF reads DPI awareness from app.manifest, so the manifest setting is correct. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
 
     <Version>1.0.0</Version>
     <Product>PinList</Product>
@@ -19,6 +22,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="PinList.Tests" />
     <Resource Include="Assets\app.ico" />
   </ItemGroup>
 
