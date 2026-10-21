@@ -287,4 +287,31 @@ public class ArchiveWindowTests : UiTest
             App.SetTheme("Dark"); // a closed archive no longer listens
         });
     }
+
+    [Fact]
+    public void Other_keys_in_the_list_and_undo_with_nothing_to_undo_change_nothing()
+    {
+        Ui(() =>
+        {
+            Completed("a");
+            var a = OpenArchive();
+
+            Press(List(a), Key.A);
+            Press(a, Key.Z, ModifierKeys.Control); // nothing to undo: just says so
+            Assert.Equal(new[] { "a" }, Store.Data.Archive.Select(x => x.Text));
+            Assert.NotNull(App.Archive);
+        });
+    }
+
+    [Fact]
+    public void Opening_it_again_while_it_is_open_keeps_its_size()
+    {
+        Ui(() =>
+        {
+            var first = OpenArchive();
+            first.WindowState = WindowState.Maximized;
+            Assert.Same(first, OpenArchive());
+            Assert.Equal(WindowState.Maximized, first.WindowState); // only a minimized one is restored
+        });
+    }
 }

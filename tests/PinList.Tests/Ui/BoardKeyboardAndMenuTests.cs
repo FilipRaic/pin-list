@@ -183,6 +183,24 @@ public class BoardKeyboardTests : UiTest
     }
 
     [Fact]
+    public void Ctrl_Z_while_editing_an_item_is_left_to_the_text_box()
+    {
+        Ui(() =>
+        {
+            var w = OpenNew(("A", new[] { "a" }));
+            var item = w.Board.Categories[0].Items[0];
+            Actions.SetItemText(item, "changed");
+            item.IsEditing = true;
+            Pump();
+            var box = EditBox(w, item);
+            box.Focus();
+            Press(box, Key.Z, ModifierKeys.Control);
+            Assert.True(Actions.CanUndo); // the widget's undo didn't run
+            Press(box, Key.Escape);
+        });
+    }
+
+    [Fact]
     public void Alt_arrows_move_items_within_and_between_categories()
     {
         Ui(() =>
@@ -194,6 +212,9 @@ public class BoardKeyboardTests : UiTest
 
             Press(Key.Up, ModifierKeys.Alt); // already at the very top
             Assert.Same(a1, a.Items[0]);
+
+            Press(Key.Left, ModifierKeys.Alt); // only up and down move
+            Assert.Equal(new[] { "a1", "a2" }, a.Items.Select(i => i.Text));
 
             Press(Key.Down, ModifierKeys.Alt);
             Assert.Equal(new[] { "a2", "a1" }, a.Items.Select(i => i.Text));

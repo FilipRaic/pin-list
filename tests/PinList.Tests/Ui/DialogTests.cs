@@ -83,6 +83,22 @@ public class ConfirmDialogTests : UiTest
             ConfirmDialog.Choose(null, "T", "M", 0, ("OK", DialogButtonKind.Accent));
         });
     }
+    [Fact]
+    public void Keys_other_than_Esc_leave_the_dialog_open()
+    {
+        int result = Ui(() =>
+        {
+            WhenOpened<ConfirmDialog>(d =>
+            {
+                Press(d, Key.A);
+                Assert.True(d.IsVisible);
+                Press(d, Key.Escape);
+            });
+            return ConfirmDialog.Choose(null, "Title", "", 0, ("OK", DialogButtonKind.Accent));
+        });
+        Assert.Equal(-1, result);
+    }
+
 }
 
 public class DialogsHelperTests : UiTest
@@ -364,4 +380,5 @@ public class FileDialogTests : UiTest
             Assert.Equal(file, new WindowsDialogs().OpenFile(null, "Import", "JSON|*.json"));
         });
     }
+
 }

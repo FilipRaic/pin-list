@@ -185,6 +185,9 @@ public class DragDropTests : UiTest
             });
             Assert.Equal(new[] { "A", "C", "B" }, w.Board.Categories.Select(x => x.Name));
 
+            Drag(Row(w, b), () => DropOn(Row(w, a), 0.25)); // upper half: above
+            Assert.Equal(new[] { "B", "A", "C" }, w.Board.Categories.Select(x => x.Name));
+
             Drag(Row(w, c), () =>
             {
                 Assert.Equal(DragDropEffects.None, Over(Row(w, c)));
@@ -315,6 +318,64 @@ public class DragDropTests : UiTest
                 UiHost.Wait(TimeSpan.FromMilliseconds(100));
             });
             Assert.Equal(0, Named<ScrollViewer>(w, "Scroller").VerticalOffset);
+        });
+    }
+
+    [Fact]
+    public void A_sideways_move_also_starts_a_drag()
+    {
+        Ui(() =>
+        {
+            var w = OpenNew(("A", new[] { "a" }));
+            var row = Row(w, w.Board.Categories[0].Items[0]);
+            int drags = 0;
+            InputState.DoDragDrop = (_, _, _) => { drags++; return DragDropEffects.None; };
+            InputState.IsLeftButtonPressed = _ => true;
+            var position = new Point(10, 10);
+            InputState.Position = (_, _) => position;
+
+            MouseDown(row);
+            position = new Point(40, 10); // only to the side
+            row.RaiseEvent(MouseMove(row));
+            Pump();
+            Assert.Equal(1, drags);
+        });
+    }
+
+    [Fact]
+    public void Drops_where_the_dragged_thing_does_not_fit_change_nothing()
+    {
+        Ui(() =>
+        {
+            var w = OpenNew(("A", new[] { "a" }), ("B", new[] { "b" }));
+            var (a, b) = (w.Board.Categories[0], w.Board.Categories[1]);
+
+            Drag(Row(w, a), () =>
+            {
+                DropOn(Row(w, b.Items[0])); // a category onto an item
+                DropOn(AddRow(w, b));       // a category onto an "Add item" box
+            });
+            Drag(Row(w, a.Items[0]), () => DropOn(EndArea(w))); // an item onto the empty space at the end
+
+            Assert.Equal(new[] { "A", "B" }, w.Board.Categories.Select(c => c.Name));
+            Assert.Equal(new[] { "a" }, a.Items.Select(i => i.Text));
+            Assert.Equal(new[] { "b" }, b.Items.Select(i => i.Text));
+        });
+    }
+
+    [Fact]
+    public void Dropping_a_category_on_a_widget_deleted_meanwhile_changes_nothing()
+    {
+        Ui(() =>
+        {
+            var w = OpenNew(("A", new string[0]), ("B", new string[0]));
+            var (a, b) = (w.Board.Categories[0], w.Board.Categories[1]);
+            Drag(Row(w, a), () =>
+            {
+                Store.Data.Boards.Remove(w.Board); // e.g. by an import while dragging
+                DropOn(Row(w, b), 0.75);
+            });
+            Assert.Equal(new[] { "A", "B" }, w.Board.Categories.Select(c => c.Name));
         });
     }
 }

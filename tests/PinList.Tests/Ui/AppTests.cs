@@ -234,6 +234,40 @@ public class AppTests : UiTest
         });
     }
 
+    [Fact]
+    public void A_widget_closed_by_Windows_while_the_app_exits_is_not_reopened()
+    {
+        Ui(() =>
+        {
+            PinList.App.ReopenDelay = TimeSpan.FromMilliseconds(50);
+            try
+            {
+                var w = OpenNew(("A", new string[0]));
+                DestroyWindow(new WindowInteropHelper(w).Handle);
+                Pump();
+                PinList.App.ShuttingDown = true; // the exit started before the reopen timer ran
+                UiHost.Wait(TimeSpan.FromMilliseconds(150));
+                Assert.DoesNotContain(App.OpenWindows, x => x.Board == w.Board);
+            }
+            finally { PinList.App.ReopenDelay = TimeSpan.FromSeconds(2); }
+        });
+    }
+
+    [Fact]
+    public void The_first_run_widget_follows_a_light_Windows_theme()
+    {
+        Ui(() =>
+        {
+            App.Stop();
+            File.Delete(Path.Combine(UiHost.DataDir, "data.json"));
+            Themes.SystemDarkSource = () => false;
+            Tray.Disposed = false;
+            Assert.True(App.Start());
+            Assert.Equal("Light", Assert.Single(Store.Data.Boards).Style);
+            Assert.True(File.Exists(Path.Combine(UiHost.DataDir, "data.json"))); // saved right away
+        });
+    }
+
     // ================= Tray icon =================
 
     [Fact]
@@ -282,6 +316,19 @@ public class AppTests : UiTest
             ChooseFromMenu(App.ShowTrayMenu(), "Exit");
             Assert.Equal(1, UiHost.ShutdownRequests);
             PinList.App.ShuttingDown = false;
+        });
+    }
+
+    [Fact]
+    public void New_window_from_the_tray_with_no_widgets_open_uses_the_default_look()
+    {
+        Ui(() =>
+        {
+            Assert.Empty(App.OpenWindows);
+            ChooseFromMenu(App.ShowTrayMenu(), "New window");
+            var b = Store.Data.Boards.Last();
+            Assert.Equal(("Dark", true), (b.Style, b.Transparent));
+            Assert.Single(App.OpenWindows, x => x.Board == b);
         });
     }
 
