@@ -55,7 +55,7 @@
 
         <Style TargetType="ListViewItem">
             <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource InnerFocusRing}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
@@ -69,6 +69,7 @@
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ArcSelected}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ArcSelectedText}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -95,7 +96,8 @@
                 <TextBlock x:Name="CountText" Foreground="{DynamicResource ArcMuted}" Margin="12,0,0,2" VerticalAlignment="Bottom"/>
             </StackPanel>
             <Grid Grid.Column="1" Width="260">
-                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" TextChanged="Search_TextChanged"/>
+                <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" TextChanged="Search_TextChanged"
+                         AutomationProperties.Name="Search completed items" AutomationProperties.HelpText="Ctrl+F"/>
                 <TextBlock Text="Search" Margin="31,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"
                            Foreground="{DynamicResource ArcMuted}"
                            Visibility="{Binding Text, ElementName=SearchBox, Converter={StaticResource EmptyToVis}}"/>
@@ -108,8 +110,11 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="Enter or double-click restores  ·  Del deletes permanently  ·  Ctrl+Z undoes"
+            <TextBlock x:Name="HintText" Text="Enter or double-click restores  ·  Del deletes permanently  ·  Ctrl+Z undoes"
                        Foreground="{DynamicResource ArcMuted}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <!-- Shown for a few seconds after restoring, e.g. when an item's category no longer exists -->
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource ArcText}" FontSize="12" VerticalAlignment="Center"
+                       TextWrapping="Wrap" Margin="0,0,12,0" Visibility="Collapsed"/>
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <Button Style="{StaticResource DialogButton}" Content="Delete permanently" Click="Delete_Click"/>
                 <Button Style="{StaticResource AccentButton}" Content="Restore" Margin="8,0,0,0" Click="Restore_Click"/>
@@ -120,7 +125,8 @@
         <Border x:Name="TableBorder" Background="{DynamicResource ArcSurface}" BorderBrush="{DynamicResource ArcBorder}"
                 BorderThickness="1" CornerRadius="8" Padding="6,2,6,6">
             <Grid>
-                <ListView x:Name="List" SelectionMode="Extended"
+                <ListView x:Name="List" SelectionMode="Extended" AutomationProperties.Name="Completed items"
+                          AutomationProperties.HelpText="Enter restores, Delete deletes permanently, Ctrl+Z undoes"
                           MouseDoubleClick="List_MouseDoubleClick" KeyDown="List_KeyDown">
                     <ListView.View>
                         <GridView x:Name="ColumnsView">

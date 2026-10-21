@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ master ]
 
-# Read-only token: this workflow only compiles the code.
+# Read-only token: this workflow only compiles and tests the code.
 permissions:
   contents: read
 
@@ -20,5 +20,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # Warnings fail the build here, so they get fixed before they pile up
       - name: Build
-        run: dotnet build src/PinList/PinList.csproj -c Release
+        run: dotnet build PinList.sln -c Release -warnaserror
+
+      # The UI tests run the real app on a hidden desktop. The build fails if coverage drops
+      # below 99 % of lines or 92 % of branches (Release builds count branches a little differently).
+      - name: Test
+        run: >
+          dotnet test PinList.sln -c Release --no-build
+          -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**
+          -p:Threshold=99%2c92 -p:ThresholdType=line%2cbranch -p:ThresholdStat=total

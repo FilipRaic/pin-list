@@ -6,7 +6,8 @@ namespace PinList;
 /// <summary>Start with Windows via HKCU\...\Run (no admin rights needed).</summary>
 static class Autostart
 {
-    const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+    /// <summary>Registry key under HKCU. Tests use their own key, so the real "Start with Windows" list isn't touched.</summary>
+    internal static string RunKey { get; set; } = @"Software\Microsoft\Windows\CurrentVersion\Run";
     const string ValueName = "PinList";
 
     static string ExePath => $"\"{Environment.ProcessPath}\"";

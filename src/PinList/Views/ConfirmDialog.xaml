@@ -4,7 +4,7 @@
         Title="PinList"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
-        Width="360" SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        Width="380" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         FontFamily="{StaticResource UiFont}" FontSize="13"
         Foreground="{DynamicResource MenuText}">
     <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}"
@@ -12,10 +12,8 @@
         <StackPanel>
             <TextBlock x:Name="TitleText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
             <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource MenuTextMuted}" LineHeight="19"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                <Button Style="{StaticResource DialogButton}" Content="Cancel" IsCancel="True"/>
-                <Button x:Name="OkButton" Style="{StaticResource DangerButton}" Margin="8,0,0,0" IsDefault="True" Click="Ok_Click"/>
-            </StackPanel>
+            <!-- Buttons are added from code -->
+            <StackPanel x:Name="Buttons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"/>
         </StackPanel>
     </Border>
 </Window>

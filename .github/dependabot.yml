@@ -1,0 +1,15 @@
+# Opens pull requests when the GitHub Actions or the test packages have new versions.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+
+  - package-ecosystem: nuget
+    directory: /tests/PinList.Tests
+    schedule:
+      interval: monthly
+    groups:
+      test-packages:
+        patterns: [ "*" ]

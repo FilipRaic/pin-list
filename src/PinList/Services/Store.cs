@@ -1,13 +1,55 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Threading;
 
 namespace PinList;
+
+/// <summary>Decides when a pending save runs. The app waits until changes stop; tests replace it.</summary>
+public interface ISaveScheduler
+{
+    /// <summary>A change happened; save soon.</summary>
+    void Schedule();
+
+    /// <summary>Cancels a pending save. Returns true if one was pending.</summary>
+    bool CancelPending();
+}
+
+/// <summary>Saves 300 ms after the LAST change, on the UI thread.</summary>
+public sealed class DebouncedSaveScheduler : ISaveScheduler
+{
+    readonly Action _save;
+    DispatcherTimer? _timer;
+
+    public DebouncedSaveScheduler(Action save) => _save = save;
+
+    public void Schedule()
+    {
+        if (_timer == null)
+        {
+            _timer = new DispatcherTimer(DispatcherPriority.Background, Dispatcher.CurrentDispatcher)
+            {
+                Interval = TimeSpan.FromMilliseconds(300)
+            };
+            _timer.Tick += (_, _) => { _timer.Stop(); _save(); };
+        }
+        _timer.Stop(); // restart, so a burst of changes is saved once
+        _timer.Start();
+    }
+
+    public bool CancelPending()
+    {
+        if (_timer?.IsEnabled != true) return false;
+        _timer.Stop();
+        return true;
+    }
+}
 
 /// <summary>
 /// Loads and saves everything to %APPDATA%\PinList\data.json.
@@ -16,13 +58,18 @@ namespace PinList;
 /// </summary>
 public static class Store
 {
-    public static readonly string Dir =
+    public static readonly string DefaultDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PinList");
+
+    public static string Dir { get; private set; } = DefaultDir;
 
     static string FilePath => Path.Combine(Dir, "data.json");
     static string TempPath => Path.Combine(Dir, "data.json.tmp");
-    static string BackupDir => Path.Combine(Dir, "backups");
+    public static string BackupDir => Path.Combine(Dir, "backups");
+    static string LogPath => Path.Combine(Dir, "log.txt");
+
     const int BackupsToKeep = 7;
+    const long MaxLogBytes = 1024 * 1024;
 
     static readonly JsonSerializerOptions Options = new()
     {
@@ -33,8 +80,27 @@ public static class Store
 
     public static AppData Data { get; private set; } = new();
 
-    static DispatcherTimer? _timer;
+    /// <summary>When saves run. Tests replace this with one that does nothing.</summary>
+    public static ISaveScheduler Saver { get; set; } = new DebouncedSaveScheduler(SaveNow);
+
+    /// <summary>Shows a message to the user (warning = false, error = true). Tests replace this.</summary>
+    public static Action<string, bool> Notify { get; set; } = ShowMessage;
+
+    /// <summary>The normal way messages are shown: a dialog in the app's style.</summary>
+    public static void ShowMessage(string message, bool isError) =>
+        Dialogs.Info(null, isError ? "PinList couldn't load your lists" : "PinList", message);
+
     static int _failedSaves;
+
+    /// <summary>Uses another data folder (tests, or the PINLIST_DATA_DIR variable while developing). Clears the data in memory.</summary>
+    public static void UseDirectory(string dir)
+    {
+        Dir = dir;
+        Data = new AppData();
+        _failedSaves = 0;
+    }
+
+    // ================= Loading =================
 
     /// <summary>Returns true if existing data was loaded, false on first run.</summary>
     public static bool Load()
@@ -51,13 +117,13 @@ public static class Store
 
         try
         {
-            Data = Read(FilePath);
+            Data = ReadMainFile();
             DailyBackup();
             return true;
         }
         catch (Exception ex)
         {
-            Log("Neispravan data.json: " + ex);
+            Log("Invalid data.json: " + ex);
             try { File.Copy(FilePath, FilePath + ".corrupt-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"), true); } catch { }
 
             var latest = Directory.Exists(BackupDir)
@@ -67,63 +133,92 @@ public static class Store
             {
                 try
                 {
-                    Data = Read(latest);
-                    MessageBox.Show($"The data file was damaged, so the latest backup was loaded:\n{Path.GetFileName(latest)}",
-                        "PinList", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    Data = ReadFile(latest, out _);
+                    Notify($"The data file was damaged, so the latest backup was loaded:\n{Path.GetFileName(latest)}", false);
                     return true;
                 }
-                catch { }
+                catch (Exception backupEx) { Log("Backup could not be read either: " + backupEx.Message); }
             }
 
-            MessageBox.Show("The data file is damaged and no valid backup exists. The damaged file was kept in:\n" + Dir,
-                "PinList", MessageBoxButton.OK, MessageBoxImage.Error);
+            Notify("The data file is damaged and no valid backup exists. The damaged file was kept in:\n" + Dir, true);
             Data = new AppData();
             return true; // don't run first-run setup on top of damaged data
         }
     }
 
-    static AppData Read(string path) =>
-        JsonSerializer.Deserialize<AppData>(File.ReadAllText(path, Encoding.UTF8), Options) ?? new AppData();
-
-    /// <summary>The widget created on first run (top-right corner of the primary screen).</summary>
-    public static Board DefaultBoard()
+    /// <summary>Reads data.json. Before upgrading an older (or opening a newer) format, a copy of the file is kept.</summary>
+    static AppData ReadMainFile()
     {
-        var wa = SystemParameters.WorkArea;
-        var b = new Board { Title = "My list", Width = 320, Height = 480, Style = "Dark" };
-        b.X = wa.Right - b.Width - 24;
-        b.Y = wa.Top + 24;
+        var data = ReadFile(FilePath, out int fileVersion);
+        if (fileVersion == AppData.CurrentVersion) return data;
+
+        var copy = Path.Combine(Dir, $"data.v{fileVersion}.json");
+        try { if (!File.Exists(copy)) File.Copy(FilePath, copy); }
+        catch (Exception ex) { Log("Could not keep a copy before upgrading: " + ex.Message); }
+
+        if (fileVersion > AppData.CurrentVersion)
+            Notify("Your lists were saved by a newer version of PinList. They were loaded, but details only the newer " +
+                   $"version knows about may be lost. A copy of the original file was kept as {Path.GetFileName(copy)}.", false);
+        else
+            Log($"Upgraded data from version {fileVersion} to {AppData.CurrentVersion}");
+        return data;
+    }
+
+    /// <summary>Reads and upgrades a data file (also used for import). Throws if the file isn't valid PinList data.</summary>
+    public static AppData ReadFile(string path, out int fileVersion) =>
+        Parse(File.ReadAllText(path, Encoding.UTF8), out fileVersion);
+
+    public static AppData Parse(string json, out int fileVersion)
+    {
+        var root = JsonNode.Parse(json) as JsonObject ?? throw new InvalidDataException("Not a JSON object.");
+        if (root["boards"] is not JsonArray) throw new InvalidDataException("This isn't a PinList data file.");
+
+        fileVersion = root["version"]?.GetValue<int>() ?? 1;
+        Migrate(root, fileVersion);
+
+        var data = root.Deserialize<AppData>(Options) ?? new AppData();
+        data.Settings ??= new Settings();
+        data.Boards ??= new();
+        data.Archive ??= new();
+        data.Version = AppData.CurrentVersion;
+        return data;
+    }
+
+    /// <summary>
+    /// Upgrades older data formats step by step. MigrationSteps[0] turns version 1 into 2, [1] turns 2 into 3, and so on.
+    /// When the format changes: add a step here and raise AppData.CurrentVersion.
+    /// </summary>
+    static readonly Action<JsonObject>[] MigrationSteps =
+    {
+        // 1 → 2: due dates, reminders and settings were added. They are optional, so nothing to convert.
+        _ => { },
+    };
+
+    static void Migrate(JsonObject root, int fromVersion)
+    {
+        for (int v = Math.Max(1, fromVersion); v < AppData.CurrentVersion; v++)
+            MigrationSteps[v - 1](root);
+        root["version"] = Math.Max(fromVersion, AppData.CurrentVersion);
+    }
+
+    /// <summary>The widget created on first run (top-right corner of the given work area).</summary>
+    public static Board DefaultBoard(Rect workArea, string style = "Dark")
+    {
+        var b = new Board { Title = "My list", Width = 320, Height = 480, Style = style };
+        b.X = workArea.Right - b.Width - 24;
+        b.Y = workArea.Top + 24;
         b.Categories.Add(new Category { Name = "General", Color = Actions.Palette[0] });
         return b;
     }
 
-    public static void MarkDirty()
-    {
-        if (_timer == null)
-        {
-            _timer = new DispatcherTimer(DispatcherPriority.Background, Application.Current.Dispatcher)
-            {
-                Interval = TimeSpan.FromMilliseconds(300)
-            };
-            _timer.Tick += OnTick;
-        }
-        _timer.Stop(); // restart: save 300 ms after the LAST change
-        _timer.Start();
-    }
+    // ================= Saving =================
 
-    static void OnTick(object? sender, EventArgs e)
-    {
-        _timer!.Stop();
-        SaveNow();
-    }
+    public static void MarkDirty() => Saver.Schedule();
 
-    /// <summary>Saves immediately if there is a pending change (exit, sign-out, shutdown).</summary>
+    /// <summary>Saves immediately if there is a pending change (exit, sign-out, shutdown, export).</summary>
     public static void Flush()
     {
-        if (_timer?.IsEnabled == true)
-        {
-            _timer.Stop();
-            SaveNow();
-        }
+        if (Saver.CancelPending()) SaveNow();
     }
 
     public static void SaveNow()
@@ -131,51 +226,135 @@ public static class Store
         try
         {
             Directory.CreateDirectory(Dir);
-            var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, Options));
-            using (var fs = new FileStream(TempPath, FileMode.Create, FileAccess.Write, FileShare.None))
-            {
-                fs.Write(bytes, 0, bytes.Length);
-                fs.Flush(true); // really on disk, not just in the OS cache
-            }
-
-            if (File.Exists(FilePath)) File.Replace(TempPath, FilePath, null);
-            else File.Move(TempPath, FilePath);
-
+            WriteAtomic(FilePath, Data);
             _failedSaves = 0;
+            DailyBackup();
         }
         catch (Exception ex)
         {
             // e.g. antivirus or OneDrive briefly holding the file – try again
-            Log("Spremanje nije uspjelo: " + ex.Message);
+            Log("Save failed: " + ex.Message);
             if (++_failedSaves <= 5) MarkDirty();
         }
     }
 
+    static void WriteAtomic(string path, AppData data)
+    {
+        var temp = path + ".tmp";
+        var bytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data, Options));
+        using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+        {
+            fs.Write(bytes, 0, bytes.Length);
+            fs.Flush(true); // really on disk, not just in the OS cache
+        }
+
+        if (File.Exists(path)) File.Replace(temp, path, null);
+        else File.Move(temp, path);
+    }
+
+    /// <summary>
+    /// One copy of data.json per day, the last 7 are kept. Runs on start and after saving,
+    /// so the backups stay current even if PinList runs for weeks without a restart.
+    /// </summary>
     static void DailyBackup()
     {
         try
         {
-            Directory.CreateDirectory(BackupDir);
             var today = Path.Combine(BackupDir, $"data-{DateTime.Now:yyyy-MM-dd}.json");
-            if (!File.Exists(today)) File.Copy(FilePath, today);
+            if (File.Exists(today) || !File.Exists(FilePath)) return;
 
+            Directory.CreateDirectory(BackupDir);
+            File.Copy(FilePath, today);
             foreach (var old in Directory.GetFiles(BackupDir, "data-*.json").OrderByDescending(f => f).Skip(BackupsToKeep))
                 File.Delete(old);
         }
         catch (Exception ex) { Log("Backup: " + ex.Message); }
     }
 
+    // ================= Export and import =================
+
+    public static void Export(string path)
+    {
+        Flush();
+        WriteAtomic(path, Data);
+    }
+
+    /// <summary>Replaces all data (import). A copy of the current data is kept in the backups folder first.</summary>
+    public static string ReplaceAll(AppData imported)
+    {
+        Flush();
+        Directory.CreateDirectory(BackupDir);
+        var safety = Path.Combine(BackupDir, $"before-import-{DateTime.Now:yyyy-MM-dd-HHmmss}.json");
+        WriteAtomic(safety, Data);
+
+        imported.Settings = Data.Settings; // the theme is a setting of this PC, not of the lists
+        Data = imported;
+        SaveNow();
+        return safety;
+    }
+
+    /// <summary>Adds imported windows and archive items next to the existing ones (with new ids, so nothing clashes).</summary>
+    public static IReadOnlyList<Board> Merge(AppData imported)
+    {
+        ReassignIds(imported);
+        foreach (var b in imported.Boards) Data.Boards.Add(b);
+        foreach (var a in imported.Archive) Data.Archive.Add(a);
+        var archive = Data.Archive.OrderByDescending(a => a.CompletedAt).ToList();
+        Data.Archive.Clear();
+        foreach (var a in archive) Data.Archive.Add(a);
+        MarkDirty();
+        return imported.Boards.ToList();
+    }
+
+    /// <summary>New ids for every window, category and item; archive entries follow their category and window.</summary>
+    public static void ReassignIds(AppData data)
+    {
+        var map = new Dictionary<string, string>();
+        string NewId(string old)
+        {
+            var id = Guid.NewGuid().ToString("N");
+            if (old.Length > 0) map[old] = id;
+            return id;
+        }
+
+        foreach (var b in data.Boards)
+        {
+            b.Id = NewId(b.Id);
+            foreach (var c in b.Categories)
+            {
+                c.Id = NewId(c.Id);
+                foreach (var i in c.Items) i.Id = NewId(i.Id);
+            }
+        }
+        foreach (var a in data.Archive)
+        {
+            // an archive entry whose category isn't in the file must not point to an existing category on this PC
+            a.CategoryId = map.TryGetValue(a.CategoryId, out var c) ? c : "";
+            a.BoardId = map.TryGetValue(a.BoardId, out var b) ? b : "";
+        }
+    }
+
+    // ================= Log =================
+
     public static void Log(string message)
     {
         try
         {
             Directory.CreateDirectory(Dir);
-            File.AppendAllText(Path.Combine(Dir, "log.txt"), $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
+            // Keep the log small: when it passes 1 MB, the old part moves to log.old.txt (replacing the previous one)
+            var info = new FileInfo(LogPath);
+            if (info.Exists && info.Length > MaxLogBytes)
+                File.Move(LogPath, Path.Combine(Dir, "log.old.txt"), true);
+
+            File.AppendAllText(LogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}");
         }
         catch { }
     }
 
-    // ---- Lookups ----
+    // ================= Lookups =================
+
+    public static IEnumerable<TodoItem> AllItems() =>
+        Data.Boards.SelectMany(b => b.Categories).SelectMany(c => c.Items);
 
     public static (Board board, Category category)? Locate(TodoItem item)
     {
