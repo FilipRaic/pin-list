@@ -3,7 +3,7 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.1.0] - 2026-10-21
 
 ### Added
 - Due dates and reminders: right-click an item → *Add due date…* / *Add reminder…*. Reminders appear as Windows notifications; ones missed while PinList was closed are shown on start
@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Starting PinList while it's already running brings its widgets to the front
 - Undo for restoring from the archive, editing, renaming, recoloring, moving and adding items and categories
 - The archive tells you when a restored item went to another category because its own was deleted
-- Tests for the whole app (about 270), including UI tests that run the real app on a hidden Windows desktop; 100 % of lines covered, and CI fails if coverage drops below 99 % (lines) / 92 % (branches)
+- Tests for the whole app (about 280), including UI tests that run the real app on a hidden Windows desktop; 100 % of lines covered, and CI fails if coverage drops below 99 % (lines) / 92 % (branches)
 - Release checks that the tag matches the csproj version, and publishes a SHA-256 checksum next to the exe
 - Dependabot updates for GitHub Actions and test packages
 - Accessibility:
