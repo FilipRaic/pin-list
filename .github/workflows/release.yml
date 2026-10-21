@@ -56,7 +56,7 @@ jobs:
           $hash = (Get-FileHash release/PinList.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  PinList.exe" | Out-File release/PinList.exe.sha256 -Encoding ascii -NoNewline
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: |
             release/PinList.exe
