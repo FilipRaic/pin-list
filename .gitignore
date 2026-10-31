@@ -20,3 +20,11 @@ desktop.ini
 TestResults/
 coverage.json
 coverage.cobertura.xml
+
+# Brainstorming mockups
+.superpowers/
+
+# Markdown: only README and CHANGELOG are tracked
+*.md
+!README.md
+!CHANGELOG.md

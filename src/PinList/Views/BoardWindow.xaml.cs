@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Shell;
 using System.Windows.Threading;
@@ -24,8 +25,6 @@ public partial class BoardWindow : Window
     public Board Board { get; }
     public bool UserDeleted { get; private set; }
 
-    bool _loaded, _suppressSave;
-
     public BoardWindow(Board board)
     {
         InitializeComponent();
@@ -33,10 +32,6 @@ public partial class BoardWindow : Window
         DataContext = board;
 
         WindowStartupLocation = WindowStartupLocation.Manual;
-        _suppressSave = true;
-        Width = Math.Max(MinWidth, board.Width);
-        Height = Math.Max(MinHeight, board.Height);
-        _suppressSave = false;
         EnsureOnScreen();
 
         Native.PinToDesktop(this);
@@ -44,12 +39,15 @@ public partial class BoardWindow : Window
         ApplyAppearance();
         A11y.ApplyTextScale(this);
 
-        SourceInitialized += (_, _) => Native.MakeToolWindow(this);
+        SourceInitialized += (_, _) =>
+        {
+            Native.MakeToolWindow(this);
+            HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(WndProc);
+        };
         // clicking outside the widget (desktop, another app, another widget) clears the highlight
         Deactivated += (_, _) => { if (_active != null && BelongsToThisBoard(_active)) SetActive(null); };
-        Loaded += (_, _) => _loaded = true;
-        LocationChanged += (_, _) => SaveBounds();
-        SizeChanged += (_, _) => SaveBounds();
+        LocationChanged += (_, _) => OnMovedWithoutDrag();
+        SizeChanged += (_, _) => OnMovedWithoutDrag();
     }
 
     /// <summary>Closes the window without deleting its data (all data is being replaced by an import).</summary>
@@ -61,42 +59,89 @@ public partial class BoardWindow : Window
 
     // ================= Position, size, lock =================
 
+    // Only moves and resizes made by the user are saved. Windows also moves windows on its own when a monitor
+    // goes to sleep, wakes up or is plugged in; saving those would lose the widget's place.
+
+    /// <summary>True while monitors are changing (set by App): moves made then come from Windows, not the user.</summary>
+    internal static bool DisplayChanging { get; set; }
+
+    /// <summary>How long a Win+Arrow move waits before it's saved, so a monitor change that caused it can still cancel it.</summary>
+    internal static TimeSpan KeyMoveSaveDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    DispatcherTimer? _keyMoveSave;
+    Rect _placedAt; // where EnsureOnScreen put the widget; that is not a move by the user
+
     /// <summary>
-    /// Moves the widget to its saved position if that is visible; otherwise (e.g. a monitor was
+    /// Moves the widget to its saved position and size if that is visible; otherwise (e.g. a monitor was
     /// disconnected) temporarily places it on the primary screen WITHOUT overwriting the saved position.
     /// </summary>
     public void EnsureOnScreen()
     {
+        Width = Math.Max(MinWidth, Board.Width);
+        Height = Math.Max(MinHeight, Board.Height);
         var saved = new Rect(Board.X, Board.Y, Width, Height);
-        _suppressSave = true;
-        try
+        if (Screens.IsReachable(saved, Screens.WorkAreas()))
         {
-            if (Screens.IsReachable(saved, Screens.WorkAreas()))
-            {
-                Left = saved.X;
-                Top = saved.Y;
-            }
-            else
-            {
-                var wa = Screens.Primary;
-                int k = _fallbackIndex++ % 5;
-                Left = wa.Right - Width - 24 - 30 * k;
-                Top = wa.Top + 24 + 30 * k;
-            }
+            Left = saved.X;
+            Top = saved.Y;
         }
-        finally { _suppressSave = false; }
+        else
+        {
+            var wa = Screens.Primary;
+            int k = _fallbackIndex++ % 5;
+            Left = wa.Right - Width - 24 - 30 * k;
+            Top = wa.Top + 24 + 30 * k;
+        }
+        _placedAt = new Rect(Left, Top, Width, Height);
+        _keyMoveSave?.Stop();
     }
+
+    const int WM_DISPLAYCHANGE = 0x007E;
+    const int WM_EXITSIZEMOVE = 0x0232;
+
+    IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        // Dragging the widget by its header or resizing it by its border ends with WM_EXITSIZEMOVE
+        if (msg == WM_EXITSIZEMOVE) SaveBounds();
+        // A monitor change: a move that was just made came from Windows, not from Win+Arrow
+        else if (msg == WM_DISPLAYCHANGE) _keyMoveSave?.Stop();
+        return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Win+Arrow (and Win+Shift+Arrow) move the active window without a drag, so there is no WM_EXITSIZEMOVE.
+    /// A move of the active widget is saved after a short wait, unless a monitor change shows it came from Windows.
+    /// </summary>
+    void OnMovedWithoutDrag()
+    {
+        if (!IsActive || DisplayChanging) return;
+        if (_keyMoveSave == null)
+        {
+            _keyMoveSave = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher);
+            _keyMoveSave.Tick += (_, _) =>
+            {
+                _keyMoveSave.Stop();
+                if (!DisplayChanging && !IsAt(_placedAt)) SaveBounds();
+            };
+        }
+        _keyMoveSave.Stop(); // wait until the moving is over
+        _keyMoveSave.Interval = KeyMoveSaveDelay;
+        _keyMoveSave.Start();
+    }
+
+    bool IsAt(Rect r) =>
+        Math.Abs(Left - r.X) < 1 && Math.Abs(Top - r.Y) < 1 && Math.Abs(Width - r.Width) < 1 && Math.Abs(Height - r.Height) < 1;
 
     /// <summary>Work area of the monitor this widget is on.</summary>
     Rect CurrentWorkArea() => Screens.WorkAreaAt(new Point(Left + ActualWidth / 2, Top + 15));
 
+    /// <summary>Saves the current position and size (after the user moved or resized the widget).</summary>
     void SaveBounds()
     {
-        if (!_loaded || _suppressSave || WindowState != WindowState.Normal) return;
-        Board.X = Math.Round(Left);
-        Board.Y = Math.Round(Top);
-        Board.Width = Math.Round(ActualWidth);
-        Board.Height = Math.Round(ActualHeight);
+        if (WindowState != WindowState.Normal) return;
+        double x = Math.Round(Left), y = Math.Round(Top), width = Math.Round(Width), height = Math.Round(Height);
+        if ((x, y, width, height) == (Board.X, Board.Y, Board.Width, Board.Height)) return; // e.g. a click on the header
+        (Board.X, Board.Y, Board.Width, Board.Height) = (x, y, width, height);
         Store.MarkDirty();
     }
 

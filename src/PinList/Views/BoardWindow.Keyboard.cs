@@ -274,6 +274,7 @@ public partial class BoardWindow
             Width = Math.Max(MinWidth, Width + dx);
             Height = Math.Max(MinHeight, Height + dy);
         }
+        SaveBounds();
         return true;
     }
 }

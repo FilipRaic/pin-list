@@ -3,6 +3,11 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Widgets no longer move when a monitor goes to sleep, wakes up or another device is plugged into it. Only moves and resizes made by you are saved (mouse, Ctrl+Arrows and Win+Arrows), and widgets go back to their place once the monitors settle (also after waking the PC from sleep)
+
 ## [1.1.0] - 2026-10-21
 
 ### Added

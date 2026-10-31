@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -70,6 +71,12 @@ public class BoardWindowTests : UiTest
         });
     }
 
+    [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr hwnd, uint msg, IntPtr w, IntPtr l);
+
+    /// <summary>What Windows sends when the user lets go after dragging or resizing a window.</summary>
+    static void EndUserMove(Window w) =>
+        SendMessage(new System.Windows.Interop.WindowInteropHelper(w).Handle, 0x0232 /* WM_EXITSIZEMOVE */, IntPtr.Zero, IntPtr.Zero);
+
     [Fact]
     public void Moving_and_resizing_is_saved_but_not_while_maximized()
     {
@@ -79,15 +86,97 @@ public class BoardWindowTests : UiTest
             w.Left = 210.4;
             w.Width = 333;
             Pump();
-            Assert.Equal((210.0, 333.0), (w.Board.X, w.Board.Width));
-            Assert.True(Saver.Requests > 0);
-
             int saves = Saver.Requests;
+            EndUserMove(w);
+            Assert.Equal((210.0, 333.0), (w.Board.X, w.Board.Width));
+            Assert.True(Saver.Requests > saves);
+
+            saves = Saver.Requests;
+            EndUserMove(w); // a click on the header without moving
+            Assert.Equal(saves, Saver.Requests);
+
             w.WindowState = WindowState.Maximized;
             Pump();
             w.Left = 500; // not a real move while maximized
+            EndUserMove(w);
             Assert.Equal(saves, Saver.Requests);
             w.WindowState = WindowState.Normal;
+        });
+    }
+
+    [Fact]
+    public void Moves_made_by_Windows_are_not_saved()
+    {
+        Ui(() =>
+        {
+            var old = BoardWindow.KeyMoveSaveDelay;
+            BoardWindow.KeyMoveSaveDelay = TimeSpan.FromMilliseconds(50);
+            try
+            {
+                var w = OpenNew(("A", new string[0]));
+                OpenNew(("B", new string[0])).Activate(); // another window is active
+                Pump();
+                Assert.False(w.IsActive);
+                var (x, y, width) = (w.Board.X, w.Board.Y, w.Board.Width);
+                int saves = Saver.Requests;
+
+                // e.g. the monitor went to sleep and Windows moved the widget to another one
+                w.Left += 300;
+                w.Top += 50;
+                w.Width += 40;
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+
+                Assert.Equal((x, y, width), (w.Board.X, w.Board.Y, w.Board.Width));
+                Assert.Equal(saves, Saver.Requests);
+            }
+            finally { BoardWindow.KeyMoveSaveDelay = old; }
+        });
+    }
+
+    static void Send(Window w, uint msg) =>
+        SendMessage(new System.Windows.Interop.WindowInteropHelper(w).Handle, msg, IntPtr.Zero, IntPtr.Zero);
+
+    [Fact]
+    public void Win_Arrow_moves_of_the_active_widget_are_saved_unless_monitors_change()
+    {
+        Ui(() =>
+        {
+            var old = BoardWindow.KeyMoveSaveDelay;
+            BoardWindow.KeyMoveSaveDelay = TimeSpan.FromMilliseconds(50);
+            try
+            {
+                var w = OpenNew(("A", new string[0]));
+                w.Activate();
+                Pump();
+                Assert.True(w.IsActive);
+
+                // Win+Arrow: no drag, so no WM_EXITSIZEMOVE; saved after a short wait
+                w.Left += 100;
+                Assert.NotEqual(Math.Round(w.Left), w.Board.X);
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal(Math.Round(w.Left), w.Board.X);
+
+                // a monitor change right after the move: Windows moved it, so it's not saved
+                double x = w.Board.X;
+                w.Left += 100;
+                Send(w, 0x007E); // WM_DISPLAYCHANGE
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal(x, w.Board.X);
+
+                // nor while the monitors are still settling
+                BoardWindow.DisplayChanging = true;
+                w.Left += 100;
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                BoardWindow.DisplayChanging = false;
+                Assert.Equal(x, w.Board.X);
+
+                // nor where PinList itself put the widget (e.g. on the primary monitor while its own is gone)
+                w.Board.X = -100000;
+                w.EnsureOnScreen();
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal(-100000, w.Board.X);
+            }
+            finally { BoardWindow.KeyMoveSaveDelay = old; BoardWindow.DisplayChanging = false; }
         });
     }
 

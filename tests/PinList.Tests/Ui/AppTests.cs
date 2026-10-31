@@ -200,6 +200,42 @@ public class AppTests : UiTest
         });
     }
 
+    [Fact]
+    public void Widgets_moved_by_Windows_go_back_once_the_monitors_settle()
+    {
+        Ui(() =>
+        {
+            var old = PinList.App.DisplaySettleDelay;
+            PinList.App.DisplaySettleDelay = TimeSpan.FromMilliseconds(50);
+            try
+            {
+                var w = OpenNew(("A", new string[0]));
+                var (x, y, width) = (w.Left, w.Top, w.Width);
+
+                App.OnDisplaySettingsChanged(null, EventArgs.Empty);
+                Pump();
+                // Windows moves the widget once more after reporting the change (a monitor waking up)
+                w.Left = x + 300;
+                w.Width = width + 40;
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal((x, y, width), (w.Left, w.Top, w.Width));
+
+                // waking up from sleep does the same
+                w.Top = y + 200;
+                App.OnPowerModeChanged(null, new Microsoft.Win32.PowerModeChangedEventArgs(Microsoft.Win32.PowerModes.Resume));
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal(y, w.Top);
+
+                // other power events don't move anything
+                w.Top = y + 200;
+                App.OnPowerModeChanged(null, new Microsoft.Win32.PowerModeChangedEventArgs(Microsoft.Win32.PowerModes.Suspend));
+                UiHost.Wait(TimeSpan.FromMilliseconds(300));
+                Assert.Equal(y + 200, w.Top);
+            }
+            finally { PinList.App.DisplaySettleDelay = old; }
+        });
+    }
+
     // ================= Widgets closed by Windows =================
 
     [Fact]

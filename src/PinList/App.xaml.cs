@@ -136,6 +136,7 @@ public partial class App : Application
 
         SessionEnding += OnSessionEnding;
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         SystemParameters.StaticPropertyChanged += OnSystemParameterChanged;
         return true;
@@ -148,6 +149,9 @@ public partial class App : Application
         Actions.BoardAdded -= OpenBoard;
         SessionEnding -= OnSessionEnding;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        _displaySettle?.Stop();
+        BoardWindow.DisplayChanging = false;
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         SystemParameters.StaticPropertyChanged -= OnSystemParameterChanged;
         _reminders.Due -= ShowReminders;
@@ -263,11 +267,44 @@ public partial class App : Application
 
     // ================= Windows =================
 
+    /// <summary>
+    /// How long after the last monitor change the widgets are put back once more. When a monitor wakes up or is
+    /// plugged in, Windows keeps moving windows around for a moment after it reports the change.
+    /// </summary>
+    internal static TimeSpan DisplaySettleDelay { get; set; } = TimeSpan.FromSeconds(2);
+
+    DispatcherTimer? _displaySettle;
+
     internal void OnDisplaySettingsChanged(object? sender, EventArgs e) =>
         Dispatcher.InvokeAsync(() =>
         {
-            foreach (var w in _windows.ToList()) w.EnsureOnScreen();
+            BoardWindow.DisplayChanging = true; // moves until the monitors settle aren't the user's
+            RestoreWidgetPositions();
+            if (_displaySettle == null)
+            {
+                _displaySettle = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher);
+                _displaySettle.Tick += (_, _) =>
+                {
+                    _displaySettle.Stop();
+                    RestoreWidgetPositions();
+                    BoardWindow.DisplayChanging = false;
+                };
+            }
+            _displaySettle.Stop(); // restart the wait on every change
+            _displaySettle.Interval = DisplaySettleDelay;
+            _displaySettle.Start();
         });
+
+    internal void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == PowerModes.Resume) OnDisplaySettingsChanged(sender, e);
+    }
+
+    void RestoreWidgetPositions()
+    {
+        if (ShuttingDown) return;
+        foreach (var w in _windows.ToList()) w.EnsureOnScreen();
+    }
 
     internal void OpenAllBoards()
     {
