@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>PinList</string>
+    <key>CFBundleDisplayName</key><string>PinList</string>
+    <key>CFBundleIdentifier</key><string>com.pinlist.app</string>
+    <key>CFBundleExecutable</key><string>PinList</string>
+    <key>CFBundleIconFile</key><string>PinList</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>__VERSION__</string>
+    <key>CFBundleVersion</key><string>__VERSION__</string>
+    <key>LSMinimumSystemVersion</key><string>12.0</string>
+    <!-- A menu bar app: no Dock icon and not in Cmd+Tab, like the widgets on Windows aren't in the taskbar -->
+    <key>LSUIElement</key><true/>
+    <key>NSHighResolutionCapable</key><true/>
+</dict>
+</plist>

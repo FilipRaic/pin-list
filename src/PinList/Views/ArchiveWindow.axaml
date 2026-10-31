@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList"
+        x:Class="PinList.ArchiveWindow"
+        x:DataType="local:ArchiveWindow"
+        Title="PinList – Archive"
+        Icon="avares://PinList/Assets/app.ico"
+        Width="900" Height="560" MinWidth="480" MinHeight="320"
+        WindowStartupLocation="CenterScreen"
+        FontSize="13"
+        Background="{DynamicResource ArcBg}" Foreground="{DynamicResource ArcText}">
+
+    <Window.Styles>
+        <Style Selector="ListBox#List">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox#List ListBoxItem">
+            <Setter Property="Padding" Value="0,7"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+            <Setter Property="FocusAdorner" Value="{StaticResource InnerFocusRing}"/>
+        </Style>
+        <Style Selector="ListBox#List ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="5"/>
+        </Style>
+        <Style Selector="ListBox#List ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ArcHover}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+        </Style>
+        <Style Selector="ListBox#List ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter,
+                         ListBox#List ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                         ListBox#List ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ArcSelected}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ArcSelectedText}"/>
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="6,0"/>
+        </Style>
+        <Style Selector="TextBlock.columnheader">
+            <Setter Property="Foreground" Value="{DynamicResource ArcMuted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="6,8"/>
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <LayoutTransformControl x:Name="Scaler">
+            <DockPanel x:Name="Root" Margin="20,16,20,16">
+
+                <!-- Title + search -->
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,14" ColumnDefinitions="*,Auto">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Completed items" FontSize="20" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="CountText" Foreground="{DynamicResource ArcMuted}" Margin="12,0,0,2" VerticalAlignment="Bottom"/>
+                    </StackPanel>
+                    <Panel Grid.Column="1" Width="260">
+                        <TextBox x:Name="SearchBox" Classes="search" PlaceholderText="Search"
+                                 Padding="30,6,8,6"
+                                 AutomationProperties.Name="Search completed items" AutomationProperties.HelpText="Ctrl+F"/>
+                        <PathIcon Data="{StaticResource Icon.Search}" Width="12" Height="12" Margin="10,0,0,0"
+                                  HorizontalAlignment="Left" Foreground="{DynamicResource ArcMuted}" IsHitTestVisible="False"/>
+                    </Panel>
+                </Grid>
+
+                <!-- Buttons -->
+                <Grid DockPanel.Dock="Bottom" Margin="0,14,0,0" ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="HintText" Text="Enter or double-click restores  ·  Del deletes permanently  ·  Ctrl+Z undoes"
+                               Foreground="{DynamicResource ArcMuted}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    <!-- Shown for a few seconds after restoring, e.g. when an item's category no longer exists -->
+                    <TextBlock x:Name="StatusText" Foreground="{DynamicResource ArcText}" FontSize="12" VerticalAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,0,12,0" IsVisible="False"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Classes="dialog" Content="Delete permanently" Click="Delete_Click"/>
+                        <Button Classes="dialog accent" Content="Restore" Margin="8,0,0,0" Click="Restore_Click"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Table -->
+                <Border x:Name="TableBorder" Background="{DynamicResource ArcSurface}" BorderBrush="{DynamicResource ArcBorder}"
+                        BorderThickness="1" CornerRadius="8" Padding="6,2,6,6">
+                    <Grid RowDefinitions="Auto,*">
+                        <Border BorderBrush="{DynamicResource ArcBorder}" BorderThickness="0,0,0,1">
+                            <Grid ColumnDefinitions="140,320,160,130,100">
+                                <TextBlock Classes="columnheader" Text="Completed"/>
+                                <TextBlock Grid.Column="1" Classes="columnheader" Text="Item"/>
+                                <TextBlock Grid.Column="2" Classes="columnheader" Text="Category"/>
+                                <TextBlock Grid.Column="3" Classes="columnheader" Text="Window"/>
+                                <TextBlock Grid.Column="4" Classes="columnheader" Text="Added"/>
+                            </Grid>
+                        </Border>
+                        <ListBox x:Name="List" Grid.Row="1" SelectionMode="Multiple" Classes="slim"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                 AutomationProperties.Name="Completed items"
+                                 AutomationProperties.HelpText="Enter restores, Delete deletes permanently, Ctrl+Z undoes"
+                                 DoubleTapped="List_DoubleTapped" KeyDown="List_KeyDown">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="local:ArchivedItem">
+                                    <Grid ColumnDefinitions="140,320,160,130,100" Background="Transparent">
+                                        <TextBlock Classes="cell" Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy  HH:mm'}"/>
+                                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding Text, Converter={x:Static local:Converters.FirstLine}}"
+                                                   ToolTip.Tip="{Binding Text}"/>
+                                        <Grid Grid.Column="2" ColumnDefinitions="Auto,*" Margin="6,0">
+                                            <Ellipse Width="8" Height="8" Fill="{Binding CategoryColor}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Classes="cell" Margin="0" Text="{Binding CategoryName}" ToolTip.Tip="{Binding CategoryName}"/>
+                                        </Grid>
+                                        <TextBlock Grid.Column="3" Classes="cell" Text="{Binding BoardTitle}" ToolTip.Tip="{Binding BoardTitle}"/>
+                                        <TextBlock Grid.Column="4" Classes="cell" Text="{Binding CreatedAt, StringFormat='dd.MM.yyyy'}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock x:Name="EmptyText" Grid.Row="1" Text="Nothing here yet. Completed items show up here with the date and time."
+                                   Foreground="{DynamicResource ArcMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="20" IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
+            </DockPanel>
+        </LayoutTransformControl>
+        <local:LiveRegion/>
+    </Panel>
+</Window>

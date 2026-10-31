@@ -1,5 +1,7 @@
 using System;
+#if WINDOWS
 using WinForms = System.Windows.Forms;
+#endif
 
 namespace PinList;
 
@@ -10,10 +12,23 @@ public interface ITrayIcon : IDisposable
     event Action? RightClick;
     event Action? NotificationClicked;
 
-    /// <summary>Shows a Windows notification (reminders).</summary>
+    /// <summary>Shows a notification (reminders).</summary>
     void ShowNotification(string title, string text);
+
+    /// <summary>
+    /// The menu's entries, for platforms whose tray menu is native (macOS menu bar). On Windows the app shows its
+    /// own menu on right click instead.
+    /// </summary>
+    void SetMenu(System.Collections.Generic.IReadOnlyList<TrayEntry> entries);
 }
 
+/// <summary>One tray menu entry; <see cref="Separator"/> draws a line.</summary>
+public sealed record TrayEntry(string Text, Action? Action)
+{
+    public static readonly TrayEntry Separator = new("-", null);
+}
+
+#if WINDOWS
 /// <summary>The real tray icon (a WinForms NotifyIcon; WPF has none).</summary>
 public sealed class TrayIcon : ITrayIcon
 {
@@ -43,9 +58,12 @@ public sealed class TrayIcon : ITrayIcon
     public void ShowNotification(string title, string text) =>
         _icon.ShowBalloonTip(10000, title, text, WinForms.ToolTipIcon.None);
 
+    public void SetMenu(System.Collections.Generic.IReadOnlyList<TrayEntry> entries) { } // right click shows the app's menu
+
     public void Dispose()
     {
         _icon.Visible = false;
         _icon.Dispose();
     }
 }
+#endif

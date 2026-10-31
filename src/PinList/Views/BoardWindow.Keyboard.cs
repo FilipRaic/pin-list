@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Threading;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace PinList;
 
@@ -22,61 +25,83 @@ public partial class BoardWindow
 {
     const double KeyboardStep = 10;
 
-    void Row_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    void Row_GotFocus(object? sender, FocusChangedEventArgs e)
     {
-        if (ReferenceEquals(e.NewFocus, sender) && ((FrameworkElement)sender).Tag is Observable o)
+        if (ReferenceEquals(e.Source, sender) && ((Control)sender!).Tag is Observable o)
             SetActive(o);
     }
 
     static bool IsMenuKey(KeyEventArgs e) =>
-        e.Key == Key.Apps || (e.Key == Key.System && e.SystemKey == Key.F10 && InputState.Modifiers() == ModifierKeys.Shift);
+        e.Key == Key.Apps || (e.Key == Key.F10 && e.KeyModifiers == KeyModifiers.Shift);
 
-    /// <summary>Alt+Up / Alt+Down arrive as Key.System. Returns -1, +1 or 0.</summary>
+    /// <summary>Alt+Up / Alt+Down. Returns -1, +1 or 0.</summary>
     static int AltArrow(KeyEventArgs e)
     {
-        if (e.Key != Key.System || InputState.Modifiers() != ModifierKeys.Alt) return 0;
-        return e.SystemKey switch { Key.Up => -1, Key.Down => +1, _ => 0 };
+        if (e.KeyModifiers != KeyModifiers.Alt) return 0;
+        return e.Key switch { Key.Up => -1, Key.Down => +1, _ => 0 };
     }
 
-    void Item_KeyDown(object sender, KeyEventArgs e)
+    void Item_KeyDown(object? sender, KeyEventArgs e)
     {
-        var row = (FrameworkElement)sender;
-        if (!ReferenceEquals(e.OriginalSource, row) || row.Tag is not TodoItem item) return;
+        var row = (Control)sender!;
+        if (!ReferenceEquals(e.Source, row) || row.Tag is not TodoItem item) return;
 
         if (IsMenuKey(e)) ShowItemMenu(row, item, PlacementMode.Bottom);
-        else if (e.Key == Key.Space && InputState.Modifiers() == ModifierKeys.None) ToggleCompleting(item);
-        else if ((e.Key == Key.Enter || e.Key == Key.F2) && InputState.Modifiers() == ModifierKeys.None) item.IsEditing = true;
+        else if (e.Key == Key.Space && e.KeyModifiers == KeyModifiers.None) ToggleCompleting(item);
+        else if ((e.Key == Key.Enter || e.Key == Key.F2) && e.KeyModifiers == KeyModifiers.None) item.IsEditing = true;
         else if (AltArrow(e) is int d and not 0) MoveItemBy(item, d);
         else if (!MoveFocusUpDown(row, e)) return;
         e.Handled = true;
     }
 
-    void Cat_KeyDown(object sender, KeyEventArgs e)
+    void Cat_KeyDown(object? sender, KeyEventArgs e)
     {
-        var row = (FrameworkElement)sender;
-        if (!ReferenceEquals(e.OriginalSource, row) || row.Tag is not Category cat) return;
+        var row = (Control)sender!;
+        if (!ReferenceEquals(e.Source, row) || row.Tag is not Category cat) return;
 
         if (IsMenuKey(e)) ShowCategoryMenu(row, cat, PlacementMode.Bottom);
-        else if ((e.Key == Key.Enter || e.Key == Key.Space) && InputState.Modifiers() == ModifierKeys.None) ToggleCollapsed(cat);
-        else if (e.Key == Key.F2 && InputState.Modifiers() == ModifierKeys.None) cat.IsEditing = true;
+        else if ((e.Key == Key.Enter || e.Key == Key.Space) && e.KeyModifiers == KeyModifiers.None) ToggleCollapsed(cat);
+        else if (e.Key == Key.F2 && e.KeyModifiers == KeyModifiers.None) cat.IsEditing = true;
         else if (AltArrow(e) is int d and not 0) MoveCategoryBy(cat, d);
         else if (!MoveFocusUpDown(row, e)) return;
         e.Handled = true;
     }
 
     /// <summary>Up/Down move focus like Shift+Tab/Tab.</summary>
-    static bool MoveFocusUpDown(FrameworkElement from, KeyEventArgs e)
+    bool MoveFocusUpDown(Control from, KeyEventArgs e)
     {
-        if (InputState.Modifiers() != ModifierKeys.None) return false;
-        var direction = e.Key switch
+        if (e.KeyModifiers != KeyModifiers.None) return false;
+        NavigationDirection? direction = e.Key switch
         {
-            Key.Up => FocusNavigationDirection.Previous,
-            Key.Down => FocusNavigationDirection.Next,
-            _ => (FocusNavigationDirection?)null,
+            Key.Up => NavigationDirection.Previous,
+            Key.Down => NavigationDirection.Next,
+            _ => null,
         };
         if (direction == null) return false;
-        from.MoveFocus(new TraversalRequest(direction.Value));
+        MoveFocus(from, direction.Value);
         return true;
+    }
+
+    /// <summary>
+    /// Everything the keyboard can reach in the widget, in the order it appears: the header buttons, then every
+    /// category header, its items and its "Add item" box. (Computed here because Avalonia's own Tab order doesn't
+    /// continue from one category into the next.)
+    /// </summary>
+    internal List<InputElement> FocusOrder() =>
+        this.GetVisualDescendants().OfType<InputElement>()
+            .Where(e => e.Focusable && KeyboardNavigation.GetIsTabStop(e) && e.IsEffectivelyVisible && e.IsEffectivelyEnabled)
+            .ToList();
+
+    /// <summary>Moves focus to the next or previous element (wrapping around, like Tab in a window).</summary>
+    void MoveFocus(InputElement from, NavigationDirection direction)
+    {
+        var order = FocusOrder();
+        if (order.Count == 0) return;
+        int i = order.IndexOf(from);
+        int next = direction == NavigationDirection.Previous
+            ? (i <= 0 ? order.Count - 1 : i - 1)
+            : (i < 0 || i == order.Count - 1 ? 0 : i + 1);
+        order[next].Focus(direction == NavigationDirection.Next || direction == NavigationDirection.Previous ? NavigationMethod.Tab : NavigationMethod.Directional);
     }
 
     // ================= Actions with announcements =================
@@ -89,6 +114,9 @@ public partial class BoardWindow
         FocusRow(cat);
     }
 
+    /// <summary>How long a completed item stays (crossed out) before it goes to the archive; tests shorten it.</summary>
+    internal static TimeSpan CompleteDelay { get; set; } = TimeSpan.FromMilliseconds(900);
+
     /// <summary>Starts completing (with ~1 s to cancel), or cancels if it's already completing. Same as clicking the circle.</summary>
     void ToggleCompleting(TodoItem item)
     {
@@ -100,7 +128,7 @@ public partial class BoardWindow
         }
 
         item.IsCompleting = true;
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(900) };
+        var timer = new DispatcherTimer { Interval = CompleteDelay };
         timer.Tick += (_, _) =>
         {
             timer.Stop();
@@ -145,6 +173,7 @@ public partial class BoardWindow
         int index = cat.Items.IndexOf(item);
         int catIndex = board.Categories.IndexOf(cat);
 
+        var before = Reorder.Capture(this);
         if (delta < 0 && index > 0) Actions.MoveItem(item, cat, index - 1);
         else if (delta > 0 && index < cat.Items.Count - 1) Actions.MoveItem(item, cat, index + 2); // drop index counts the item itself
         else if (delta < 0 && catIndex > 0)
@@ -164,6 +193,7 @@ public partial class BoardWindow
             A11y.Announce(this, delta < 0 ? "Already at the top" : "Already at the bottom");
             return;
         }
+        Reorder.Animate(this, before);
 
         var now = Store.Locate(item)!.Value.category;
         A11y.Announce(this, $"Moved to position {now.Items.IndexOf(item) + 1} of {now.Items.Count} in {now.Name}");
@@ -181,7 +211,9 @@ public partial class BoardWindow
             A11y.Announce(this, delta < 0 ? "Already at the top" : "Already at the bottom");
             return;
         }
+        var before = Reorder.Capture(this);
         Actions.MoveCategory(cat, board, delta < 0 ? target : target + 1);
+        Reorder.Animate(this, before);
         A11y.Announce(this, $"Moved to position {board.Categories.IndexOf(cat) + 1} of {board.Categories.Count}");
         FocusRow(cat);
     }
@@ -209,42 +241,31 @@ public partial class BoardWindow
         return null;
     }
 
-    bool IsRowFocused(object tag) => Keyboard.FocusedElement is FrameworkElement fe && ReferenceEquals(fe.Tag, tag)
-                                     && fe is AccessibleRow && IsAncestorOf(fe);
+    bool IsRowFocused(object tag) => FocusManager?.GetFocusedElement() is AccessibleRow row
+                                     && ReferenceEquals(row.Tag, tag) && this.IsVisualAncestorOf(row);
 
     /// <summary>Focuses the row of an item or category once it's on screen.</summary>
-    void FocusRow(object tag) => Dispatcher.InvokeAsync(() =>
+    void FocusRow(object tag) => Dispatcher.UIThread.Post(() =>
     {
-        if (FindTagged(this, tag) is { } row)
+        if (FindTagged(tag) is { } row)
         {
             row.BringIntoView();
-            row.Focus();
+            row.Focus(NavigationMethod.Tab);
         }
     }, DispatcherPriority.Loaded);
 
     void FocusRowOrContent(object? tag)
     {
         if (tag != null) FocusRow(tag);
-        else Dispatcher.InvokeAsync(FocusContent, DispatcherPriority.Loaded);
+        else Dispatcher.UIThread.Post(FocusContent, DispatcherPriority.Loaded);
     }
 
     /// <summary>Puts keyboard focus on the first thing in the widget (used when the tray icon or a second start brings it forward).</summary>
     public void FocusContent()
     {
-        var first = FindFirstRow(this);
-        if (first != null) first.Focus();
-        else MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
-    }
-
-    static AccessibleRow? FindFirstRow(DependencyObject root)
-    {
-        for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
-            if (child is AccessibleRow { IsVisible: true } row) return row;
-            if (FindFirstRow(child) is { } found) return found;
-        }
-        return null;
+        var first = this.GetVisualDescendants().OfType<AccessibleRow>().FirstOrDefault(r => r.IsEffectivelyVisible);
+        if (first != null) first.Focus(NavigationMethod.Tab);
+        else FocusManager?.FindFirstFocusableElement()?.Focus(NavigationMethod.Tab);
     }
 
     // ================= Moving and resizing the widget =================
@@ -252,8 +273,8 @@ public partial class BoardWindow
     /// <summary>Ctrl+Arrows move the widget, Ctrl+Shift+Arrows resize it. Returns true if handled.</summary>
     bool HandleWindowKeys(KeyEventArgs e)
     {
-        var mods = InputState.Modifiers();
-        if (mods != ModifierKeys.Control && mods != (ModifierKeys.Control | ModifierKeys.Shift)) return false;
+        var mods = e.KeyModifiers;
+        if (mods != KeyModifiers.Control && mods != (KeyModifiers.Control | KeyModifiers.Shift)) return false;
         if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return false;
         if (!ShortcutsAllowed()) return false;
         if (Board.Locked)
@@ -264,10 +285,9 @@ public partial class BoardWindow
 
         double dx = e.Key == Key.Left ? -KeyboardStep : e.Key == Key.Right ? KeyboardStep : 0;
         double dy = e.Key == Key.Up ? -KeyboardStep : e.Key == Key.Down ? KeyboardStep : 0;
-        if (mods == ModifierKeys.Control)
+        if (mods == KeyModifiers.Control)
         {
-            Left += dx;
-            Top += dy;
+            Position = Displays.ToPixels(Left + dx, Top + dy);
         }
         else
         {

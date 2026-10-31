@@ -1,9 +1,10 @@
 using System;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Shapes;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
 
 namespace PinList;
 
@@ -13,11 +14,20 @@ public partial class BoardWindow
     static MenuItem Item(string header, Action action, string? gesture = null) =>
         App.CreateMenuItem(header, action, gesture);
 
-    /// <summary>Menus use the app theme (colors come from the application resources).</summary>
-    static ContextMenu NewMenu(UIElement target, PlacementMode placement) =>
-        new() { PlacementTarget = target, Placement = placement };
+    /// <summary>The last menu opened (tests look at it).</summary>
+    internal ContextMenu? LastMenu { get; private set; }
 
-    void Menu_Click(object sender, RoutedEventArgs e)
+    /// <summary>Menus use the app theme (colors come from the application resources).</summary>
+    ContextMenu NewMenu(Control target, PlacementMode placement)
+    {
+        var menu = new ContextMenu { Placement = placement, PlacementTarget = target };
+        LastMenu = menu;
+        return menu;
+    }
+
+    static void Open(ContextMenu menu, Control target) => menu.Open(target);
+
+    void Menu_Click(object? sender, RoutedEventArgs e)
     {
         var menu = NewMenu(MenuBtn, PlacementMode.Bottom);
         var colors = new MenuItem { Header = "Window color" };
@@ -25,24 +35,26 @@ public partial class BoardWindow
         {
             var mi = Item(style.Name, () => SetStyle(style.Key));
             mi.Icon = Swatch(style.Background, true);
+            mi.ToggleType = MenuItemToggleType.Radio;
             mi.IsChecked = style.Key == CurrentStyle.Key;
             colors.Items.Add(mi);
         }
         menu.Items.Add(colors);
 
         var transparent = Item("Transparent background", ToggleTransparency);
+        transparent.ToggleType = MenuItemToggleType.CheckBox;
         transparent.IsChecked = Board.Transparent;
         menu.Items.Add(transparent);
         menu.Items.Add(App.Instance.ThemeMenu());
         menu.Items.Add(new Separator());
 
-        menu.Items.Add(Item("New window", () => Actions.NewBoard(CurrentWorkArea(), Board)));
+        menu.Items.Add(Item("New window", () => Actions.NewBoard(CurrentWorkArea().ToWorkArea(), Board)));
         menu.Items.Add(Item("Archive", App.Instance.ShowArchive));
-        menu.Items.Add(Item("Export…", () => App.Instance.ExportData(this)));
-        menu.Items.Add(Item("Import…", () => App.Instance.ImportData(this)));
+        menu.Items.Add(Item("Export…", () => _ = App.Instance.ExportData(this)));
+        menu.Items.Add(Item("Import…", () => _ = App.Instance.ImportData(this)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Delete window", DeleteThisBoard));
-        menu.IsOpen = true;
+        Open(menu, MenuBtn);
     }
 
     static Ellipse Swatch(string hex, bool outlined) => new()
@@ -54,24 +66,23 @@ public partial class BoardWindow
         StrokeThickness = outlined ? 1 : 0,
     };
 
-    static TextBlock Glyph(string glyph) => new()
+    PathIcon Glyph(string key) => new()
     {
-        Text = glyph,
-        FontFamily = (System.Windows.Media.FontFamily)Application.Current.FindResource("IconFont"),
-        FontSize = 13,
-        HorizontalAlignment = HorizontalAlignment.Center,
-        VerticalAlignment = VerticalAlignment.Center,
+        Data = (Geometry)this.FindResource(key)!,
+        Width = 13,
+        Height = 13,
     };
 
-    void Cat_RightClick(object sender, MouseButtonEventArgs e)
+    void Cat_ContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (((FrameworkElement)sender).Tag is not Category cat) return;
-        ShowCategoryMenu((FrameworkElement)sender, cat, PlacementMode.MousePoint);
+        if (((Control)sender!).Tag is not Category cat) return;
+        // the context menu key and Shift+F10 are handled in Cat_KeyDown (the menu opens below the row there)
+        ShowCategoryMenu((Control)sender, cat, PlacementMode.Pointer);
         e.Handled = true;
     }
 
     /// <summary>Category menu; from the keyboard (context menu key, Shift+F10) it opens below the header.</summary>
-    void ShowCategoryMenu(FrameworkElement target, Category cat, PlacementMode placement)
+    void ShowCategoryMenu(Control target, Category cat, PlacementMode placement)
     {
         SetActive(cat);
         var menu = NewMenu(target, placement);
@@ -83,6 +94,7 @@ public partial class BoardWindow
             string hex = Actions.Palette[i];
             var mi = Item(Actions.PaletteNames[i], () => Actions.SetCategoryColor(cat, hex));
             mi.Icon = Swatch(hex, false);
+            mi.ToggleType = MenuItemToggleType.Radio;
             mi.IsChecked = string.Equals(cat.Color, hex, StringComparison.OrdinalIgnoreCase);
             colors.Items.Add(mi);
         }
@@ -92,18 +104,18 @@ public partial class BoardWindow
         menu.Items.Add(Item("Move down", () => MoveCategoryBy(cat, +1), "Alt+Down"));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Delete category", () => DeleteWithFocus(cat), "Del"));
-        menu.IsOpen = true;
+        Open(menu, target);
     }
 
-    void Item_RightClick(object sender, MouseButtonEventArgs e)
+    void Item_ContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        if (((FrameworkElement)sender).Tag is not TodoItem item) return;
-        ShowItemMenu((FrameworkElement)sender, item, PlacementMode.MousePoint);
+        if (((Control)sender!).Tag is not TodoItem item) return;
+        ShowItemMenu((Control)sender, item, PlacementMode.Pointer);
         e.Handled = true;
     }
 
     /// <summary>Item menu; from the keyboard (context menu key, Shift+F10) it opens below the row.</summary>
-    void ShowItemMenu(FrameworkElement target, TodoItem item, PlacementMode placement)
+    void ShowItemMenu(Control target, TodoItem item, PlacementMode placement)
     {
         SetActive(item);
         var menu = NewMenu(target, placement);
@@ -114,25 +126,25 @@ public partial class BoardWindow
         menu.Items.Add(new Separator());
 
         var due = Item(item.HasDue ? "Change due date…" : "Add due date…", () => EditDueDate(item));
-        due.Icon = Glyph(""); // calendar
+        due.Icon = Glyph("Icon.Calendar");
         menu.Items.Add(due);
         if (item.HasDue)
             menu.Items.Add(Item("Remove due date", () => { Actions.SetDueDate(item, null); A11y.Announce(this, "Due date removed"); FocusRow(item); }));
 
         var reminder = Item(item.HasPendingReminder ? "Change reminder…" : "Add reminder…", () => EditReminder(item));
-        reminder.Icon = Glyph(""); // bell
+        reminder.Icon = Glyph("Icon.Bell");
         menu.Items.Add(reminder);
         if (item.ReminderAt != null)
             menu.Items.Add(Item("Remove reminder", () => { Actions.SetReminder(item, null); A11y.Announce(this, "Reminder removed"); FocusRow(item); }));
 
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Delete", () => DeleteWithFocus(item), "Del"));
-        menu.IsOpen = true;
+        Open(menu, target);
     }
 
-    void EditDueDate(TodoItem item)
+    async void EditDueDate(TodoItem item)
     {
-        var picked = Dialogs.Current.PickDueDate(this, item.DueDate);
+        var picked = await Dialogs.Current.PickDueDate(this, item.DueDate);
         if (picked.HasValue)
         {
             Actions.SetDueDate(item, picked.Value);
@@ -141,10 +153,10 @@ public partial class BoardWindow
         FocusRow(item);
     }
 
-    void EditReminder(TodoItem item)
+    async void EditReminder(TodoItem item)
     {
         var current = item.HasPendingReminder ? item.ReminderAt : null;
-        var picked = Dialogs.Current.PickReminder(this, current, item.DueDate);
+        var picked = await Dialogs.Current.PickReminder(this, current, item.DueDate);
         if (picked.HasValue)
         {
             Actions.SetReminder(item, picked.Value);

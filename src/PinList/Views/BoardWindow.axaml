@@ -1,0 +1,259 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList"
+        x:Class="PinList.BoardWindow"
+        x:DataType="local:Board"
+        Title="{Binding WindowTitle}"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        CanResize="True"
+        MinWidth="200" MinHeight="120"
+        FontSize="14" Foreground="{DynamicResource TextPrimary}">
+
+    <Window.Styles>
+        <!-- Rows (items and category headers): hover, highlight, keyboard focus, dragging -->
+        <Style Selector="local|AccessibleRow.row">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="6,4"/>
+            <Setter Property="FocusAdorner" Value="{StaticResource InnerFocusRing}"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="local|AccessibleRow.row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource HoverBg}"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.row.active">
+            <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.row.lifted">
+            <Setter Property="Opacity" Value="0.45"/>
+            <Setter Property="RenderTransform" Value="scale(0.98)"/>
+        </Style>
+
+        <!-- The round "complete" button: 24 px click target around a 16 px circle -->
+        <Style Selector="Button.check">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Panel Width="24" Height="24" Background="Transparent">
+                        <Ellipse Name="Circle" Width="16" Height="16" StrokeThickness="1.5"
+                                 Stroke="{DynamicResource TextSecondary}" Fill="Transparent"/>
+                        <PathIcon Name="Tick" Data="{StaticResource Icon.Checkmark}" Width="9" Height="9"
+                                  Foreground="Transparent"/>
+                    </Panel>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="Button.check:pointerover /template/ Ellipse#Circle">
+            <Setter Property="Stroke" Value="{DynamicResource Done}"/>
+        </Style>
+        <Style Selector="Button.check:pointerover /template/ PathIcon#Tick">
+            <Setter Property="Foreground" Value="{DynamicResource Done}"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.completing Button.check /template/ Ellipse#Circle">
+            <Setter Property="Fill" Value="{DynamicResource Done}"/>
+            <Setter Property="Stroke" Value="{DynamicResource Done}"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.completing Button.check /template/ PathIcon#Tick">
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.completing TextBlock.itemtext">
+            <Setter Property="TextDecorations" Value="Strikethrough"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+        </Style>
+
+        <!-- Due date and reminder chips -->
+        <Style Selector="StackPanel.chip">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="Margin" Value="0,2,12,0"/>
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="(TextElement.FontSize)" Value="11.5"/>
+        </Style>
+        <Style Selector="StackPanel.chip PathIcon">
+            <Setter Property="Width" Value="11"/>
+            <Setter Property="Height" Value="11"/>
+            <Setter Property="Margin" Value="0,1,5,0"/>
+            <Setter Property="Foreground" Value="{Binding $parent[StackPanel].(TextElement.Foreground)}"/>
+        </Style>
+        <Style Selector="StackPanel.chip.today">
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="StackPanel.chip.overdue">
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Overdue}"/>
+        </Style>
+
+        <!-- Collapse arrow -->
+        <Style Selector="Button.collapse PathIcon">
+            <Setter Property="Width" Value="9"/>
+            <Setter Property="Height" Value="9"/>
+            <Setter Property="Data" Value="{StaticResource Icon.ChevronDown}"/>
+        </Style>
+        <Style Selector="Button.collapse.collapsed PathIcon">
+            <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
+        </Style>
+
+        <!-- Resize grips along the edges (hidden while the widget is locked) -->
+        <Style Selector="Border.grip">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <LayoutTransformControl x:Name="Scaler">
+            <!-- Focusable (but not a Tab stop), so focus can leave the rows and boxes without leaving the widget -->
+            <Border x:Name="Frame" CornerRadius="10" Background="{DynamicResource BoardBg}"
+                    Focusable="True" KeyboardNavigation.IsTabStop="False" FocusAdorner="{x:Null}"
+                    BorderBrush="{DynamicResource BoardBorder}" BorderThickness="1" ClipToBounds="True">
+                <DockPanel>
+
+                    <!-- ===== Header: title + buttons (drag to move) ===== -->
+                    <Grid x:Name="Header" DockPanel.Dock="Top" Height="38" Background="Transparent"
+                          ColumnDefinitions="*,Auto" PointerPressed="Header_PointerPressed">
+                        <Panel Margin="14,0,4,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsEditingTitle}"/>
+                            <TextBox x:Name="TitleBox" Classes="bare edit" FontSize="13" FontWeight="SemiBold" Loaded="EditBox_Loaded"
+                                     IsVisible="{Binding IsEditingTitle}" AutomationProperties.Name="Window title"/>
+                        </Panel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Button Classes="icon" ToolTip.Tip="New category" AutomationProperties.Name="New category"
+                                    Click="AddCategory_Click">
+                                <PathIcon Data="{StaticResource Icon.NewCategory}"/>
+                            </Button>
+                            <Button x:Name="LockBtn" Classes="icon" Click="Lock_Click">
+                                <PathIcon x:Name="LockIcon"/>
+                            </Button>
+                            <Button x:Name="MenuBtn" Classes="icon" ToolTip.Tip="Menu" AutomationProperties.Name="Window menu"
+                                    Click="Menu_Click">
+                                <PathIcon Data="{StaticResource Icon.More}"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- ===== Categories ===== -->
+                    <ScrollViewer x:Name="Scroller" Classes="slim" Focusable="False"
+                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                  Padding="6,0,4,6">
+                        <StackPanel>
+                            <ItemsControl x:Name="CategoryList" ItemsSource="{Binding Categories}"
+                                          AutomationProperties.Name="Categories">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="local:Category">
+                                        <StackPanel Margin="0,0,0,6">
+
+                                            <!-- Category header -->
+                                            <local:AccessibleRow Classes="row header" Classes.active="{Binding IsActive}" Tag="{Binding}"
+                                                    AutomationProperties.Name="{Binding AccessibleName}"
+                                                    AutomationProperties.HelpText="Enter collapses or expands, F2 renames, Delete deletes, Alt+Up or Down moves, context menu key for more"
+                                                    KeyDown="Cat_KeyDown" GotFocus="Row_GotFocus"
+                                                    PointerPressed="Row_PointerPressed" ContextRequested="Cat_ContextRequested">
+                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                    <Ellipse Width="8" Height="8" Fill="{Binding Color}" Margin="1,0,9,0" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis"
+                                                               VerticalAlignment="Center" IsVisible="{Binding !IsEditing}"/>
+                                                    <TextBox Grid.Column="1" Classes="bare edit" FontSize="12.5" FontWeight="SemiBold" Loaded="EditBox_Loaded"
+                                                             IsVisible="{Binding IsEditing}" AutomationProperties.Name="Category name"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Items.Count}" FontSize="12"
+                                                               Foreground="{DynamicResource TextMuted}" Margin="8,0,2,0" VerticalAlignment="Center"/>
+                                                    <Button Grid.Column="3" Classes="icon collapse" Classes.collapsed="{Binding Collapsed}"
+                                                            Width="24" Height="24" Margin="0,-2" Tag="{Binding}" Focusable="False"
+                                                            ToolTip.Tip="Collapse / expand" Click="Collapse_Click"
+                                                            AutomationProperties.Name="Collapse or expand">
+                                                        <PathIcon/>
+                                                    </Button>
+                                                </Grid>
+                                            </local:AccessibleRow>
+
+                                            <!-- Items + "Add item" box -->
+                                            <StackPanel IsVisible="{Binding !Collapsed}">
+                                                <ItemsControl ItemsSource="{Binding Items}" AutomationProperties.Name="{Binding Name, StringFormat='Items in {0}'}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="local:TodoItem">
+                                                            <local:AccessibleRow Classes="row item" Classes.active="{Binding IsActive}"
+                                                                    Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
+                                                                    AutomationProperties.Name="{Binding AccessibleName}"
+                                                                    AutomationProperties.HelpText="Space completes, Enter edits, Delete deletes, Alt+Up or Down moves, context menu key for more"
+                                                                    KeyDown="Item_KeyDown" GotFocus="Row_GotFocus"
+                                                                    PointerPressed="Row_PointerPressed" ContextRequested="Item_ContextRequested">
+                                                                <Grid ColumnDefinitions="Auto,*">
+                                                                    <!-- Not a tab stop: the focused row completes with Space -->
+                                                                    <Button Classes="check" Tag="{Binding}" Click="Check_Click" Focusable="False"
+                                                                            VerticalAlignment="Top" Margin="-4,-2,6,-4" ToolTip.Tip="Complete"
+                                                                            AutomationProperties.Name="{Binding Text, StringFormat='Complete {0}'}"/>
+                                                                    <StackPanel Grid.Column="1" IsVisible="{Binding !IsEditing}">
+                                                                        <TextBlock Classes="itemtext" Text="{Binding Text}" TextWrapping="Wrap"/>
+                                                                        <WrapPanel>
+                                                                            <StackPanel Classes="chip" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
+                                                                                        IsVisible="{Binding HasDue}" ToolTip.Tip="{Binding DueHint}">
+                                                                                <PathIcon Data="{StaticResource Icon.Calendar}"/>
+                                                                                <TextBlock Text="{Binding DueText}" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Classes="chip" IsVisible="{Binding HasPendingReminder}" ToolTip.Tip="Reminder">
+                                                                                <PathIcon Data="{StaticResource Icon.Bell}"/>
+                                                                                <TextBlock Text="{Binding ReminderText}" VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                        </WrapPanel>
+                                                                    </StackPanel>
+                                                                    <TextBox Grid.Column="1" Classes="bare edit" FontSize="14" TextWrapping="Wrap" AcceptsReturn="True" Loaded="EditBox_Loaded"
+                                                                             IsVisible="{Binding IsEditing}" AutomationProperties.Name="Item text"/>
+                                                                </Grid>
+                                                            </local:AccessibleRow>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+
+                                                <Border Classes="addrow" Padding="6,4" CornerRadius="5" Background="Transparent" Tag="{Binding}">
+                                                    <Grid ColumnDefinitions="Auto,*">
+                                                        <PathIcon Data="{StaticResource Icon.Add}" Width="11" Height="11"
+                                                                  Foreground="{DynamicResource TextMuted}" Margin="2,0,13,0" VerticalAlignment="Center"/>
+                                                        <TextBox Grid.Column="1" Classes="bare addbox" FontSize="14" TextWrapping="Wrap" AcceptsReturn="True"
+                                                                 PlaceholderText="Add item…" Tag="{Binding}"
+                                                                 ToolTip.Tip="Enter adds the item · Shift+Enter starts a new line"
+                                                                 AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- Empty space at the bottom: a category can be dropped here -->
+                            <Border x:Name="EndZone" Height="40" Background="Transparent"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </LayoutTransformControl>
+
+        <!-- Drop indicator for drag and drop (a line that glides to where the row would go) -->
+        <Canvas x:Name="DropLayer" IsHitTestVisible="False">
+            <Border x:Name="DropLine" Height="2" CornerRadius="1" Background="{DynamicResource Accent}" IsVisible="False">
+                <Border.Transitions>
+                    <Transitions>
+                        <DoubleTransition Property="Canvas.Top" Duration="0:0:0.1" Easing="CubicEaseOut"/>
+                    </Transitions>
+                </Border.Transitions>
+            </Border>
+        </Canvas>
+
+        <!-- Resize grips along the edges and corners -->
+        <Panel x:Name="Grips">
+            <Border Classes="grip" Tag="W" Width="6" HorizontalAlignment="Left" Cursor="SizeWestEast"/>
+            <Border Classes="grip" Tag="E" Width="6" HorizontalAlignment="Right" Cursor="SizeWestEast"/>
+            <Border Classes="grip" Tag="N" Height="6" VerticalAlignment="Top" Cursor="SizeNorthSouth"/>
+            <Border Classes="grip" Tag="S" Height="6" VerticalAlignment="Bottom" Cursor="SizeNorthSouth"/>
+            <Border Classes="grip" Tag="NW" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="TopLeftCorner"/>
+            <Border Classes="grip" Tag="NE" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="TopRightCorner"/>
+            <Border Classes="grip" Tag="SW" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="BottomLeftCorner"/>
+            <Border Classes="grip" Tag="SE" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="BottomRightCorner"/>
+        </Panel>
+
+        <local:LiveRegion/>
+    </Panel>
+</Window>

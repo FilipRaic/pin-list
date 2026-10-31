@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v1.1.0 (on a commit that is on master) to build the exe and publish a GitHub release.
+# Push a tag like v2.0.0 (on a commit that is on master) to build every app and publish a GitHub release.
 on:
   push:
     tags: [ 'v*' ]
@@ -9,35 +9,41 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: windows-latest
+  check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # full history, needed for the master check below
 
       - name: Make sure the tag points to a commit on master
-        shell: pwsh
         run: |
-          git merge-base --is-ancestor $env:GITHUB_SHA origin/master
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Tag ${{ github.ref_name }} is not on master - no release is created."
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/master; then
+            echo "::error::Tag ${GITHUB_REF_NAME} is not on master - no release is created."
             exit 1
-          }
+          fi
 
-      - name: Make sure the tag matches the version in PinList.csproj
-        shell: pwsh
+      - name: Make sure the tag matches the version in Version.props
         run: |
-          $tag = "${{ github.ref_name }}".TrimStart('v')
-          $version = ([xml](Get-Content src/PinList/PinList.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
-          if ($tag -ne $version) {
-            Write-Error "Tag v$tag doesn't match <Version>$version</Version> in PinList.csproj. Update the csproj (and CHANGELOG.md) first."
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(grep -oP '(?<=<Version>)[^<]+' Version.props | head -1)
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag v$tag doesn't match <Version>$version</Version> in Version.props. Update it (and CHANGELOG.md) first."
             exit 1
-          }
+          fi
+
+  windows:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Install the .NET Android workload
+        run: dotnet workload install android
 
       - name: Test
         run: dotnet test PinList.sln -c Release
@@ -45,9 +51,10 @@ jobs:
       - name: Publish
         shell: pwsh
         run: |
-          # Single-file exe; needs the .NET 10 Desktop Runtime on the user's PC
-          dotnet publish src/PinList/PinList.csproj -c Release -r win-x64 --self-contained false `
-            -p:PublishSingleFile=true -o out
+          # Single-file exe; needs the .NET 10 Desktop Runtime on the user's PC (WinForms is used for the tray icon).
+          # Avalonia's native libraries (Skia, HarfBuzz) go inside the exe and are unpacked on first start.
+          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out
 
           New-Item -ItemType Directory -Force release | Out-Null
           Copy-Item out/PinList.exe release/PinList.exe
@@ -56,9 +63,87 @@ jobs:
           $hash = (Get-FileHash release/PinList.exe -Algorithm SHA256).Hash.ToLower()
           "$hash  PinList.exe" | Out-File release/PinList.exe.sha256 -Encoding ascii -NoNewline
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: release/*
+
+  mac:
+    needs: check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test the shared code on macOS
+        run: dotnet test tests/PinList.Core.Tests -c Release
+
+      - name: Build PinList.app
+        run: |
+          bash scripts/package-mac.sh "${GITHUB_REF_NAME#v}" release
+          cd release && shasum -a 256 PinList-mac-arm64.zip > PinList-mac-arm64.zip.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac
+          path: release/*
+
+  android:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install the .NET Android workload
+        run: dotnet workload install android
+
+      # Every release must be signed with the same key, or phones refuse to update the app.
+      # The key lives in the repository secrets (see "Releasing a new version" in the README).
+      - name: Build the APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::The ANDROID_KEYSTORE_BASE64 secret is missing - see the README."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/pinlist.keystore"
+          dotnet publish src/PinList.Android/PinList.Android.csproj -c Release -f net10.0-android -o out \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$RUNNER_TEMP/pinlist.keystore" \
+            -p:AndroidSigningStorePass=env:ANDROID_KEYSTORE_PASSWORD \
+            -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS" \
+            -p:AndroidSigningKeyPass=env:ANDROID_KEYSTORE_PASSWORD
+          rm "$RUNNER_TEMP/pinlist.keystore"
+
+          mkdir -p release
+          cp out/com.pinlist.app-Signed.apk release/PinList-android.apk
+          cd release && sha256sum PinList-android.apk > PinList-android.apk.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: release/*
+
+  publish:
+    needs: [ windows, mac, android ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
       - uses: softprops/action-gh-release@v3
         with:
-          files: |
-            release/PinList.exe
-            release/PinList.exe.sha256
+          files: release/*
           generate_release_notes: true

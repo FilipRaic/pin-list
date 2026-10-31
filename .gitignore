@@ -21,6 +21,10 @@ TestResults/
 coverage.json
 coverage.cobertura.xml
 
+# Signing keys (the Android release key lives in the GitHub secrets, never in the repo)
+*.keystore
+*.jks
+
 # Brainstorming mockups
 .superpowers/
 
@@ -28,3 +32,4 @@ coverage.cobertura.xml
 *.md
 !README.md
 !CHANGELOG.md
+!docs/data-format.md

@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList"
+        x:Class="PinList.DateDialog"
+        Title="PinList"
+        WindowDecorations="None" Background="Transparent" TransparencyLevelHint="Transparent"
+        CanResize="False" ShowInTaskbar="False" Topmost="True"
+        SizeToContent="WidthAndHeight" WindowStartupLocation="CenterOwner"
+        FontSize="13" Foreground="{DynamicResource MenuText}">
+    <Window.Styles>
+        <!-- Small "chip" buttons for the quick choices (Today, Tomorrow, ...) -->
+        <Style Selector="Button.chip">
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+        <Style Selector="Calendar">
+            <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+    </Window.Styles>
+    <Panel>
+        <LayoutTransformControl x:Name="Scaler">
+            <Border Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}"
+                    BorderThickness="1" CornerRadius="10" Padding="20,18,20,16">
+                <StackPanel Width="280">
+                    <TextBlock x:Name="TitleText" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                    <!-- Quick choices, added from code -->
+                    <WrapPanel x:Name="QuickPanel" Margin="0,0,0,6"/>
+                    <Calendar x:Name="Cal" HorizontalAlignment="Center" Focusable="True"
+                              AutomationProperties.Name="Date"
+                              AutomationProperties.HelpText="Arrow keys pick a day, Page Up and Page Down change the month"
+                              SelectionMode="SingleDate" FirstDayOfWeek="Monday" IsTodayHighlighted="True"/>
+                    <!-- Reminder time -->
+                    <Grid x:Name="TimeRow" Margin="0,12,0,0" IsVisible="False" ColumnDefinitions="Auto,*">
+                        <TextBlock Text="Time" VerticalAlignment="Center" Margin="2,0,12,0"/>
+                        <Border Grid.Column="1" Background="{DynamicResource ControlBg}" BorderBrush="{DynamicResource ControlBorder}"
+                                BorderThickness="1" CornerRadius="5" Padding="8,5">
+                            <TextBox x:Name="TimeBox" Classes="bare" FontSize="13" PlaceholderText="e.g. 9:30 or 17:00"
+                                     Foreground="{DynamicResource MenuText}" CaretBrush="{DynamicResource MenuText}"
+                                     AutomationProperties.Name="Time" AutomationProperties.HelpText="For example 9:30 or 17:00"/>
+                        </Border>
+                    </Grid>
+                    <TextBlock x:Name="ErrorText" Foreground="{DynamicResource DangerFill}" FontSize="12" TextWrapping="Wrap"
+                               Margin="2,8,0,0" IsVisible="False"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button x:Name="CancelButton" Classes="dialog" Content="Cancel" IsCancel="True"/>
+                        <Button x:Name="SaveButton" Classes="dialog accent" Content="Save" Margin="8,0,0,0" IsDefault="True"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </LayoutTransformControl>
+        <local:LiveRegion/>
+    </Panel>
+</Window>

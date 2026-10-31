@@ -1,0 +1,10 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="PinList.App"
+             RequestedThemeVariant="Dark">
+    <!-- Colors (BoardBg, MenuBg, ArcBg, ...) are set from code in Themes (PinList.UI) -->
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://PinList.UI/Styles/Common.axaml"/>
+    </Application.Styles>
+</Application>

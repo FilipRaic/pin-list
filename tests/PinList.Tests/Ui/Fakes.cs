@@ -1,4 +1,4 @@
-using System.Windows;
+using Avalonia.Controls;
 
 namespace PinList.Tests;
 
@@ -6,6 +6,7 @@ namespace PinList.Tests;
 public sealed class FakeTray : ITrayIcon
 {
     public readonly List<(string title, string text)> Notifications = new();
+    public IReadOnlyList<TrayEntry> Menu = Array.Empty<TrayEntry>();
     public bool Disposed;
 
     public event Action? LeftClick;
@@ -13,6 +14,7 @@ public sealed class FakeTray : ITrayIcon
     public event Action? NotificationClicked;
 
     public void ShowNotification(string title, string text) => Notifications.Add((title, text));
+    public void SetMenu(IReadOnlyList<TrayEntry> entries) => Menu = entries;
     public void Dispose() => Disposed = true;
 
     public void ClickLeft() => LeftClick?.Invoke();
@@ -40,33 +42,33 @@ public sealed class FakeDialogs : IDialogs
         SaveFileAnswer = OpenFileAnswer = null;
     }
 
-    public int Choose(Window? owner, string title, string message, int defaultIndex, params (string text, DialogButtonKind kind)[] buttons)
+    public Task<int> Choose(Window? owner, string title, string message, int defaultIndex, params (string text, DialogButtonKind kind)[] buttons)
     {
         Shown.Add($"{title}: {message}");
-        return ChooseAnswer(title);
+        return Task.FromResult(ChooseAnswer(title));
     }
 
-    public DateTime? PickDueDate(Window owner, DateTime? current)
+    public Task<DateTime?> PickDueDate(Window owner, DateTime? current)
     {
         Shown.Add("due date");
-        return DueDateAnswer;
+        return Task.FromResult(DueDateAnswer);
     }
 
-    public DateTime? PickReminder(Window owner, DateTime? current, DateTime? dueDate)
+    public Task<DateTime?> PickReminder(Window owner, DateTime? current, DateTime? dueDate)
     {
         Shown.Add("reminder");
-        return ReminderAnswer;
+        return Task.FromResult(ReminderAnswer);
     }
 
-    public string? SaveFile(Window? owner, string title, string fileName, string filter)
+    public Task<string?> SaveFile(Window? owner, string title, string fileName)
     {
         Shown.Add("save: " + fileName);
-        return SaveFileAnswer;
+        return Task.FromResult(SaveFileAnswer);
     }
 
-    public string? OpenFile(Window? owner, string title, string filter)
+    public Task<string?> OpenFile(Window? owner, string title)
     {
         Shown.Add("open");
-        return OpenFileAnswer;
+        return Task.FromResult(OpenFileAnswer);
     }
 }

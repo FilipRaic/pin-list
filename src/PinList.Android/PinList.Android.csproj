@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\Version.props" />
+
+  <!-- The Android app. The screens are PhoneView (PinList.UI); this project only connects it to Android:
+       the data folder, notifications and reminder alarms. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>PinList.Android</RootNamespace>
+    <AssemblyName>PinList.Android</AssemblyName>
+    <ApplicationId>com.pinlist.app</ApplicationId>
+    <ApplicationTitle>PinList</ApplicationTitle>
+    <!-- One version for every platform (Version.props). ApplicationVersion is the number Android compares on
+         update; it comes from the version too (2.0.0 -> 20000, 2.1.3 -> 20103), so it always goes up. -->
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
+    <ApplicationVersion>$([MSBuild]::Add($([MSBuild]::Add($([MSBuild]::Multiply($([System.Version]::Parse($(Version)).Major), 10000)), $([MSBuild]::Multiply($([System.Version]::Parse($(Version)).Minor), 100)))), $([System.Version]::Parse($(Version)).Build)))</ApplicationVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <!-- data.json is read with System.Text.Json's reflection; keep the model types whole when trimming -->
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <TrimmerRootAssembly Include="PinList.Core" RootMode="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PinList.Core\PinList.Core.csproj" />
+    <ProjectReference Include="..\PinList.UI\PinList.UI.csproj" />
+  </ItemGroup>
+
+</Project>

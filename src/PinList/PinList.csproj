@@ -1,29 +1,54 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\..\Version.props" />
+
+  <!--
+    The desktop app (Windows and macOS). The Windows build (net10.0-windows) also uses Win32 and the WinForms
+    tray icon, so Windows behaves exactly like before; the net10.0 build is the macOS app.
+  -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>PinList</RootNamespace>
     <AssemblyName>PinList</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- WFO0003 asks WinForms apps to set DPI awareness in code. This is a WPF app (WinForms is only used for
-         the tray icon), and WPF reads DPI awareness from app.manifest, so the manifest setting is correct. -->
-    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
 
-    <Version>1.1.1</Version>
     <Product>PinList</Product>
-    <Description>To-do list widgets that live on the Windows desktop.</Description>
+    <Description>To-do list widgets that live on the desktop.</Description>
     <Copyright>Copyright © 2026 Filip Raić</Copyright>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WinForms is only used for the tray icon; DPI awareness comes from app.manifest -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+    <!-- WinForms and Avalonia both have these names; the app uses Avalonia's -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PinList.Core\PinList.Core.csproj" />
+    <ProjectReference Include="..\PinList.UI\PinList.UI.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="PinList.Tests" />
-    <Resource Include="Assets\app.ico" />
+    <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
 
 </Project>

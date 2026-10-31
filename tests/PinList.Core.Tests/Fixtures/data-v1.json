@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "settings": {
+    "theme": "Light"
+  },
+  "boards": [
+    {
+      "id": "b-work",
+      "title": "Work",
+      "x": 1580,
+      "y": 24,
+      "width": 320,
+      "height": 480,
+      "locked": true,
+      "style": "Blue",
+      "transparent": false,
+      "categories": [
+        {
+          "id": "c-week",
+          "name": "This week",
+          "color": "#60CDFF",
+          "collapsed": false,
+          "items": [
+            {
+              "id": "i-review",
+              "text": "Review PR",
+              "createdAt": "2026-10-20T09:15:00",
+              "dueDate": "2026-10-30T00:00:00",
+              "reminderAt": null,
+              "reminderShown": false
+            },
+            {
+              "id": "i-invoice",
+              "text": "Send the invoice\nto the client",
+              "createdAt": "2026-10-21T14:00:00",
+              "dueDate": "2026-11-02T00:00:00",
+              "reminderAt": "2026-11-02T09:00:00",
+              "reminderShown": false
+            },
+            {
+              "id": "i-call",
+              "text": "Call the bank",
+              "createdAt": "2026-10-22T08:30:00",
+              "dueDate": null,
+              "reminderAt": "2026-10-25T10:00:00",
+              "reminderShown": true
+            }
+          ]
+        },
+        {
+          "id": "c-later",
+          "name": "Later",
+          "color": "#F1707A",
+          "collapsed": true,
+          "items": [
+            {
+              "id": "i-plan",
+              "text": "Plan Q1",
+              "createdAt": "2026-10-23T17:45:00",
+              "dueDate": null,
+              "reminderAt": null,
+              "reminderShown": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b-home",
+      "title": "",
+      "x": 100.5,
+      "y": 200,
+      "width": 280,
+      "height": 360,
+      "locked": false,
+      "style": "Dark",
+      "transparent": true,
+      "categories": [
+        {
+          "id": "c-empty",
+          "name": "General",
+          "color": "#A0A0A0",
+          "collapsed": false,
+          "items": []
+        }
+      ]
+    }
+  ],
+  "archive": [
+    {
+      "text": "Book flights",
+      "createdAt": "2026-10-01T10:00:00",
+      "completedAt": "2026-10-24T18:05:00",
+      "dueDate": "2026-10-25T00:00:00",
+      "categoryId": "c-week",
+      "categoryName": "This week",
+      "categoryColor": "#60CDFF",
+      "boardId": "b-work",
+      "boardTitle": "Work"
+    },
+    {
+      "text": "Old task",
+      "createdAt": "2026-09-01T08:00:00",
+      "completedAt": "2026-09-02T09:00:00",
+      "dueDate": null,
+      "categoryId": "",
+      "categoryName": "Deleted",
+      "categoryColor": "#A0A0A0",
+      "boardId": "",
+      "boardTitle": ""
+    }
+  ]
+}
