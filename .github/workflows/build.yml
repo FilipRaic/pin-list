@@ -36,6 +36,14 @@ jobs:
           -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
           -p:Threshold=99%2c92 -p:ThresholdType=line%2cbranch -p:ThresholdStat=total
 
+      # Same publish as the release (single-file exe), so a broken Windows release build shows up before tagging
+      - name: Publish PinList.exe
+        shell: pwsh
+        run: |
+          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$env:RUNNER_TEMP/windows"
+          if (-not (Test-Path "$env:RUNNER_TEMP/windows/PinList.exe")) { throw "PinList.exe was not built" }
+
   # PinList.Core has no UI, so it must build and pass its tests on every platform the apps run on
   core:
     strategy:
@@ -51,3 +59,35 @@ jobs:
 
       - name: Test Core
         run: dotnet test tests/PinList.Core.Tests -c Release
+
+  # Builds PinList.app with the same script as the release, so a broken Mac build shows up before tagging
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build PinList.app
+        run: bash scripts/package-mac.sh 0.0.0-ci "$RUNNER_TEMP/mac"
+
+  # Same publish as the release, on the same OS (trimming problems only show up here, not in a normal build).
+  # The signing key isn't used here, so the APK gets the debug key.
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install the .NET Android workload
+        run: dotnet workload install android
+
+      - name: Build the APK
+        run: |
+          dotnet publish src/PinList.Android/PinList.Android.csproj -c Release -f net10.0-android -o "$RUNNER_TEMP/android"
+          test -f "$RUNNER_TEMP/android/com.pinlist.app-Signed.apk" || { echo "::error::The APK was not built"; exit 1; }

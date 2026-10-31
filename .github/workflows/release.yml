@@ -145,5 +145,13 @@ jobs:
 
       - uses: softprops/action-gh-release@v3
         with:
-          files: release/*
+          # Every app and its checksum, by name: the release fails instead of going out with a file missing
+          files: |
+            release/PinList.exe
+            release/PinList.exe.sha256
+            release/PinList-mac-arm64.zip
+            release/PinList-mac-arm64.zip.sha256
+            release/PinList-android.apk
+            release/PinList-android.apk.sha256
+          fail_on_unmatched_files: true
           generate_release_notes: true

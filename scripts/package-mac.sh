@@ -6,7 +6,10 @@ VERSION="$1"
 OUT="${2:-release}"
 WORK="$(mktemp -d)"
 
-dotnet publish src/PinList/PinList.csproj -c Release -f net10.0 -r osx-arm64 --self-contained true -o "$WORK/publish"
+# Restore runs for every target framework, including net10.0-windows, even though only net10.0 is built.
+# EnableWindowsTargeting lets that restore work on macOS (NETSDK1100 otherwise).
+dotnet publish src/PinList/PinList.csproj -c Release -f net10.0 -r osx-arm64 --self-contained true -o "$WORK/publish" \
+  -p:EnableWindowsTargeting=true
 
 APP="$WORK/PinList.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"

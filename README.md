@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/social-preview.png" width="100%" alt="PinList – to-do lists that live on your Windows desktop">
+  <img src="docs/social-preview.png" width="100%" alt="PinList – to-do lists on your desktop (Windows and macOS) and on your Android phone">
 </p>
 
 # PinList
@@ -26,7 +26,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 | | |
 |---|---|
 | **Windows** | Windows 10 or 11 (x64) and the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (free, from Microsoft). If it's missing, Windows offers a download link the first time you start PinList. |
-| **macOS** | A Mac with Apple Silicon (M1 or newer). Nothing else to install. |
+| **macOS** | macOS 12 Monterey or newer, on a Mac with Apple Silicon (M1 or newer). Nothing else to install. |
 | **Android** | Android 8.0 or newer. |
 
 ## Download
@@ -223,14 +223,14 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 (`keytool` comes with Android Studio: `C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe`.) Then add three secrets under **Settings → Secrets and variables → Actions**: `ANDROID_KEYSTORE_BASE64` (the clipboard), `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_ALIAS` (`pinlist`).
 
-Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, so a broken build shows up right away. Dependabot opens pull requests when the GitHub Actions or test packages have updates.
+Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does, so a broken build shows up before you tag. Dependabot opens pull requests when the GitHub Actions or test packages have updates.
 
 ## Project structure
 
 ```
 pin-list/
 ├─ .github/                 CI (build + tests, releases) and Dependabot
-├─ docs/                    data-format.md, social preview image
+├─ docs/                    data-format.md, social preview image (social-preview.html is its source)
 ├─ scripts/                 run.bat, publish.bat, package-mac.sh
 ├─ Version.props            the version of every app
 ├─ src/PinList.Core/        no UI, runs everywhere
