@@ -1,35 +1,40 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Tests of the desktop app. UI tests run the real app on Avalonia's headless platform (no window ever
+       shows on the screen). -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <UseWPF>true</UseWPF>
+    <OutputType>Exe</OutputType>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <!-- Coverage counts the app and PinList.UI; PinList.Core is covered by PinList.Core.Tests -->
+    <Include>[PinList]*,[PinList.UI]*</Include>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- WPF tests: WinForms/Drawing types (only needed by the app for the tray icon) would clash with WPF names -->
+    <!-- WinForms and Avalonia both have these names; the tests use Avalonia's -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared with PinList.Core.Tests: each test gets its own data folder and fresh data -->
+    <Compile Include="..\PinList.Core.Tests\TestSetup.cs" Link="TestSetup.cs" />
+    <Compile Include="..\PinList.Core.Tests\ManualTimer.cs" Link="ManualTimer.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
-    <PackageReference Include="xunit" Version="2.9.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
     <PackageReference Include="coverlet.msbuild" Version="10.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- WPF tests: WinForms/Drawing types (only needed by the app for the tray icon) would clash with WPF names -->
-    <Using Remove="System.Windows.Forms" />
-    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

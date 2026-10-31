@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+  <!-- Avalonia's activity is an AppCompatActivity, so the theme must come from AppCompat -->
+  <style name="PinListTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <item name="android:windowBackground">@android:color/black</item>
+  </style>
+</resources>

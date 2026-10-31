@@ -1,0 +1,222 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList">
+
+    <!-- The app's own look, shared by every window. Colors come from Themes (DynamicResource keys). -->
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://PinList.UI/Styles/Icons.axaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Keyboard focus ring, drawn on top of the element (only for keyboard focus, not mouse clicks) -->
+            <FocusAdornerTemplate x:Key="FocusRing">
+                <Border Margin="-2" CornerRadius="6" BorderThickness="2" BorderBrush="{DynamicResource Accent}"/>
+            </FocusAdornerTemplate>
+            <FocusAdornerTemplate x:Key="InnerFocusRing">
+                <Border CornerRadius="5" BorderThickness="2" BorderBrush="{DynamicResource Accent}"/>
+            </FocusAdornerTemplate>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- ================= Icons ================= -->
+
+    <Style Selector="PathIcon">
+        <Setter Property="Width" Value="14"/>
+        <Setter Property="Height" Value="14"/>
+    </Style>
+
+    <!-- ================= Buttons ================= -->
+
+    <!-- Icon-only button. Always set AutomationProperties.Name, otherwise screen readers read nothing useful. -->
+    <Style Selector="Button.icon">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="28"/>
+        <Setter Property="Height" Value="26"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FocusAdorner" Value="{StaticResource FocusRing}"/>
+    </Style>
+    <Style Selector="Button.icon /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource HoverBg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="Button.icon PathIcon">
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Height" Value="12"/>
+    </Style>
+
+    <!-- Buttons of dialogs and the archive window -->
+    <Style Selector="Button.dialog">
+        <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="16,6"/>
+        <Setter Property="MinWidth" Value="80"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="FocusAdorner" Value="{StaticResource FocusRing}"/>
+    </Style>
+    <Style Selector="Button.dialog.accent">
+        <Setter Property="Background" Value="{DynamicResource AccentFill}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+    </Style>
+    <Style Selector="Button.dialog.danger">
+        <Setter Property="Background" Value="{DynamicResource DangerFill}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerFill}"/>
+        <Setter Property="Foreground" Value="{DynamicResource DangerText}"/>
+    </Style>
+    <!-- Keep the button's own colors on hover/press (Fluent would replace them); only dim it a little -->
+    <Style Selector="Button.dialog:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+        <Setter Property="BorderBrush" Value="{TemplateBinding BorderBrush}"/>
+        <Setter Property="Foreground" Value="{TemplateBinding Foreground}"/>
+        <Setter Property="Opacity" Value="0.85"/>
+    </Style>
+    <Style Selector="Button.dialog:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+        <Setter Property="BorderBrush" Value="{TemplateBinding BorderBrush}"/>
+        <Setter Property="Foreground" Value="{TemplateBinding Foreground}"/>
+        <Setter Property="Opacity" Value="0.7"/>
+    </Style>
+    <Style Selector="Button.dialog:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}"/>
+    </Style>
+
+    <!-- ================= Text boxes ================= -->
+
+    <!-- Borderless TextBox that looks like plain text -->
+    <Style Selector="TextBox.bare">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+    </Style>
+    <Style Selector="TextBox.bare /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.bare:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.bare:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.bare:pointerover">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="TextBox.bare:focus">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+    </Style>
+    <Style Selector="TextBox.bare /template/ TextBlock#PART_Placeholder">
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+    </Style>
+
+    <!-- Search box in the archive window -->
+    <Style Selector="TextBox.search">
+        <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource ArcText}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="MinHeight" Value="0"/>
+    </Style>
+    <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+    </Style>
+    <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="TextBox.search:pointerover, TextBox.search:focus">
+        <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+    </Style>
+    <Style Selector="TextBox.search /template/ TextBlock#PART_Placeholder">
+        <Setter Property="Foreground" Value="{DynamicResource ArcMuted}"/>
+    </Style>
+
+    <!-- ================= Slim scrollbar ================= -->
+
+    <Style Selector="ScrollBar.slim">
+        <Setter Property="AllowAutoHide" Value="False"/>
+    </Style>
+    <Style Selector="ScrollViewer.slim /template/ ScrollBar">
+        <Setter Property="Width" Value="6"/>
+        <Setter Property="MinWidth" Value="6"/>
+        <Setter Property="AllowAutoHide" Value="False"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Track Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True"
+                       Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                       Value="{TemplateBinding Value, Mode=TwoWay}" ViewportSize="{TemplateBinding ViewportSize}">
+                    <Thumb>
+                        <Thumb.Template>
+                            <ControlTemplate>
+                                <Border CornerRadius="3" Background="{DynamicResource ScrollThumb}"/>
+                            </ControlTemplate>
+                        </Thumb.Template>
+                    </Thumb>
+                </Track>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- ================= Menus and tooltips (colors: Themes.MapFluent) ================= -->
+
+    <Style Selector="MenuFlyoutPresenter, ContextMenu">
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="0,4"/>
+        <Setter Property="MinWidth" Value="200"/>
+        <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style Selector="MenuItem">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Margin" Value="4,1"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="CornerRadius" Value="5"/>
+    </Style>
+    <Style Selector="MenuItem:disabled">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+    <Style Selector="ContextMenu Separator, MenuItem Separator">
+        <Setter Property="Margin" Value="12,4"/>
+        <Setter Property="Background" Value="{DynamicResource MenuBorder}"/>
+    </Style>
+    <Style Selector="ToolTip">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="MaxWidth" Value="420"/>
+    </Style>
+</Styles>

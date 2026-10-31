@@ -1,8 +1,11 @@
 using System;
+#if WINDOWS
 using Microsoft.Win32;
+#endif
 
 namespace PinList;
 
+#if WINDOWS
 /// <summary>Windows settings PinList follows, read from the registry (there's no WPF API for them).</summary>
 public static class WindowsSettings
 {
@@ -32,3 +35,4 @@ public static class WindowsSettings
     /// <summary>Dark unless the value says light (dark is also the default when the value is missing).</summary>
     internal static bool ParseAppsUseDark(object? value) => value is not int light || light == 0;
 }
+#endif

@@ -1,24 +1,18 @@
 using System.Reflection;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Media;
-using PinList;
+using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using Xunit;
-using Button = System.Windows.Controls.Button;
-using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using MouseEventArgs = System.Windows.Input.MouseEventArgs;
-using Point = System.Windows.Point;
-using TextBox = System.Windows.Controls.TextBox;
 
 namespace PinList.Tests;
 
-    /// <summary>
+/// <summary>
 /// Base for tests that use real windows of the running test app (see <see cref="UiHost"/>).
-/// Each test starts with no widgets, empty data in its own folder, and real input replaced by simulated input.
-/// Test bodies run on the app's thread: wrap them in <c>Ui(() => …)</c>.
+/// Each test starts with no widgets and empty data in its own folder. Mark test methods with [AvaloniaFact],
+/// so they run on the app's UI thread.
 /// </summary>
 public abstract class UiTest : IDisposable
 {
@@ -26,70 +20,64 @@ public abstract class UiTest : IDisposable
     protected readonly List<(string message, bool isError)> Messages = new();
     internal readonly ManualSaver Saver = new();
 
-    /// <summary>Modifier keys the app sees as held.</summary>
-    protected ModifierKeys Held = ModifierKeys.None;
-
-    protected static App App => PinList.App.Instance;
+    protected static App App => App.Instance;
     protected static FakeDialogs Dialogs => UiHost.Dialogs;
     protected static FakeTray Tray => UiHost.Tray;
 
     protected UiTest()
     {
+        UiHost.EnsureStarted();
         while (UiHost.UnhandledErrors.TryDequeue(out _)) { }
-        UiHost.Run(() =>
-        {
-            ResetApp();
-            Store.UseDirectory(Dir);
-            Store.Saver = Saver;
-            Store.Notify = (m, e) => Messages.Add((m, e));
-            InputState.Modifiers = () => Held;
-        });
+        ResetApp();
+        Store.UseDirectory(Dir);
+        Store.Saver = Saver;
+        Store.Notify = (m, e) => Messages.Add((m, e));
     }
 
     public virtual void Dispose()
     {
-        UiHost.Run(() =>
-        {
-            UiHost.Pump();
-            ResetApp();
-        });
+        Pump();
+        ResetApp();
         try { Directory.Delete(Dir, true); } catch { }
         var errors = UiHost.UnhandledErrors.ToArray();
         while (UiHost.UnhandledErrors.TryDequeue(out _)) { }
         Assert.Empty(errors);
-        Assert.Empty(PendingDialogs); // every dialog the test expected did open
     }
 
     static void ResetApp()
     {
-        var app = PinList.App.Instance;
-        foreach (var menu in OpenMenus()) menu.IsOpen = false;
-        foreach (var w in app.Windows.OfType<Window>().ToList())
+        var app = App.Instance;
+        BoardWindow.EndDrag(); // a test that failed in the middle of a drag must not leave it going
+        foreach (var w in app.OpenWindows.ToList())
         {
-            if (w is BoardWindow b) b.CloseForReload();
-            else if (w.Left > -30000) w.Close(); // keep the tray menu's invisible host window
+            w.LastMenu?.Close();
+            w.CloseForReload();
         }
-        UiHost.Pump();
-        PinList.App.ShuttingDown = false;
+        app.LastTrayMenu?.Close();
+        app.Archive?.Close();
+        DialogHost.Current?.Close();
+        Pump();
+        App.ShuttingDown = false;
         app.ReminderService.Stop();
         app.ReminderService.Clock = () => DateTime.Now;
         Actions.ClearUndo();
-        InputState.Reset();
-        Themes.ForceHighContrast = null;
+        BoardWindow.SetActive(null);
+        BoardWindow.CompleteDelay = TimeSpan.FromMilliseconds(900);
+        BoardWindow.SystemResize = true;
+        Themes.ContrastSource = () => null;
         Themes.SystemDarkSource = () => true;
         A11y.TextScaleSource = () => 1.0;
         A11y.RefreshTextScale();
+        A11y.LastAnnouncement = null;
         DateDialog.Clock = DateDialog.SystemClock;
-        UiHost.Dialogs.Reset();
-        UiHost.Tray.Notifications.Clear();
+        Dialogs.Reset();
+        Tray.Notifications.Clear();
         UiHost.OpenedFolders.Clear();
         UiHost.ShutdownRequests = 0;
         Store.Data.Settings.Theme = "Dark";
         app.ApplyTheme();
     }
 
-    protected static void Ui(Action action) => UiHost.Run(action);
-    protected static T Ui<T>(Func<T> func) => UiHost.Run(func);
     protected static void Pump() => UiHost.Pump();
 
     // ================= Widgets =================
@@ -122,150 +110,82 @@ public abstract class UiTest : IDisposable
     protected static BoardWindow OpenNew(params (string name, string[] items)[] categories) => Open(MakeBoard(categories));
 
     /// <summary>The focusable row of an item or category.</summary>
-    protected static AccessibleRow Row(Window w, object tag) =>
+    protected static AccessibleRow Row(Visual w, object tag) =>
         Find<AccessibleRow>(w, r => ReferenceEquals(r.Tag, tag)) ?? throw new InvalidOperationException("No row for " + tag);
 
-    protected static T? Find<T>(DependencyObject root, Func<T, bool>? match = null) where T : DependencyObject =>
-        FindAll<T>(root).FirstOrDefault(x => match == null || match(x));
+    protected static T? Find<T>(Visual root, Func<T, bool>? match = null) where T : class =>
+        root.GetVisualDescendants().OfType<T>().FirstOrDefault(x => match == null || match(x));
 
-    protected static IEnumerable<T> FindAll<T>(DependencyObject root) where T : DependencyObject
-    {
-        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is T t) yield return t;
-            foreach (var deeper in FindAll<T>(child)) yield return deeper;
-        }
-    }
+    protected static IEnumerable<T> FindAll<T>(Visual root) => root.GetVisualDescendants().OfType<T>();
 
-    protected static T Named<T>(FrameworkElement root, string name) where T : class =>
-        root.FindName(name) as T ?? throw new InvalidOperationException("No element " + name);
+    protected static T Named<T>(Control root, string name) where T : Control =>
+        root.FindControl<T>(name) ?? throw new InvalidOperationException("No element " + name);
 
-    protected static TextBox AddBox(Window w, Category cat) =>
-        Find<TextBox>(w, t => t.Name == "AddBox" && ReferenceEquals(t.Tag, cat))!;
+    protected static TextBox AddBox(Visual w, Category cat) =>
+        Find<TextBox>(w, t => t.Classes.Contains("addbox") && ReferenceEquals(t.Tag, cat))!;
 
     /// <summary>The visible edit box (item text, category name or title) for a data object.</summary>
-    protected static TextBox EditBox(Window w, object dataContext) =>
-        Find<TextBox>(w, t => t.IsVisible && t.Name != "AddBox" && ReferenceEquals(t.DataContext, dataContext))
+    protected static TextBox EditBox(Visual w, object dataContext) =>
+        Find<TextBox>(w, t => t.Classes.Contains("edit") && t.IsEffectivelyVisible && ReferenceEquals(t.DataContext, dataContext))
         ?? throw new InvalidOperationException("No visible edit box");
+
+    /// <summary>The element that has keyboard focus in a window.</summary>
+    protected static IInputElement? Focused(TopLevel w) => w.FocusManager?.GetFocusedElement();
+
+    protected static string? NameOf(Control c) => AutomationProperties.GetName(c);
 
     // ================= Simulated input =================
 
-    /// <summary>Presses a key on an element like the keyboard does (preview event, then the normal one).</summary>
-    protected void Press(IInputElement target, Key key, ModifierKeys mods = ModifierKeys.None)
+    /// <summary>Presses a key on an element like the keyboard does (tunnelling through the window, then bubbling).</summary>
+    protected static void Press(Interactive target, Key key, KeyModifiers mods = KeyModifiers.None)
     {
-        Held = mods;
-        var source = PresentationSource.FromVisual((Visual)target) ?? PresentationSource.CurrentSources.Cast<PresentationSource>().First();
-        // Alt+key and F10 arrive as Key.System with the real key in SystemKey
-        bool system = mods.HasFlag(ModifierKeys.Alt) || key == Key.F10;
-        KeyEventArgs Make(RoutedEvent e)
-        {
-            var args = new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, system ? Key.System : key) { RoutedEvent = e };
-            if (system) typeof(KeyEventArgs).GetField("_realKey", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(args, key);
-            return args;
-        }
-        var preview = Make(Keyboard.PreviewKeyDownEvent);
-        target.RaiseEvent(preview);
-        if (!preview.Handled) target.RaiseEvent(Make(Keyboard.KeyDownEvent));
-        Held = ModifierKeys.None;
+        target.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = key, KeyModifiers = mods, Source = target });
         Pump();
     }
 
-    /// <summary>Presses a key on whatever has keyboard focus.</summary>
-    protected void Press(Key key, ModifierKeys mods = ModifierKeys.None) =>
-        Press(Keyboard.FocusedElement ?? throw new InvalidOperationException("Nothing has focus"), key, mods);
+    /// <summary>Presses a key on whatever has keyboard focus in the window (the window itself when nothing has).</summary>
+    protected static void Press(TopLevel w, Key key, KeyModifiers mods = KeyModifiers.None) =>
+        Press((Interactive?)Focused(w) ?? w, key, mods);
 
-    /// <summary>
-    /// Clicks a button the way a user (or a screen reader) does: through its real click handling, which also
-    /// runs commands like closing a dialog for a Cancel button. Raising the Click event alone would skip those.
-    /// </summary>
+    /// <summary>Clicks a button through its real click handling (the Click event and its command).</summary>
     protected static void Click(Button button)
     {
-        var invoke = (System.Windows.Automation.Provider.IInvokeProvider)
-            new System.Windows.Automation.Peers.ButtonAutomationPeer(button)
-                .GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke);
-        invoke.Invoke();
+        typeof(Button).GetMethod("OnClick", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(button, null);
         Pump();
     }
 
-    protected static MouseButtonEventArgs MouseButton(UIElement target, RoutedEvent e, MouseButton button = System.Windows.Input.MouseButton.Left, int clicks = 1)
-    {
-        var args = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, button) { RoutedEvent = e, Source = target };
-        typeof(MouseButtonEventArgs).GetProperty("ClickCount")!.GetSetMethod(true)!.Invoke(args, new object[] { clicks });
-        return args;
-    }
+    static readonly Avalonia.Input.Pointer Mouse = new(Avalonia.Input.Pointer.GetNextFreeId(), PointerType.Mouse, true);
 
-    /// <summary>Left mouse button down on an element (the preview and the normal event), with 1 or 2 clicks.</summary>
-    protected static void MouseDown(UIElement target, int clicks = 1)
+    /// <summary>Left mouse button down in the middle of an element, with 1 or 2 clicks.</summary>
+    protected static void MouseDown(Control target, int clicks = 1)
     {
-        // like real input: the general mouse-down events, which WPF turns into the left-button ones
-        var preview = MouseButton(target, Mouse.PreviewMouseDownEvent, clicks: clicks);
-        target.RaiseEvent(preview);
-        if (!preview.Handled) target.RaiseEvent(MouseButton(target, Mouse.MouseDownEvent, clicks: clicks));
+        var root = (Visual)TopLevel.GetTopLevel(target)!;
+        var pos = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), root) ?? default;
+        var props = new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed);
+        target.RaiseEvent(new PointerPressedEventArgs(target, Mouse, root, pos, 0, props, KeyModifiers.None, clicks));
         Pump();
     }
 
-    protected static void RightClick(UIElement target)
+    /// <summary>Right click (or the context menu key): asks the element for its menu.</summary>
+    protected static void RightClick(Control target)
     {
-        target.RaiseEvent(MouseButton(target, UIElement.MouseRightButtonUpEvent, System.Windows.Input.MouseButton.Right));
+        target.RaiseEvent(new ContextRequestedEventArgs { RoutedEvent = Control.ContextRequestedEvent, Source = target });
         Pump();
     }
-
-    protected static MouseEventArgs MouseMove(UIElement target) =>
-        new(Mouse.PrimaryDevice, 0) { RoutedEvent = UIElement.PreviewMouseMoveEvent, Source = target };
-
-    // ================= Modal dialogs =================
-
-    static readonly Queue<(Type type, Action<Window> act)> PendingDialogs = new();
-    static bool _loadedHooked;
 
     /// <summary>
-    /// Runs <paramref name="act"/> on the next window of type T once it has opened. Modal dialogs block until
-    /// they close, so a test schedules what to do in them before opening them.
+    /// The window loses focus to another app or window. (The headless platform keeps every window active, so the
+    /// platform's "deactivated" notification is sent directly.)
     /// </summary>
-    protected static void WhenOpened<T>(Action<T> act) where T : Window
+    protected static void Deactivate(Window w)
     {
-        if (!_loadedHooked)
-        {
-            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler(OnWindowLoaded));
-            _loadedHooked = true;
-        }
-        PendingDialogs.Enqueue((typeof(T), w => act((T)w)));
-    }
-
-    static void OnWindowLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Window w || PendingDialogs.Count == 0 || !PendingDialogs.Peek().type.IsInstanceOfType(w)) return;
-        var (_, act) = PendingDialogs.Dequeue();
-        w.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
-        {
-            try { act(w); }
-            catch (Exception ex)
-            {
-                // a failed check inside a modal dialog would otherwise leave it open and the test hanging
-                UiHost.UnhandledErrors.Enqueue(ex);
-                if (w.IsVisible) w.Close();
-            }
-        });
+        var impl = typeof(TopLevel).GetProperty("PlatformImpl", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance)!.GetValue(w)!;
+        var deactivated = (Action?)impl.GetType().GetProperty("Deactivated")!.GetValue(impl);
+        deactivated?.Invoke();
+        Pump();
     }
 
     // ================= Menus =================
-
-    /// <summary>The context menu that is open right now.</summary>
-    protected static ContextMenu OpenMenu()
-    {
-        Pump();
-        return OpenMenus().LastOrDefault() ?? throw new InvalidOperationException("No open menu");
-    }
-
-    /// <summary>All open context menus, oldest first.</summary>
-    static List<ContextMenu> OpenMenus() =>
-        PresentationSource.CurrentSources.OfType<HwndSource>()
-            .Select(s => s.RootVisual as DependencyObject)
-            .Select(root => root as ContextMenu ?? (root == null ? null : Find<ContextMenu>(root)))
-            .Where(m => m is { IsOpen: true })
-            .Cast<ContextMenu>()
-            .ToList();
 
     protected static MenuItem MenuItem(ItemsControl menu, params string[] path)
     {
@@ -273,20 +193,23 @@ public abstract class UiTest : IDisposable
         MenuItem? found = null;
         foreach (var header in path)
         {
-            found = current.Items.OfType<MenuItem>().FirstOrDefault(m => (string)m.Header == header)
+            found = current.Items.OfType<MenuItem>().FirstOrDefault(m => Header(m) == header)
                     ?? throw new InvalidOperationException($"No menu item '{header}' in: " +
-                                                           string.Join(", ", current.Items.OfType<MenuItem>().Select(m => m.Header)));
+                                                           string.Join(", ", current.Items.OfType<MenuItem>().Select(Header)));
             current = found;
         }
         return found!;
     }
 
+    /// <summary>The text of a menu item (items with a shortcut have a panel as header, and the text as their name).</summary>
+    protected static string? Header(MenuItem m) => m.Header as string ?? AutomationProperties.GetName(m);
+
     /// <summary>Clicks a menu item (path: "Window color", "Yellow") and lets its deferred action run.</summary>
     protected static void ChooseFromMenu(ContextMenu menu, params string[] path)
     {
         var item = MenuItem(menu, path);
-        menu.IsOpen = false;
-        item.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.MenuItem.ClickEvent, item));
+        menu.Close();
+        item.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.MenuItem.ClickEvent, item));
         Pump();
     }
 }

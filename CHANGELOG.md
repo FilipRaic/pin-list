@@ -3,6 +3,23 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.0.0] - 2026-10-31
+
+PinList now runs on Windows, macOS and Android, from one codebase.
+
+### Added
+- **macOS app** (Apple Silicon): the same desktop widgets, on every Space and out of the Dock and Cmd+Tab, with a menu bar icon instead of the tray icon, starting at login, reminders and the same archive, export and import. Not notarized – see the README for opening it the first time
+- **Android app**: a card for every list on the first screen (color, item count, overdue items and a short preview); tap to open a list full screen. Press and hold for menus (due date, reminder, move to another list, color, rename, delete), press and drag to reorder cards, items and categories (the other rows slide out of the way), an *Undo* bar after changes, the archive, app theme, export and import. Reminders are notifications that arrive also when the app is closed
+- Lists can be moved between devices with export and import; the data file is the same everywhere ([docs/data-format.md](docs/data-format.md))
+- Releases include `PinList-mac-arm64.zip` and `PinList-android.apk` (signed), each with a SHA-256 checksum
+- Items, categories and lists slide to their new place when they're reordered
+
+### Changed
+- The Windows app is rebuilt on Avalonia (instead of WPF), shared with macOS and Android. It looks and works as before, keeps your data and settings, and still needs the .NET 10 Desktop Runtime
+- The data file is version 2: times are saved without a time zone offset (a reminder at 9:00 stays at 9:00 on every device), and fields from newer versions are kept when an older version saves. Version 1 files are upgraded on first start, and a copy of the original is kept as `data.v1.json`
+- One version number for every app, in `Version.props`
+- The UI tests run headless (no hidden desktop needed), and the data logic is also tested on macOS and Linux
+
 ## [1.1.1] - 2026-10-31
 
 ### Fixed
