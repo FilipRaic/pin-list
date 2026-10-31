@@ -15,7 +15,7 @@
          the tray icon), and WPF reads DPI awareness from app.manifest, so the manifest setting is correct. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
 
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Product>PinList</Product>
     <Description>To-do list widgets that live on the Windows desktop.</Description>
     <Copyright>Copyright © 2026 Filip Raić</Copyright>
