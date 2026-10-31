@@ -28,7 +28,7 @@ jobs:
       - name: Build
         run: dotnet build PinList.sln -c Release -warnaserror
 
-      # The UI tests run the real app on a hidden desktop. The build fails if coverage drops
+      # The UI tests run the real app headless (nothing is shown). The build fails if coverage drops
       # below 99 % of lines or 92 % of branches (Release builds count branches a little differently).
       - name: Test
         run: >

@@ -126,6 +126,13 @@ public class BoardWindowTests : UiTest
             w.Left += 100;
             Assert.NotEqual(Math.Round(w.Left), w.Board.X);
             Assert.True(UiHost.WaitUntil(() => Math.Round(w.Left) == w.Board.X));
+            // also when only the top, the width or the height changed (Win+Shift+Arrow, macOS window tiling)
+            w.Top += 30;
+            Assert.True(UiHost.WaitUntil(() => Math.Round(w.Top) == w.Board.Y));
+            w.Width += 30;
+            Assert.True(UiHost.WaitUntil(() => w.Width == w.Board.Width));
+            w.Height += 30;
+            Assert.True(UiHost.WaitUntil(() => w.Height == w.Board.Height));
 
             // nor while the monitors are still settling
             double x = w.Board.X;
@@ -245,6 +252,23 @@ public class BoardWindowTests : UiTest
         Pump();
         Assert.Equal((w.MinWidth, 520.0), (w.Width, w.Height));
         Assert.Equal(left - 20 + 380 - w.MinWidth, w.Left, 0);
+
+        // every grip: dragged 10 right and 20 down
+        foreach (var grip in Named<Panel>(w, "Grips").Children.OfType<Border>())
+        {
+            w.Width = 320; w.Height = 480; w.Left = left; w.Top = top;
+            Pump();
+            var tag = (string)grip.Tag!;
+            var at = grip.TranslatePoint(new Point(grip.Bounds.Width / 2, grip.Bounds.Height / 2), w)!.Value;
+            w.MouseDown(at, MouseButton.Left);
+            w.MouseMove(at + new Point(10, 20), RawInputModifiers.LeftMouseButton);
+            w.MouseUp(at + new Point(10, 20), MouseButton.Left);
+            Pump();
+            double width = tag.Contains('W') ? 310 : tag.Contains('E') ? 330 : 320;
+            double height = tag.Contains('N') ? 460 : tag.Contains('S') ? 500 : 480;
+            Assert.Equal((tag, width, height), (tag, w.Width, w.Height));
+            Assert.Equal((tag, tag.Contains('W') ? left + 10 : left, tag.Contains('N') ? top + 20 : top), (tag, w.Left, w.Top));
+        }
 
         // moving the mouse without pressing a grip first does nothing
         var size = (w.Width, w.Height);

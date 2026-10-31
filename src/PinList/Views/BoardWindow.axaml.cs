@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -208,25 +209,33 @@ public partial class BoardWindow : Window
     /// </summary>
     internal static bool SystemResize { get; set; } = OperatingSystem.IsWindows();
 
+    /// <summary>
+    /// What each grip (by its Tag) resizes: the edge, and which way it moves the sides. X is -1 for the left side,
+    /// 1 for the right side and 0 for neither; Y is the same for the top and bottom.
+    /// </summary>
+    static readonly Dictionary<string, (WindowEdge Edge, int X, int Y)> GripSides = new()
+    {
+        ["W"] = (WindowEdge.West, -1, 0), ["E"] = (WindowEdge.East, 1, 0),
+        ["N"] = (WindowEdge.North, 0, -1), ["S"] = (WindowEdge.South, 0, 1),
+        ["NW"] = (WindowEdge.NorthWest, -1, -1), ["NE"] = (WindowEdge.NorthEast, 1, -1),
+        ["SW"] = (WindowEdge.SouthWest, -1, 1), ["SE"] = (WindowEdge.SouthEast, 1, 1),
+    };
+
     void Grip_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
         if (Board.Locked || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        var edge = ((Control)sender!).Tag switch
-        {
-            "W" => WindowEdge.West, "E" => WindowEdge.East, "N" => WindowEdge.North, "S" => WindowEdge.South,
-            "NW" => WindowEdge.NorthWest, "NE" => WindowEdge.NorthEast, "SW" => WindowEdge.SouthWest, _ => WindowEdge.SouthEast,
-        };
-        if (SystemResize) BeginResizeDrag(edge, e);
+        var side = GripSides[(string)((Control)sender!).Tag!];
+        if (SystemResize) BeginResizeDrag(side.Edge, e);
         else
         {
-            _resize = new(edge, ScreenPoint(e), Position, new Size(Width, Height));
+            _resize = new(side.X, side.Y, ScreenPoint(e), Position, new Size(Width, Height));
             e.Pointer.Capture((IInputElement)sender!);
         }
         e.Handled = true;
     }
 
-    /// <summary>A resize PinList does itself: the edge, and where the mouse, the widget and its size were at the start.</summary>
-    sealed record ResizeStart(WindowEdge Edge, Point Mouse, PixelPoint Position, Size Size);
+    /// <summary>A resize PinList does itself: the sides it moves, and where the mouse, the widget and its size were at the start.</summary>
+    sealed record ResizeStart(int X, int Y, Point Mouse, PixelPoint Position, Size Size);
     ResizeStart? _resize;
 
     /// <summary>The mouse in screen pixels (the widget may move while it's resized, so not in the widget).</summary>
@@ -241,16 +250,11 @@ public partial class BoardWindow : Window
         if (_resize is not { } r) return;
         var mouse = ScreenPoint(e);
         double s = DesktopScaling, dx = (mouse.X - r.Mouse.X) / s, dy = (mouse.Y - r.Mouse.Y) / s;
-        bool west = r.Edge is WindowEdge.West or WindowEdge.NorthWest or WindowEdge.SouthWest;
-        bool east = r.Edge is WindowEdge.East or WindowEdge.NorthEast or WindowEdge.SouthEast;
-        bool north = r.Edge is WindowEdge.North or WindowEdge.NorthWest or WindowEdge.NorthEast;
-        bool south = r.Edge is WindowEdge.South or WindowEdge.SouthWest or WindowEdge.SouthEast;
-
-        double width = west ? Math.Max(MinWidth, r.Size.Width - dx) : east ? Math.Max(MinWidth, r.Size.Width + dx) : r.Size.Width;
-        double height = north ? Math.Max(MinHeight, r.Size.Height - dy) : south ? Math.Max(MinHeight, r.Size.Height + dy) : r.Size.Height;
-        // the left and top edges move the widget, so the opposite edges stay where they are
-        int x = west ? r.Position.X + (int)Math.Round((r.Size.Width - width) * s) : r.Position.X;
-        int y = north ? r.Position.Y + (int)Math.Round((r.Size.Height - height) * s) : r.Position.Y;
+        double width = Math.Max(MinWidth, r.Size.Width + r.X * dx);
+        double height = Math.Max(MinHeight, r.Size.Height + r.Y * dy);
+        // Resizing by the left or top side moves the widget, so the opposite side stays where it is
+        int x = r.Position.X + (int)Math.Round((r.Size.Width - width) * s * Math.Max(0, -r.X));
+        int y = r.Position.Y + (int)Math.Round((r.Size.Height - height) * s * Math.Max(0, -r.Y));
         Width = width;
         Height = height;
         Position = new PixelPoint(x, y);
@@ -260,9 +264,8 @@ public partial class BoardWindow : Window
 
     void Grip_CaptureLost(object? sender, PointerCaptureLostEventArgs e)
     {
-        if (_resize == null) return;
         _resize = null;
-        SaveBounds();
+        SaveBounds(); // does nothing when the size didn't change
     }
 
     /// <summary>Re-applies colors and text size (after a theme, contrast or text size change).</summary>
