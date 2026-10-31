@@ -16,7 +16,7 @@ PinList now runs on Windows, macOS and Android, from one codebase.
 
 ### Changed
 - The Windows app is rebuilt on Avalonia (instead of WPF), shared with macOS and Android. It looks and works as before, keeps your data and settings, and still needs the .NET 10 Desktop Runtime
-- The data file is version 2: times are saved without a time zone offset (a reminder at 9:00 stays at 9:00 on every device), and fields from newer versions are kept when an older version saves. Version 1 files are upgraded on first start, and a copy of the original is kept as `data.v1.json`
+- The data format starts over at version 1: times are saved without a time zone offset (a reminder at 9:00 stays at 9:00 on every device), and fields from newer versions are kept when an older version saves. Files from 1.x are no longer read
 - One version number for every app, in `Version.props`
 - The UI tests run headless (no hidden desktop needed), and the data logic is also tested on macOS and Linux
 

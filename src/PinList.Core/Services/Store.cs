@@ -149,25 +149,22 @@ public static class Store
         }
     }
 
-    /// <summary>Reads data.json. Before upgrading an older (or opening a newer) format, a copy of the file is kept.</summary>
+    /// <summary>Reads data.json. A file from a newer PinList is loaded too, after a copy of it was kept.</summary>
     static AppData ReadMainFile()
     {
         var data = ReadFile(FilePath, out int fileVersion);
-        if (fileVersion == AppData.CurrentVersion) return data;
+        if (fileVersion <= AppData.CurrentVersion) return data;
 
         var copy = Path.Combine(Dir, $"data.v{fileVersion}.json");
         try { if (!File.Exists(copy)) File.Copy(FilePath, copy); }
-        catch (Exception ex) { Log("Could not keep a copy before upgrading: " + ex.Message); }
+        catch (Exception ex) { Log("Could not keep a copy of the newer file: " + ex.Message); }
 
-        if (fileVersion > AppData.CurrentVersion)
-            Notify("Your lists were saved by a newer version of PinList. They were loaded, but details only the newer " +
-                   $"version knows about may be lost. A copy of the original file was kept as {Path.GetFileName(copy)}.", false);
-        else
-            Log($"Upgraded data from version {fileVersion} to {AppData.CurrentVersion}");
+        Notify("Your lists were saved by a newer version of PinList. They were loaded, but details only the newer " +
+               $"version knows about may be lost. A copy of the original file was kept as {Path.GetFileName(copy)}.", false);
         return data;
     }
 
-    /// <summary>Reads and upgrades a data file (also used for import). Throws if the file isn't valid PinList data.</summary>
+    /// <summary>Reads a data file (also used for import). Throws if the file isn't valid PinList data.</summary>
     public static AppData ReadFile(string path, out int fileVersion) =>
         Parse(File.ReadAllText(path, Encoding.UTF8), out fileVersion);
 
@@ -176,32 +173,13 @@ public static class Store
         var root = JsonNode.Parse(json) as JsonObject ?? throw new InvalidDataException("Not a JSON object.");
         if (root["boards"] is not JsonArray) throw new InvalidDataException("This isn't a PinList data file.");
 
-        fileVersion = root["version"]?.GetValue<int>() ?? 1;
-        Migrate(root, fileVersion);
-
+        fileVersion = root["version"]?.GetValue<int>() ?? AppData.CurrentVersion;
         var data = root.Deserialize<AppData>(Options) ?? new AppData();
         data.Settings ??= new Settings();
         data.Boards ??= new();
         data.Archive ??= new();
         data.Version = AppData.CurrentVersion;
         return data;
-    }
-
-    /// <summary>
-    /// Upgrades older data formats step by step. MigrationSteps[0] turns version 1 into 2, [1] turns 2 into 3, and so on.
-    /// When the format changes: add a step here and raise AppData.CurrentVersion.
-    /// </summary>
-    static readonly Action<JsonObject>[] MigrationSteps =
-    {
-        // 1 → 2: due dates, reminders and settings were added. They are optional, so nothing to convert.
-        _ => { },
-    };
-
-    static void Migrate(JsonObject root, int fromVersion)
-    {
-        for (int v = Math.Max(1, fromVersion); v < AppData.CurrentVersion; v++)
-            MigrationSteps[v - 1](root);
-        root["version"] = Math.Max(fromVersion, AppData.CurrentVersion);
     }
 
     /// <summary>The widget created on first run (top-right corner of the given work area).</summary>

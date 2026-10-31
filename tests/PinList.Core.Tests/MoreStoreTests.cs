@@ -98,10 +98,10 @@ public class MoreStoreTests : StoreTestBase
     }
 
     [Fact]
-    public void Upgrading_still_works_when_the_copy_cannot_be_made()
+    public void A_newer_file_still_loads_when_the_copy_cannot_be_made()
     {
-        Directory.CreateDirectory(Path.Combine(Dir, "data.v1.json", "in the way")); // a folder blocks the copy
-        File.WriteAllText(DataFile, """{ "version": 1, "boards": [], "archive": [] }""");
+        Directory.CreateDirectory(Path.Combine(Dir, "data.v2.json", "in the way")); // a folder blocks the copy
+        File.WriteAllText(DataFile, """{ "version": 2, "boards": [], "archive": [] }""");
 
         Assert.True(Store.Load());
         Assert.Contains("Could not keep a copy", File.ReadAllText(Path.Combine(Dir, "log.txt")));
@@ -111,17 +111,9 @@ public class MoreStoreTests : StoreTestBase
     public void Missing_parts_of_a_file_get_defaults()
     {
         var data = Store.Parse("""{ "boards": [], "settings": null, "archive": null }""", out int version);
-        Assert.Equal(1, version); // no version number = the first format
+        Assert.Equal(AppData.CurrentVersion, version); // no version number = the current format
         Assert.NotNull(data.Settings);
         Assert.NotNull(data.Archive);
-        Assert.Equal(AppData.CurrentVersion, data.Version);
-    }
-
-    [Fact]
-    public void A_version_0_file_is_treated_like_version_1()
-    {
-        var data = Store.Parse("""{ "version": 0, "boards": [] }""", out int version);
-        Assert.Equal(0, version);
         Assert.Equal(AppData.CurrentVersion, data.Version);
     }
 

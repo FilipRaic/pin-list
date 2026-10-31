@@ -225,8 +225,8 @@ public class AppData
     /// <summary>Fields this version doesn't know (from a newer PinList); kept so saving doesn't drop them.</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 
-    /// <summary>Version of the data format. Store.Migrate upgrades older files.</summary>
-    public const int CurrentVersion = 2;
+    /// <summary>Version of the data format (see docs/data-format.md).</summary>
+    public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;
     public Settings Settings { get; set; } = new();

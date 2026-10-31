@@ -144,7 +144,7 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | `data.json` | All lists, categories, items, positions, colors, settings and the archive |
 | `backups/data-YYYY-MM-DD.json` | One backup per day, the last 7 are kept |
 | `backups/before-import-….json` | Your lists as they were before an import replaced them |
-| `data.vN.json` | A copy of the file from before PinList upgraded its format (or opened a file from a newer version) |
+| `data.vN.json` | A copy of a file from a newer version of PinList, kept before this version saves over it |
 | `log.txt` | Errors, if any occur (older entries move to `log.old.txt` after 1 MB) |
 
 `data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. The format is the same on every platform and is described in [docs/data-format.md](docs/data-format.md).
@@ -264,7 +264,7 @@ On **macOS**, each widget's window joins all Spaces and stays put when switching
 
 ### Changing the data format
 
-`data.json` has a `version` number. When a change needs old files converted, add a step to `MigrationSteps` in `Store.cs` and raise `AppData.CurrentVersion`, and update [docs/data-format.md](docs/data-format.md). Older files are upgraded on load (a copy of the original is kept). Fields an app doesn't know are kept when it saves, so an older app doesn't lose what a newer one wrote.
+`data.json` has a `version` number (currently 1). New fields are optional, and fields an app doesn't know are kept when it saves, so an older app doesn't lose what a newer one wrote. Raise `AppData.CurrentVersion` only when older files must be converted; do the conversion in `Store.Parse` and update [docs/data-format.md](docs/data-format.md).
 
 ## License
 

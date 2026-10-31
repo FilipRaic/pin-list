@@ -310,7 +310,7 @@ public class AppTests : UiTest
     public void A_data_file_without_widgets_gets_one()
     {
         App.Stop();
-        File.WriteAllText(Path.Combine(UiHost.DataDir, "data.json"), """{ "version": 2, "boards": [] }""");
+        File.WriteAllText(Path.Combine(UiHost.DataDir, "data.json"), """{ "version": 1, "boards": [] }""");
         Tray.Disposed = false;
         Assert.True(App.Start());
         Assert.Single(Store.Data.Boards);
@@ -464,7 +464,7 @@ public class AppTests : UiTest
     }
 
     const string ImportJson = """
-        { "version": 2, "boards": [ { "id": "b", "title": "Imported", "categories": [ { "id": "c", "name": "General", "items": [ { "text": "from file" } ] } ] } ],
+        { "version": 1, "boards": [ { "id": "b", "title": "Imported", "categories": [ { "id": "c", "name": "General", "items": [ { "text": "from file" } ] } ] } ],
           "archive": [ { "text": "done", "categoryId": "c", "completedAt": "2026-01-01T00:00:00" } ] }
         """;
 
@@ -519,7 +519,7 @@ public class AppTests : UiTest
         var mine = OpenNew(("Mine", new[] { "mine" }));
         App.ShowArchive();
         Actions.SetItemText(mine.Board.Categories[0].Items[0], "changed");
-        Dialogs.OpenFileAnswer = WriteFile(Dir, "newer.json", ImportJson.Replace("\"version\": 2", "\"version\": 99"));
+        Dialogs.OpenFileAnswer = WriteFile(Dir, "newer.json", ImportJson.Replace("\"version\": 1", "\"version\": 99"));
         Dialogs.ChooseAnswer = _ => 1; // Replace everything
         Await(App.ImportData(null));
         Pump();
@@ -535,7 +535,7 @@ public class AppTests : UiTest
     [AvaloniaFact]
     public void Importing_a_file_without_widgets_still_leaves_one()
     {
-        Dialogs.OpenFileAnswer = WriteFile(Dir, "empty.json", """{ "version": 2, "boards": [] }""");
+        Dialogs.OpenFileAnswer = WriteFile(Dir, "empty.json", """{ "version": 1, "boards": [] }""");
         Dialogs.ChooseAnswer = _ => 1;
         Await(App.ImportData(null));
         Assert.Single(Store.Data.Boards);

@@ -3,9 +3,9 @@
 All PinList apps (Windows, macOS, Android) read and write the same JSON file. Exports use the same format, so a
 file exported on one platform can be imported on any other. The code is in `src/PinList.Core`
 (`Models/AppData.cs`, `Services/Store.cs`); the test `DataFormatTests` checks the example file
-`tests/PinList.Core.Tests/Fixtures/data-v2.json`, so the format can't change by accident.
+`tests/PinList.Core.Tests/Fixtures/data-v1.json`, so the format can't change by accident.
 
-Current version: **2**
+Current version: **1**
 
 ## Where the file is
 
@@ -20,7 +20,7 @@ The folder contains:
 - `data.json` – all widgets, categories, items, the archive and settings.
 - `backups/data-YYYY-MM-DD.json` – one copy per day, the last 7 are kept.
 - `backups/before-import-YYYY-MM-DD-HHMMSS.json` – a copy taken before an import replaced everything.
-- `data.vN.json` – a copy of the file as it was before an older (or newer) version was upgraded.
+- `data.vN.json` – a copy of a file from a newer PinList (version N), kept before this version saves over it.
 - `data.json.corrupt-…` – a damaged file that couldn't be read (the latest backup was loaded instead).
 - `log.txt` / `log.old.txt` – errors and notes, at most about 1 MB each.
 
@@ -32,8 +32,7 @@ If the app stops between the two steps, the `.tmp` file is used on the next star
 - Property names are camelCase. Text is UTF-8, written with relaxed escaping (`“`, `é`, `€` stay readable).
 - **Times are local wall-clock time without a time zone**, e.g. `"2026-11-02T09:00:00"` (fractions of a second
   may follow, e.g. `"…T09:00:00.1234567"`). A reminder for 09:00 fires at 09:00 on whichever device has the
-  file. Files written by PinList 1.x often have an offset after the time (`"…T09:00:00+01:00"`); readers must
-  **ignore the offset** and use the clock time as written, never convert it to another time zone.
+  file. A time with an offset or `Z` (`"…T09:00:00+01:00"`) isn't valid, and the file is rejected.
 - **`dueDate` is a date only**; it is written with a time of `00:00:00`, which is ignored.
 - **Unknown fields are kept.** A field this version doesn't know (from a newer PinList) is read and written back
   unchanged, on every object.
@@ -42,7 +41,7 @@ If the app stops between the two steps, the `.tmp` file is used on the next star
 - Ids are 32 lowercase hex characters (a GUID without dashes). Importing with *add next to mine* gives every
   imported widget, category and item a new id.
 - Text may contain line breaks (`\n`) for multi-line items.
-- A missing `version` means version 1. A file without a `boards` array isn't PinList data and is rejected.
+- A missing `version` means the current version. A file without a `boards` array isn't PinList data and is rejected.
 
 ## Objects
 
@@ -50,7 +49,7 @@ If the app stops between the two steps, the `.tmp` file is used on the next star
 
 | Field | Type | Meaning | Default |
 |---|---|---|---|
-| `version` | number | Format version | 2 |
+| `version` | number | Format version | 1 |
 | `settings` | object | `Settings` | |
 | `boards` | array | `Board` objects, in order (the phone's card list uses this order too) | `[]` |
 | `archive` | array | `ArchivedItem` objects, newest first | `[]` |
@@ -112,9 +111,9 @@ Archived items have no id of their own.
 
 | Version | Changes |
 |---|---|
-| 1 | First format: widgets, categories, items, archive |
-| 2 | Added `dueDate`, `reminderAt`, `reminderShown` and `settings`. All optional, so version 1 files load without conversion |
+| 1 | First format (PinList 2.0.0): widgets, categories, items, due dates, reminders, archive and settings |
 
-When the format changes: add a migration step in `Store.MigrationSteps`, raise `AppData.CurrentVersion`, add a
-new fixture next to `data-v2.json`, and update this file. A migration step must also accept data that already
-has the new fields: an older PinList keeps fields it doesn't know but saves the file with its own version number.
+New fields are optional and unknown fields are kept, so most changes need no new version. Raise
+`AppData.CurrentVersion` only when older files have to be converted: then convert them in `Store.Parse`, add a
+fixture next to `data-v1.json`, and update this file. A newer file opened by an older PinList is loaded with a
+warning, and a copy of it is kept as `data.vN.json`.

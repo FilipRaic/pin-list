@@ -8,7 +8,7 @@ public class StoreTests : StoreTestBase
 {
     string DataFile => Path.Combine(Dir, "data.json");
 
-    const string Version1File = """
+    const string SmallFile = """
         {
           "version": 1,
           "boards": [ { "id": "b1", "title": "Old", "categories": [ { "id": "c1", "name": "General", "items": [ { "id": "i1", "text": "old item" } ] } ] } ],
@@ -24,7 +24,7 @@ public class StoreTests : StoreTestBase
     {
         Directory.CreateDirectory(Dir);
         File.WriteAllText(DataFile, """
-            { "version": 2, "futureTop": 1,
+            { "version": 1, "futureTop": 1,
               "settings": { "theme": "Dark", "futureSetting": "x" },
               "boards": [ { "id": "b", "futureBoard": [1, 2],
                 "categories": [ { "id": "c", "futureCat": true,
@@ -124,24 +124,10 @@ public class StoreTests : StoreTestBase
     }
 
     [Fact]
-    public void A_version_1_file_is_upgraded_and_a_copy_is_kept()
-    {
-        Directory.CreateDirectory(Dir);
-        File.WriteAllText(DataFile, Version1File);
-
-        Assert.True(Store.Load());
-        Assert.Equal(AppData.CurrentVersion, Store.Data.Version);
-        Assert.Equal("System", Store.Data.Settings.Theme);
-        Assert.Equal("old item", Store.Data.Boards[0].Categories[0].Items[0].Text);
-        Assert.True(File.Exists(Path.Combine(Dir, "data.v1.json")));
-        Assert.Empty(Messages);
-    }
-
-    [Fact]
     public void A_file_from_a_newer_version_warns_and_keeps_a_copy()
     {
         Directory.CreateDirectory(Dir);
-        var newer = JsonNode.Parse(Version1File)!;
+        var newer = JsonNode.Parse(SmallFile)!;
         newer["version"] = AppData.CurrentVersion + 1;
         File.WriteAllText(DataFile, newer.ToJsonString());
 
@@ -162,7 +148,7 @@ public class StoreTests : StoreTestBase
     public void Merge_adds_boards_with_new_ids_and_keeps_archive_links()
     {
         var existing = MakeBoard(("Mine", new[] { "mine" }));
-        var imported = Store.Parse(Version1File, out _);
+        var imported = Store.Parse(SmallFile, out _);
         imported.Archive.Add(new ArchivedItem { Text = "done", CategoryId = "c1", BoardId = "b1", CompletedAt = DateTime.Now });
         imported.Archive.Add(new ArchivedItem { Text = "orphan", CategoryId = "gone", BoardId = "gone", CompletedAt = DateTime.Now.AddDays(-1) });
 
@@ -186,7 +172,7 @@ public class StoreTests : StoreTestBase
         MakeBoard(("Mine", new[] { "mine" }));
         Store.Data.Settings.Theme = "Dark";
 
-        var safety = Store.ReplaceAll(Store.Parse(Version1File, out _));
+        var safety = Store.ReplaceAll(Store.Parse(SmallFile, out _));
 
         Assert.Equal("Old", Store.Data.Boards.Single().Title);
         Assert.Equal("Dark", Store.Data.Settings.Theme);
