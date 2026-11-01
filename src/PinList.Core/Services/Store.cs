@@ -249,7 +249,7 @@ public static class Store
         }
     }
 
-    /// <summary>The JSON written to data.json and export files (see docs/data-format.md).</summary>
+    /// <summary>The JSON written to data.json and export files (see docs/data-format.html).</summary>
     public static string Serialize(AppData data) => JsonSerializer.Serialize(data, Options);
 
     static void WriteAtomic(string path, AppData data) => WriteTextAtomic(path, Serialize(data));

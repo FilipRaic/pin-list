@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PinList</title>
+    <meta name="description"
+          content="To-do lists pinned to your Windows and macOS desktop, and in your pocket on Android. Free, open source, no account needed, with optional sync through your own Google Drive.">
+    <meta name="color-scheme" content="dark light">
+    <meta property="og:title" content="PinList">
+    <meta property="og:description" content="To-do lists on your desktop and in your pocket. No account needed.">
+    <meta property="og:image" content="https://filipraic.github.io/pin-list/social-preview.png">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&amp;family=Barlow+Condensed:wght@500;600&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site">
+    <a class="brand" href="./" aria-label="PinList home">
+        <svg class="logo" width="26" height="26" viewBox="0 0 34 34" fill="none" stroke="currentColor"
+             stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="28" height="28" rx="7"/>
+            <path d="M10.5 17.5l4.5 4.5 8.5-9"/>
+        </svg>
+        <span class="wordmark">PIN<span>LIST</span></span>
+    </a>
+    <nav class="site-nav" aria-label="Pages">
+        <a href="privacy">Privacy</a>
+        <a href="data-format">Data format</a>
+        <a href="https://github.com/FilipRaic/pin-list">GitHub</a>
+    </nav>
+</header>
+
+<main id="content" class="home">
+    <section class="hero">
+        <div class="hero-text">
+            <h1>To-do lists on your desktop and in your pocket</h1>
+            <div class="lede">
+                <p>PinList keeps your lists as small widgets on the Windows and macOS desktop, and as cards on your
+                    Android phone. Categories, due dates, reminders and an archive of everything you finished.
+                    No account needed.</p>
+            </div>
+            <div class="actions">
+                <a class="button primary" href="#download">Download</a>
+                <a class="button" href="https://github.com/FilipRaic/pin-list">Source code on GitHub</a>
+            </div>
+            <p class="meta">Free and open source, for <a href="#download">Windows, macOS and Android</a>.</p>
+        </div>
+
+        <div class="board" aria-hidden="true">
+            <div class="widget widget-dark">
+                <div class="widget-head">Todo</div>
+                <div class="widget-cat"><span class="dot" style="background: #60cdff"></span>General</div>
+                <ul>
+                    <li>Book the car service</li>
+                    <li>Call the team about Saturday's game</li>
+                    <li class="done">Send wedding photos to guests</li>
+                    <li>Replace watch batteries</li>
+                </ul>
+                <div class="widget-cat"><span class="dot" style="background: #c58af9"></span>Weekend</div>
+                <ul>
+                    <li>Finish the bike repair</li>
+                    <li>Pay the electricity bill</li>
+                </ul>
+                <div class="widget-add">+ Add item</div>
+            </div>
+            <div class="widget widget-yellow">
+                <div class="widget-head">Ideas</div>
+                <ul>
+                    <li>Lego set sharing app</li>
+                    <li>Finance tracker</li>
+                    <li>Weekend trip to Lisbon</li>
+                </ul>
+                <div class="widget-add">+ Add item</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="band" aria-labelledby="features">
+        <h2 id="features">What it does</h2>
+        <ul class="features">
+            <li>
+                <h3>Lists that stay on the desktop</h3>
+                <p>Every list is a borderless widget. On Windows it survives Show desktop and stays out of the
+                    taskbar. On macOS it is on every Space.</p>
+            </li>
+            <li>
+                <h3>The same lists on your phone</h3>
+                <p>The Android app shows a card for every list with its color, item count and overdue items. Tap one
+                    to open it full screen.</p>
+            </li>
+            <li>
+                <h3>Categories and drag and drop</h3>
+                <p>Group items in colored categories and drag items, categories and lists into the order you
+                    want.</p>
+            </li>
+            <li>
+                <h3>Due dates and reminders</h3>
+                <p>Overdue items turn red, and reminders arrive as system notifications, on the phone also when the
+                    app is closed.</p>
+            </li>
+            <li>
+                <h3>Archive and undo</h3>
+                <p>Completed items go to a searchable archive. Ctrl+Z on the desktop and the Undo bar on the phone
+                    bring back almost any change.</p>
+            </li>
+            <li>
+                <h3>Optional Google Drive sync</h3>
+                <p>Choose which lists sync between your PCs, Macs and phone. Changes are merged item by item, also
+                    after days offline.</p>
+            </li>
+        </ul>
+    </section>
+
+    <section class="band privacy-band" aria-labelledby="privacy">
+        <div class="privacy-text">
+            <h2 id="privacy">Your data stays yours</h2>
+            <p>Everything you put into PinList is saved on your device, in a plain JSON file you can export at any
+                time. There is no PinList server, and nothing leaves your device unless you turn on sync.</p>
+            <p>With sync, your lists go to a hidden app folder in your own Google Drive. PinList can't see any of your
+                other Drive files, and the developer never receives your data.</p>
+            <p><a href="privacy">Read the privacy policy</a></p>
+        </div>
+        <aside class="widget widget-yellow" aria-label="In short">
+            <div class="widget-head">In short</div>
+            <ul>
+                <li>Your lists stay on your devices</li>
+                <li>Sync is optional and off until you turn it on</li>
+                <li>Synced lists go only to a hidden folder in your own Google Drive</li>
+                <li>The developer never receives, sees or stores your data</li>
+                <li>No ads, no analytics, no tracking</li>
+            </ul>
+        </aside>
+    </section>
+
+    <section class="band" aria-labelledby="download">
+        <h2 id="download">Download</h2>
+        <p class="band-intro">Each button downloads the newest version. Every release, with its checksums and
+            what's new, is on <a href="https://github.com/FilipRaic/pin-list/releases">GitHub</a>.</p>
+        <div class="platforms">
+            <div class="platform">
+                <h3>Windows</h3>
+                <p class="file">PinList.exe</p>
+                <p>Windows 10 or 11 (x64) with the free .NET 10 Desktop Runtime.</p>
+                <div class="platform-actions">
+                    <a class="button primary" href="https://github.com/FilipRaic/pin-list/releases/latest/download/PinList.exe">Download for Windows</a>
+                    <a href="https://github.com/FilipRaic/pin-list#windows--pinlistexe">Install steps</a>
+                </div>
+            </div>
+            <div class="platform">
+                <h3>macOS</h3>
+                <p class="file">PinList-mac-arm64.zip</p>
+                <p>macOS 12 or newer on a Mac with Apple Silicon. The app isn't notarized, so the first start needs
+                    one extra step.</p>
+                <div class="platform-actions">
+                    <a class="button primary" href="https://github.com/FilipRaic/pin-list/releases/latest/download/PinList-mac-arm64.zip">Download for macOS</a>
+                    <a href="https://github.com/FilipRaic/pin-list#macos--pinlist-mac-arm64zip">Install steps</a>
+                </div>
+            </div>
+            <div class="platform">
+                <h3>Android</h3>
+                <p class="file">PinList-android.apk</p>
+                <p>Android 8.0 or newer. Updates install over the old version and keep your lists.</p>
+                <div class="platform-actions">
+                    <a class="button primary" href="https://github.com/FilipRaic/pin-list/releases/latest/download/PinList-android.apk">Download for Android</a>
+                    <a href="https://github.com/FilipRaic/pin-list#android--pinlist-androidapk">Install steps</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site">
+    <p>PinList is open source under the <a href="https://github.com/FilipRaic/pin-list/blob/master/LICENSE">MIT
+        license</a>. Questions? <a href="https://github.com/FilipRaic/pin-list/issues">Open an issue</a>.</p>
+</footer>
+</body>
+</html>

@@ -38,7 +38,7 @@ public sealed class SeenList : Dictionary<string, long>
     }
 }
 
-/// <summary>Sync bookkeeping of one board, category, item or archived item (see docs/data-format.md).</summary>
+/// <summary>Sync bookkeeping of one board, category, item or archived item (see docs/data-format.html).</summary>
 public sealed class SyncMeta
 {
     /// <summary>The change that created the object.</summary>

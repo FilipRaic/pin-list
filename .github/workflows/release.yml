@@ -32,6 +32,14 @@ jobs:
             exit 1
           fi
 
+      - name: Make sure CHANGELOG.md has an entry for this version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if ! awk -v h="## [$tag]" 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$tag]' section - the release notes come from it."
+            exit 1
+          fi
+
   windows:
     needs: check
     runs-on: windows-latest
@@ -168,6 +176,17 @@ jobs:
     needs: [ windows, mac, android ]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          # The version's section, without its heading; links to repo files point at this tag
+          awk -v h="## [$tag]" 'index($0, h) == 1 { on = 1; next } on && /^## \[/ { exit } on' CHANGELOG.md \
+            | sed -E "s#\]\((docs/|README\.md|CHANGELOG\.md)#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/\1#g" \
+            > "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
+
       - uses: actions/download-artifact@v4
         with:
           path: release
@@ -184,4 +203,4 @@ jobs:
             release/PinList-android.apk
             release/PinList-android.apk.sha256
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-notes.md

@@ -71,7 +71,7 @@ public sealed class ItemCopy
 
 /// <summary>
 /// One device's copy of one synced list: the content of a cloud file <c>w-&lt;boardId&gt;.&lt;deviceId&gt;.json</c>
-/// (docs/data-format.md). A marker (Board == null) has only the flags: what's left after sync was turned off or
+/// (docs/data-format.html). A marker (Board == null) has only the flags: what's left after sync was turned off or
 /// the list was deleted.
 /// </summary>
 public sealed class ListCopy

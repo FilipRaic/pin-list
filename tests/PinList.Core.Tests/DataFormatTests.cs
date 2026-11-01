@@ -4,7 +4,7 @@ using Xunit;
 
 namespace PinList.Tests;
 
-/// <summary>The data file format (docs/data-format.md) must not change by accident.</summary>
+/// <summary>The data file format (docs/data-format.html) must not change by accident.</summary>
 public class DataFormatTests
 {
     [Fact]

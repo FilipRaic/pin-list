@@ -181,7 +181,7 @@ public class Board : Observable
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? OrderSync { get; set; }
 
     bool _synced;
-    /// <summary>The list syncs through Google Drive (the same on every device; see docs/data-format.md).</summary>
+    /// <summary>The list syncs through Google Drive (the same on every device; see docs/data-format.html).</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool Synced { get => _synced; set => Set(ref _synced, value); }
 
@@ -258,7 +258,7 @@ public class AppData
     /// <summary>Fields this version doesn't know (from a newer PinList); kept so saving doesn't drop them.</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 
-    /// <summary>Version of the data format (see docs/data-format.md).</summary>
+    /// <summary>Version of the data format (see docs/data-format.html).</summary>
     public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;

@@ -35,5 +35,3 @@ src/PinList/google-client.json
 *.md
 !README.md
 !CHANGELOG.md
-!docs/data-format.md
-!docs/privacy.md

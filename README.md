@@ -6,6 +6,8 @@
 
 To-do lists pinned to your desktop – on **Windows** and **macOS** – and in your pocket on **Android**. Categories, drag-and-drop, due dates, reminders and an archive of completed items. No account needed. Optional sync through your own Google Drive.
 
+**Website:** [filipraic.github.io/pin-list](https://filipraic.github.io/pin-list/)
+
 ---
 
 ## Features
@@ -32,7 +34,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 
 ## Download
 
-Get the files from the [Releases](../../releases/latest) page. Each one has a `.sha256` file next to it, to check that the download wasn't changed.
+Get the files from the [website](https://filipraic.github.io/pin-list/#download) or the [Releases](../../releases/latest) page. Each one has a `.sha256` file next to it, to check that the download wasn't changed.
 
 ### Windows – `PinList.exe`
 
@@ -130,7 +132,7 @@ How it behaves:
 - **Sign out** keeps all lists on this device and pauses their sync. **Sign out and delete cloud data** also removes PinList's data from your Google Drive; your lists stay on every device as local lists.
 - Window positions and sizes, the lock, the app theme and "start with Windows" are per device and never synced.
 
-Privacy: PinList can only see its own hidden folder in your Drive, never your other files, and there is no PinList server. The full policy is in [docs/privacy.md](docs/privacy.md). Setting up the Google project for a fork of PinList is described in [GOOGLE-REQUIREMENTS.md](GOOGLE-REQUIREMENTS.md).
+Privacy: PinList can only see its own hidden folder in your Drive, never your other files, and there is no PinList server. The full policy is on the [privacy page](https://filipraic.github.io/pin-list/privacy). Building your own release with sync needs your own Google project – see [Releasing a new version](#releasing-a-new-version).
 
 ## Keyboard and accessibility
 
@@ -170,7 +172,7 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | `sync-state.json` | Google sync's state: the signed-in account and which cloud files were merged (only after signing in) |
 | `google-token.dat` | Windows: your Google sign-in, encrypted for your Windows user (macOS keeps it in the **Keychain**, Android in Google Play services). Removed when you sign out. |
 
-`data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. The format is the same on every platform and is described in [docs/data-format.md](docs/data-format.md).
+`data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. The format is the same on every platform and is described on the [data format page](https://filipraic.github.io/pin-list/data-format).
 
 To move your lists to another device, use **Export** and **Import**.
 
@@ -228,14 +230,14 @@ The solution (`PinList.sln`) opens in Rider, Visual Studio or VS Code with the C
 
 Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 
-1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add an entry to [CHANGELOG.md](CHANGELOG.md).
+1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit and push to `master`.
 3. Create and push a tag with the same version:
    ```powershell
    git tag v2.1.0
    git push origin v2.1.0
    ```
-4. The workflow checks that the tag is on `master` and matches `Version.props`, runs the tests, builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk`, and creates a GitHub release with all three and their `.sha256` checksums. Edit the release notes on GitHub if needed.
+4. The workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section, runs the tests, builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk`, and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):
 
@@ -246,7 +248,7 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 (`keytool` comes with Android Studio: `C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe`.) Then add three secrets under **Settings → Secrets and variables → Actions**: `ANDROID_KEYSTORE_BASE64` (the clipboard), `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_ALIAS` (`pinlist`).
 
-**The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console.
+**The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console (project with the Google Drive API enabled and the scopes `drive.appdata`, `openid` and `userinfo.email`). The Android app has nothing built in: Google recognizes it by an *Android* OAuth client with the package name `com.pinlist.app` and the **SHA-1 of the release signing key** (`keytool -list -v -keystore pinlist-release.keystore -alias pinlist`). Without it, sign-in fails in the released APK. Add a second Android client with your debug key's SHA-1 for local builds. While the consent screen's publishing status is *Testing*, only listed test users can sign in and sign-ins expire after 7 days. Set it to **In production** (no Google review needed for these non-sensitive scopes) before telling anyone else about sync.
 
 Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does, so a broken build shows up before you tag. Dependabot opens pull requests when the GitHub Actions or test packages have updates.
 
@@ -255,7 +257,8 @@ Every push and pull request to `master` is also built (warnings count as errors)
 ```
 pin-list/
 ├─ .github/                 CI (build + tests, releases) and Dependabot
-├─ docs/                    data-format.md, privacy.md, social preview image (social-preview.html is its source)
+├─ docs/                    the website on GitHub Pages: index.html, privacy.html, data-format.html and site.css,
+│                           plus the social preview image (social-preview.html is its source)
 ├─ scripts/                 run.bat, publish.bat, package-mac.sh
 ├─ Version.props            the version of every app
 ├─ src/PinList.Core/        no UI, runs everywhere
@@ -277,7 +280,7 @@ pin-list/
 │  │                        tray icons, SingleInstance, Dialogs, WindowsSettings,
 │  │                        GoogleClient (the built-in Google sign-in client for sync), DesktopGoogleAuth,
 │  │                        TokenStores (DPAPI / Keychain)
-│  └─ macOS/Info.plist      the Mac app bundle's settings
+│  └─ macOS/                Info.plist (the Mac app bundle's settings) and icon-1024.png (the Mac app icon)
 ├─ src/PinList.Android/     the Android app: data folder, notifications, reminder alarms, Google sign-in
 │                           (Play services) and background sync (WorkManager)
 ├─ tests/PinList.Core.Tests/
@@ -295,7 +298,7 @@ On **macOS**, each widget's window joins all Spaces and stays put when switching
 
 ### Changing the data format
 
-`data.json` has a `version` number (currently 1). New fields are optional, and fields an app doesn't know are kept when it saves, so an older app doesn't lose what a newer one wrote. Raise `AppData.CurrentVersion` only when older files must be converted; do the conversion in `Store.Parse` and update [docs/data-format.md](docs/data-format.md).
+`data.json` has a `version` number (currently 1). New fields are optional, and fields an app doesn't know are kept when it saves, so an older app doesn't lose what a newer one wrote. Raise `AppData.CurrentVersion` only when older files must be converted; do the conversion in `Store.Parse` and update [docs/data-format.html](docs/data-format.html).
 
 ## License
 

@@ -16,11 +16,12 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -R "$WORK/publish/." "$APP/Contents/MacOS/"
 sed "s/__VERSION__/$VERSION/g" src/PinList/macOS/Info.plist > "$APP/Contents/Info.plist"
 
-# App icon from the 256 px PNG
+# App icon from the 1024 px PNG, with the Retina (@2x) sizes
 ICONSET="$WORK/PinList.iconset"
 mkdir -p "$ICONSET"
 for s in 16 32 128 256 512; do
-  sips -z $s $s src/PinList/Assets/icon-256.png --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+  sips -z $s $s src/PinList/macOS/icon-1024.png --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+  sips -z $((s * 2)) $((s * 2)) src/PinList/macOS/icon-1024.png --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/PinList.icns"
 

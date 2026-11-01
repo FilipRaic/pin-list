@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace PinList;
 
 /// <summary>
-/// Times in the data file are local wall-clock time without a time zone (see docs/data-format.md), so a 09:00
+/// Times in the data file are local wall-clock time without a time zone (see docs/data-format.html), so a 09:00
 /// reminder is 09:00 on whichever device has the file. A time with an offset isn't valid.
 /// </summary>
 sealed class WallClockConverter : JsonConverter<DateTime>

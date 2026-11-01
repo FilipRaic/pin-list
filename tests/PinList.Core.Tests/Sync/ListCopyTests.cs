@@ -5,7 +5,7 @@ using Xunit;
 
 namespace PinList.Tests.Sync;
 
-/// <summary>The cloud file of one list (docs/data-format.md, "Cloud files").</summary>
+/// <summary>The cloud file of one list (docs/data-format.html, "Cloud files").</summary>
 public class ListCopyTests
 {
     readonly SimClock _clock = new();
