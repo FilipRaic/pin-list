@@ -50,6 +50,14 @@ public class PhoneApp : Application
 
     static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
 
+    /// <summary>This app's version (set by the platform). Without it there is no update check.</summary>
+    public static Version? AppVersion { get; set; }
+
+    /// <summary>Creates the update check when the app starts (tests give one without GitHub).</summary>
+    public static Func<Updates?> CreateUpdates { get; set; } = () => AppVersion is { } v ? Updates.ForGitHub(Http, v) : null;
+
+    Updates? _updates;
+
     public PhoneView? View { get; private set; }
     public Reminders? ReminderService { get; private set; }
 
@@ -83,7 +91,8 @@ public class PhoneApp : Application
 
     /// <summary>Loads the data and makes the phone screen.</summary>
     public PhoneView Start()
-    {        UiTimers.Factory = () => new AvaloniaUiTimer();
+    {
+        UiTimers.Factory = () => new AvaloniaUiTimer();
         Themes.SystemThemeName = "Use phone setting";
         Themes.SystemDarkSource = () => PlatformSettings?.GetColorValues().ThemeVariant == PlatformThemeVariant.Dark;
         Store.Saver = new DebouncedSaveScheduler(() => { Store.SaveNow(); Saved?.Invoke(); });
@@ -103,6 +112,7 @@ public class PhoneApp : Application
         View.Reload();
 
         StartSync();
+        StartUpdates();
         OnUiThread = work => Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(work);
 
         ReminderService?.Stop();
@@ -129,6 +139,15 @@ public class PhoneApp : Application
         View!.Sync = sync;
         sync.Start();
         _ = sync.SyncNow(); // on start (spec 9.9)
+    }
+
+    /// <summary>Starts the update check (one at a time, also after a restart of the screen).</summary>
+    void StartUpdates()
+    {
+        _updates?.Stop();
+        _updates = CreateUpdates();
+        View!.UpdateCheck = _updates;
+        _updates?.Start();
     }
 
     internal void SetTheme(string key)

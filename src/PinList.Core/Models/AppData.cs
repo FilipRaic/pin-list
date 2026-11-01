@@ -251,6 +251,12 @@ public class Settings
 
     /// <summary>Theme for menus, dialogs and the archive: "System", "Light" or "Dark".</summary>
     public string Theme { get; set; } = "System";
+
+    /// <summary>Whether PinList looks for a newer version about once a day. Null: not asked yet (asked on start).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public bool? CheckForUpdates { get; set; }
+
+    /// <summary>The newest version PinList has already told about, so each new version is announced once.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? UpdateAnnounced { get; set; }
 }
 
 public class AppData

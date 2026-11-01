@@ -35,6 +35,11 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
         {
             if (e == TrayEntry.Separator) { menu.Items.Add(new NativeMenuItemSeparator()); continue; }
             var item = new NativeMenuItem(e.Text) { IsEnabled = e.Enabled };
+            if (e.Checked is { } on)
+            {
+                item.ToggleType = MenuItemToggleType.CheckBox;
+                item.IsChecked = on;
+            }
             item.Click += (_, _) => e.Action?.Invoke();
             menu.Items.Add(item);
         }

@@ -198,6 +198,49 @@ public partial class PhoneTests : UiTest
     }
 
     [AvaloniaFact]
+    public void A_dragged_card_stays_under_the_finger_and_does_not_swap_back_and_forth()
+    {
+        var a = MakeBoard(("A", new[] { "a" })); a.Title = "A";
+        var b = MakeBoard(("B", new[] { "b1", "b2", "b3", "b4", "b5" })); b.Title = "B"; // taller than A
+        Show();
+        var card = Card(a);
+        var p = At(card);
+        double grab = p.Y - card.TranslatePoint(default, _window)!.Value.Y;
+        _window.MouseDown(p, MouseButton.Left);
+        UiHost.Wait(TimeSpan.FromMilliseconds(150));
+
+        // into the top half of the taller card: not past its middle yet, so nothing moves
+        var top = At(Card(b), 0.3);
+        _window.MouseMove(new Point(p.X, (p.Y + top.Y) / 2), RawInputModifiers.LeftMouseButton);
+        _window.MouseMove(top, RawInputModifiers.LeftMouseButton);
+        Pump();
+        Assert.Equal(new[] { "A", "B" }, Store.Data.Boards.Select(x => x.Title));
+
+        // past its middle: they swap once, and wiggling there keeps them swapped
+        var low = At(Card(b), 0.7);
+        foreach (var dy in new[] { 0.0, 3, -3, 6, -6, 0 })
+        {
+            _window.MouseMove(low + new Point(0, dy), RawInputModifiers.LeftMouseButton);
+            Pump();
+            Assert.Equal(new[] { "B", "A" }, Store.Data.Boards.Select(x => x.Title));
+        }
+
+        // the lifted card is drawn where the finger holds it, not in its slot
+        UiHost.Wait(TimeSpan.FromMilliseconds(250)); // let the lift and the other card's slide finish
+        var lifted = Card(a);
+        Assert.Contains("lifted", lifted.Classes);
+        double shownTop = lifted.TranslatePoint(default, _window)!.Value.Y;
+        Assert.InRange(low.Y - shownTop, grab - 6, grab + 6); // a few pixels off: it's drawn a little bigger
+
+        _window.MouseUp(low, MouseButton.Left);
+        UiHost.Wait(TimeSpan.FromMilliseconds(500));
+        Assert.Equal(new[] { "B", "A" }, Store.Data.Boards.Select(x => x.Title));
+        Assert.DoesNotContain("lifted", Card(a).Classes);
+        Actions.Undo();
+        Assert.Equal(new[] { "A", "B" }, Store.Data.Boards.Select(x => x.Title));
+    }
+
+    [AvaloniaFact]
     public void A_swipe_that_starts_on_a_card_does_not_pick_it_up()
     {
         var a = MakeBoard(("A", new[] { "a" }));

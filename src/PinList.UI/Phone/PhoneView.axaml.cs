@@ -41,6 +41,12 @@ public partial class PhoneView : UserControl
     /// <summary>Asks for a file to export into (the system file picker). Tests replace it.</summary>
     public static Func<TopLevel, Task<Stream?>> PickExportFile { get; set; } = SystemExportPicker;
 
+    /// <summary>Opens a web page or a download in the phone's browser. Tests replace it.</summary>
+    public static Func<TopLevel, string, Task> OpenUrl { get; set; } = SystemOpenUrl;
+
+    [ExcludeFromCodeCoverage(Justification = "Opens the phone's browser; tests replace it.")]
+    static async Task SystemOpenUrl(TopLevel top, string url) => await top.Launcher.LaunchUriAsync(new Uri(url));
+
     /// <summary>Asks for a file to import (the system file picker). Tests replace it.</summary>
     public static Func<TopLevel, Task<Stream?>> PickImportFile { get; set; } = SystemImportPicker;
 
@@ -72,6 +78,7 @@ public partial class PhoneView : UserControl
 
         _homeDrag = new PhoneDrag(HomeScreen, HomeScroller, o => o is Board)
         {
+            LiftScale = 1.03,
             MoveOver = MoveBoardOver,
             Dropped = DropBoard,
             LongPressed = (o, _) => ShowBoardMenu((Board)o, fromCard: true),
@@ -87,6 +94,7 @@ public partial class PhoneView : UserControl
         AddHandler(LostFocusEvent, OnLostFocus, RoutingStrategies.Bubble);
         ArchiveSearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) RefreshArchive(); };
         _snackTimer.Tick += (_, _) => HideSnackbar();
+        _snackbarAction = UndoLastChange; // the bar's button starts as Undo
         App_ThemeOrDataChanged();
     }
 
@@ -226,6 +234,57 @@ public partial class PhoneView : UserControl
                     "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
                     ("Delete", () => _ = sync.SignOut(true), true),
                     ("Cancel", () => { }, false)), true));
+    }
+
+    // ================= Updates =================
+
+    Updates? _updates;
+
+    /// <summary>The update check (null when this build has none: then nothing about updates shows).</summary>
+    public Updates? UpdateCheck
+    {
+        get => _updates;
+        set
+        {
+            if (_updates != null) _updates.Found -= OnUpdateFound;
+            _updates = value;
+            if (_updates == null) return;
+            _updates.Found += OnUpdateFound;
+            if (_updates.Enabled == null) Dispatcher.UIThread.Post(AskAboutUpdates);
+        }
+    }
+
+    /// <summary>Asked on start until it's answered (tapping outside the question asks again next time).</summary>
+    internal void AskAboutUpdates()
+    {
+        if (_updates is not { Enabled: null } updates) return;
+        ShowSheet("PinList can look for a new version about once a day and tell you when there is one. " +
+                  "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent. " +
+                  "You can change this later in the ⋮ menu.",
+            ("Check for updates", () => updates.Enabled = true, false),
+            ("Don't check", () => updates.Enabled = false, false));
+    }
+
+    /// <summary>The ⋮ menu's "Updates": on or off.</summary>
+    void ShowUpdatesSheet()
+    {
+        var updates = _updates!;
+        ShowSheet("Look for new versions of PinList",
+            ((updates.Enabled == true ? "✓ " : "") + "Check about once a day", () => updates.Enabled = true, false),
+            ((updates.Enabled == false ? "✓ " : "") + "Don't check", () => updates.Enabled = false, false));
+    }
+
+    /// <summary>A new version, found for the first time: a bar that offers it.</summary>
+    void OnUpdateFound(UpdateInfo update) =>
+        ShowSnackbar($"PinList {update.Version} is available", "Get it", OpenUpdate,
+            $"PinList {update.Version} is available. Get it from the button, or later from the menu.",
+            TimeSpan.FromSeconds(10));
+
+    /// <summary>Downloads the new version's APK in the browser (or opens its release page).</summary>
+    void OpenUpdate()
+    {
+        var update = _updates?.Available;
+        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, update?.ApkUrl ?? update?.PageUrl ?? Updates.ReleasesPage);
     }
 
     void ShowHome()
@@ -507,10 +566,19 @@ public partial class PhoneView : UserControl
     (Category cat, int index)? _itemFrom;
     int? _categoryFrom;
 
+    /// <summary>
+    /// A card or category only takes the other's place once the finger is past the middle of it. Swapping as soon
+    /// as the finger touches a taller neighbour would put that neighbour right back under the finger, and the two
+    /// would swap back and forth.
+    /// </summary>
+    static bool PastMiddle(int from, int to, Point p, Size size) =>
+        to > from ? p.Y > size.Height / 2 : p.Y < size.Height / 2;
+
     bool MoveBoardOver(object dragged, object target, Point p, Size size)
     {
         var boards = Store.Data.Boards; // only boards can be dragged on the cards screen
         int from = boards.IndexOf((Board)dragged), to = boards.IndexOf((Board)target);
+        if (!PastMiddle(from, to, p, size)) return false;
         _boardFrom ??= from;
         boards.Move(from, to);
         return true;
@@ -543,9 +611,10 @@ public partial class PhoneView : UserControl
                 return true;
             case (Category d, Category t):
                 var cats = _board!.Categories;
-                int fromIndex = cats.IndexOf(d);
+                int fromIndex = cats.IndexOf(d), toIndex = cats.IndexOf(t);
+                if (!PastMiddle(fromIndex, toIndex, p, size)) return false;
                 _categoryFrom ??= fromIndex;
-                cats.Move(fromIndex, cats.IndexOf(t));
+                cats.Move(fromIndex, toIndex);
                 return true;
             default:
                 return false; // e.g. a category over an item: keep looking (to the item's category)
@@ -704,13 +773,16 @@ public partial class PhoneView : UserControl
 
     void AppMenu_Click(object? sender, RoutedEventArgs e)
     {
-        var options = new System.Collections.Generic.List<(string, Action, bool)>
+        var options = new System.Collections.Generic.List<(string, Action, bool)>();
+        if (_updates?.Available is { } update) options.Add(($"Get PinList {update.Version}", OpenUpdate, false));
+        options.AddRange(new (string, Action, bool)[]
         {
             ("Archive", ShowArchive, false),
             ("App theme", () => ShowSheet("App theme", Themes.AppThemes.Select(t =>
                 ((Store.Data.Settings.Theme == t.Key ? "✓ " : "") + t.Name, (Action)(() => SetTheme(t.Key)), false)).ToArray()), false),
-        };
+        });
         if (_sync != null) options.Add(("Google sync", ShowSyncSheet, false));
+        if (_updates != null) options.Add(("Updates", ShowUpdatesSheet, false));
         options.Add(("Export", () => _ = Export(), false));
         options.Add(("Import", () => _ = Import(), false));
         ShowSheet("PinList", options.ToArray());
@@ -840,22 +912,29 @@ public partial class PhoneView : UserControl
 
     // ================= Undo bar =================
 
-    /// <summary>Says what just happened, with an Undo button, for a few seconds.</summary>
-    internal void ShowUndo(string message) => ShowSnackbar(message, undo: true);
+    Action? _snackbarAction;
 
-    void ShowMessage(string message) => ShowSnackbar(message, undo: false);
+    /// <summary>Says what just happened, with an Undo button, for a few seconds.</summary>
+    internal void ShowUndo(string message) =>
+        ShowSnackbar(message, "Undo", UndoLastChange, message + ". Undo is available.");
+
+    void ShowMessage(string message) => ShowSnackbar(message, null, null, message);
 
     /// <summary>Messages from PinList.Core (e.g. "the data file was damaged, the backup was loaded").</summary>
     public void ShowMessageForStore(string message) => ShowMessage(message);
 
-    void ShowSnackbar(string message, bool undo)
+    /// <summary>The bar at the bottom, with an optional button (Undo, Get it), for a few seconds.</summary>
+    void ShowSnackbar(string message, string? button, Action? action, string announcement, TimeSpan? time = null)
     {
         SnackbarText.Text = message;
-        UndoButton.IsVisible = undo;
+        UndoButton.Content = button;
+        UndoButton.IsVisible = button != null;
+        _snackbarAction = action;
         Snackbar.IsVisible = true;
         _snackTimer.Stop();
+        _snackTimer.Interval = time ?? TimeSpan.FromSeconds(5);
         _snackTimer.Start();
-        A11y.Announce(this, undo ? message + ". Undo is available." : message);
+        A11y.Announce(this, announcement);
     }
 
     void HideSnackbar()
@@ -864,9 +943,15 @@ public partial class PhoneView : UserControl
         Snackbar.IsVisible = false;
     }
 
-    void Undo_Click(object? sender, RoutedEventArgs e)
+    void SnackbarButton_Click(object? sender, RoutedEventArgs e)
     {
+        var action = _snackbarAction;
         HideSnackbar();
+        action?.Invoke();
+    }
+
+    void UndoLastChange()
+    {
         A11y.Announce(this, Actions.Undo(out var what) ? "Undone: " + what : "Nothing to undo");
         UpdateBoardTitle();
     }

@@ -3,6 +3,25 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.2.0] - 2026-11-02
+
+PinList can now tell you when a new version is out, and dragging on Android is smooth.
+
+### Added
+- **Update check**, on Windows, macOS and Android. On first start PinList asks whether it may look for new versions. If you say yes, it asks GitHub about once a day for the number of the latest release. Nothing about you or your lists is sent ([privacy policy](https://filipraic.github.io/pin-list/privacy)). PinList never installs anything by itself
+- When a new version is out, the desktop shows a notification once and the tray / menu bar menu starts with **Get PinList x.y.z**, which opens the release page. On Android a bar with **Get it** appears once and the ⋮ menu gets **Get PinList x.y.z**, which downloads the new APK in the browser
+- **Check for updates** in the tray / menu bar menu and **⋮ → Updates** on Android change the answer at any time
+- `data.json` gets two optional settings for this, `checkForUpdates` and `updateAnnounced`. The data format stays at version 1 ([data format](https://filipraic.github.io/pin-list/data-format))
+
+### Changed
+- The privacy policy has a new section about the update check (effective 2 November 2026)
+
+### Fixed
+- Smoother drag and drop on Android. The card, item or category you drag now stays under your finger instead of jumping from slot to slot, and slides into its place when you let go
+- On Android, dragging a card or category over a taller one no longer makes the two swap back and forth. They swap once your finger is past the middle of the other one
+- On Android, a dragged item is drawn above the rows below it instead of sliding under them, and the round check button no longer jumps ahead of its row while rows slide
+- On Android, scrolling while you hold a dragged row near the top or bottom edge runs at an even speed, and the row stays under your finger while the list scrolls
+
 ## [2.1.0] - 2026-11-01
 
 Optional sync through your own Google Drive, on Windows, macOS and Android. Off until you sign in and turn it on for a list.

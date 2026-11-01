@@ -55,6 +55,9 @@ public partial class App : Application
     /// <summary>Creates the sync service when the app starts (tests use one without Google).</summary>
     internal static Func<SyncService> CreateSyncService { get; set; } = CreateRealSync;
 
+    /// <summary>Creates the update check when the app starts (tests use one without GitHub).</summary>
+    internal static Func<Updates> CreateUpdates { get; set; } = CreateRealUpdates;
+
     // These act on the operating system itself (an icon in the real taskbar, a file manager window, ending the
     // process), so tests replace them and they're left out of the coverage numbers.
 
@@ -82,6 +85,9 @@ public partial class App : Application
         return new SyncService(auth, () => new DriveCloudStore(Http, auth.AccessToken), Environment.MachineName);
     }
 
+    [ExcludeFromCodeCoverage(Justification = "Asks GitHub for PinList's latest release; tests use fakes.")]
+    static Updates CreateRealUpdates() => Updates.ForGitHub(Http, typeof(App).Assembly.GetName().Version!);
+
     [ExcludeFromCodeCoverage(Justification = "Ends the app (in tests: the test run).")]
     static void ShutdownProcess(App app) =>
         (app.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
@@ -96,9 +102,12 @@ public partial class App : Application
     readonly List<BoardWindow> _windows = new();
     readonly Reminders _reminders = new();
     IReadOnlyList<TodoItem> _lastReminders = Array.Empty<TodoItem>();
+    Updates? _updates;
+    bool _lastNotificationIsUpdate;
     static bool _errorLoggingHooked;
 
     internal IReadOnlyList<BoardWindow> OpenWindows => _windows;
+    internal Updates? UpdateCheck => _updates;
     internal ArchiveWindow? Archive => _archive;
     internal Reminders ReminderService => _reminders;
     internal ITrayIcon? Tray => _tray;
@@ -189,6 +198,8 @@ public partial class App : Application
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkChange;
         OpenAllBoards();
         CreateTray();
+        UseUpdates(CreateUpdates());
+        if (_updates!.Enabled == null) Dispatcher.UIThread.Post(() => _ = AskAboutUpdates());
         _ = SyncService.Current?.SyncNow(); // on start (spec 5.2)
         _instance.ListenForShow(() => Dispatcher.UIThread.Post(ShowAllBoards));
 
@@ -212,6 +223,8 @@ public partial class App : Application
         Actions.BoardDeleted -= OnBoardDeleted;
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkChange;
         UseSync(null);
+        UseUpdates(null);
+        _lastNotificationIsUpdate = false;
 #if WINDOWS
         SystemEvents.SessionEnding -= OnSessionEnding;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -343,6 +356,60 @@ public partial class App : Application
             new TrayEntry("Sign out and delete cloud data", () => _ = SignOutAndDeleteCloudData(null)),
         };
     }
+
+    // ================= Updates =================
+
+    /// <summary>Replaces the update check (on start, on exit, and in tests).</summary>
+    internal void UseUpdates(Updates? updates)
+    {
+        if (_updates is { } old)
+        {
+            old.Stop();
+            old.Changed -= OnUpdatesChanged;
+            old.Found -= OnUpdateFound;
+        }
+        _updates = updates;
+        if (updates != null)
+        {
+            updates.Changed += OnUpdatesChanged;
+            updates.Found += OnUpdateFound;
+            updates.Start();
+        }
+        OnUpdatesChanged();
+    }
+
+    /// <summary>A new version or the setting changed: the tray menu follows.</summary>
+    void OnUpdatesChanged() => _tray?.SetMenu(TrayMenuEntries());
+
+    /// <summary>A new version, found for the first time: a notification that opens its download page.</summary>
+    void OnUpdateFound(UpdateInfo update)
+    {
+        _lastNotificationIsUpdate = true;
+        _tray!.ShowNotification($"PinList {update.Version} is available", "Click here to open the download page.");
+    }
+
+    /// <summary>Opens the download page of the new version (or of the latest release).</summary>
+    internal void OpenUpdatePage() => OpenUrl(_updates?.Available?.PageUrl ?? Updates.ReleasesPage);
+
+    /// <summary>Asked once (on the first start of a version with the update check), until it's answered.</summary>
+    internal async Task AskAboutUpdates()
+    {
+        if (_updates is not { Enabled: null } updates) return;
+        var menu = OperatingSystem.IsWindows() ? "tray menu" : "menu bar menu";
+        int choice = await Dialogs.Current.Choose(null, "Check for updates?",
+            "PinList can look for a new version about once a day and tell you when there is one. " +
+            "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent.\n\n" +
+            $"You can change this later with Check for updates in the {menu}.", 1,
+            ("No", DialogButtonKind.Normal), ("Yes", DialogButtonKind.Accent));
+        if (choice >= 0) updates.Enabled = choice == 1; // closed without answering: asked again on the next start
+    }
+
+    void ToggleUpdates() => _updates!.Enabled = _updates.Enabled != true;
+
+    /// <summary>"Get PinList x.y.z" at the top of the tray menu, while a newer version is available.</summary>
+    IEnumerable<TrayEntry> UpdateEntries() => _updates?.Available is { } u
+        ? new[] { new TrayEntry($"Get PinList {u.Version}", OpenUpdatePage), TrayEntry.Separator }
+        : Array.Empty<TrayEntry>();
 
     // ================= Errors =================
 
@@ -552,13 +619,23 @@ public partial class App : Application
     {
         if (_tray == null) return;
         _lastReminders = due;
+        _lastNotificationIsUpdate = false;
         var (title, text) = Reminders.Describe(due);
         _tray.ShowNotification(title, text);
     }
 
-    /// <summary>Clicking the notification brings the widgets to the front and highlights the item.</summary>
+    /// <summary>
+    /// Clicking a reminder brings the widgets to the front and highlights the item. Clicking the notification
+    /// about a new version opens its download page.
+    /// </summary>
     internal void OnReminderClicked()
     {
+        if (_lastNotificationIsUpdate)
+        {
+            _lastNotificationIsUpdate = false;
+            OpenUpdatePage();
+            return;
+        }
         ShowAllBoards();
         var item = _lastReminders.FirstOrDefault(i => Store.Locate(i) != null);
         if (item != null) BoardWindow.Highlight(item);
@@ -660,7 +737,7 @@ public partial class App : Application
     }
 
     /// <summary>The tray menu's entries (shared by the Windows menu and the macOS menu bar menu).</summary>
-    internal IReadOnlyList<TrayEntry> TrayMenuEntries() => new[]
+    internal IReadOnlyList<TrayEntry> TrayMenuEntries() => UpdateEntries().Concat(new[]
     {
         new TrayEntry("New window", NewBoardAtCursor),
         new TrayEntry("Archive", ShowArchive),
@@ -669,9 +746,10 @@ public partial class App : Application
         new TrayEntry("Export", () => _ = ExportData(null)),
         new TrayEntry("Import", () => _ = ImportData(null)),
         TrayEntry.Separator,
-    }.Concat(SyncEntries()).Concat(new[]
+    }).Concat(SyncEntries()).Concat(new[]
     {
         TrayEntry.Separator,
+        new TrayEntry("Check for updates", ToggleUpdates, Checked: _updates?.Enabled == true),
         new TrayEntry("Open data folder", () => OpenFolder(Store.Dir)),
         TrayEntry.Separator,
         new TrayEntry("Exit", ExitApp),
@@ -713,6 +791,11 @@ public partial class App : Application
         Native.BringToForeground(host);
 
         var menu = new ContextMenu { Placement = PlacementMode.TopEdgeAlignedLeft };
+        if (_updates?.Available is { } update)
+        {
+            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", OpenUpdatePage));
+            menu.Items.Add(new Separator());
+        }
         menu.Items.Add(CreateMenuItem("New window", NewBoardAtCursor));
         menu.Items.Add(CreateMenuItem("Archive", ShowArchive));
         menu.Items.Add(CreateMenuItem("Show all windows", ShowAllBoards));
@@ -734,6 +817,10 @@ public partial class App : Application
         auto.IsChecked = Autostart.IsEnabled();
         auto.IsEnabled = ManageAutostart;
         menu.Items.Add(auto);
+        var updates = CreateMenuItem("Check for updates", ToggleUpdates);
+        updates.ToggleType = MenuItemToggleType.CheckBox;
+        updates.IsChecked = _updates?.Enabled == true;
+        menu.Items.Add(updates);
         menu.Items.Add(CreateMenuItem("Open data folder", () => OpenFolder(Store.Dir)));
         menu.Items.Add(new Separator());
         menu.Items.Add(CreateMenuItem("Exit", ExitApp));

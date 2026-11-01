@@ -342,7 +342,7 @@ public class AppTests : UiTest
         w.Board.Style = "Green";
         Tray.ClickRight();
         var menu = App.LastTrayMenu!;
-        Assert.Equal(new object[] { "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Open data folder", "Exit" },
+        Assert.Equal(new object[] { "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Check for updates", "Open data folder", "Exit" },
             menu.Items.OfType<MenuItem>().Select(m => m.Header!));
 
         ChooseFromMenu(menu, "New window");
@@ -368,7 +368,7 @@ public class AppTests : UiTest
         // macOS shows these entries in its menu bar menu (Windows shows the menu above on right click)
         var entries = Tray.Menu;
         Assert.Equal(new[] { "New window", "Archive", "Show all windows", "-", "Export", "Import", "-",
-                "Sync isn't available in this build.", "-", "Open data folder", "-", "Exit" },
+                "Sync isn't available in this build.", "-", "Check for updates", "Open data folder", "-", "Exit" },
             entries.Select(e => e.Text));
         Assert.False(entries.Single(e => e.Text.StartsWith("Sync isn't")).Enabled);
         OpenNew(("A", new string[0]));

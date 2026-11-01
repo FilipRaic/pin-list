@@ -23,6 +23,8 @@ public class MainApplication : AvaloniaAndroidApplication<PhoneApp>
         // and the phone's name for sync messages
         PhoneApp.Auth = new AndroidGoogleAuth(this);
         PhoneApp.DeviceName = $"{Build.Manufacturer} {Build.Model}".Trim();
+        // the update check compares this with PinList's latest release (Version.props)
+        PhoneApp.AppVersion = typeof(MainApplication).Assembly.GetName().Version;
         base.OnCreate();
     }
 

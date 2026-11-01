@@ -22,6 +22,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 - **Undo.** On the desktop, Ctrl+Z undoes almost anything: deleting, completing, editing, renaming, moving, restoring. On the phone, the bar that appears after a change has an *Undo* button.
 - **Dark, light or pastel lists**, optional transparency, menus that follow the system light/dark setting.
 - **Optional Google Drive sync.** Sign in with Google and choose which lists sync between your PCs, Macs and phone. Changes are merged item by item, also after days offline, and nothing you deleted comes back. Your lists go only to a hidden folder in **your own** Google Drive – see [Sync](#sync).
+- **Update notices (optional).** On first start PinList asks whether it may check for new versions. If you say yes, it looks about once a day and tells you when one is out – see [Updating](#updating).
 - **Your data is safe.** Every change is saved right away to a local JSON file, with atomic writes and daily backups. Export and import your lists at any time – also to move them between a PC, a Mac and a phone.
 
 ## Requirements
@@ -74,6 +75,15 @@ On **Xiaomi / HyperOS** (and some other brands), the system may stop apps in the
 
 Updates install over the old version and keep your lists.
 
+### Updating
+
+On first start PinList asks whether it may check for updates. If you say yes, it asks GitHub about once a day for the number of the latest release (nothing about you or your lists is sent, see the [privacy policy](https://filipraic.github.io/pin-list/privacy)). When a new version is out:
+
+- **Windows and macOS:** a notification says so, and the tray / menu bar menu gets **Get PinList x.y.z** at the top. Both open the release page. Download the new file and replace the old one.
+- **Android:** a bar with **Get it** appears, and the **⋮** menu gets **Get PinList x.y.z**. Both download the new APK in your browser. Open it to install it over the old version.
+
+Change your answer at any time with **Check for updates** in the tray / menu bar menu, or **⋮ → Updates** on the phone.
+
 ## Usage
 
 ### Desktop (Windows and macOS)
@@ -97,7 +107,8 @@ Updates install over the old version and keep your lists.
 | Archive | **⋯ → Archive** or the tray / menu bar menu. Enter or double-click restores, Delete removes permanently (after asking), Ctrl+Z undoes, Ctrl+F searches. |
 | Sync a widget | **⋯ → Sync this window** (signs in with Google first if needed). See [Sync](#sync). |
 | Export / import | **⋯ → Export** saves all lists and the archive to a file. **⋯ → Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
-| Tray / menu bar icon | Brings all widgets to the front; its menu has new window, archive, theme, export/import, **Google sync**, start at login, data folder and exit. |
+| Tray / menu bar icon | Brings all widgets to the front; its menu has new window, archive, theme, export/import, **Google sync**, start at login, **Check for updates**, data folder and exit. |
+| Updates | When a new version is out, the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
 Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window** to remove one.
 
@@ -115,6 +126,7 @@ Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window*
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
 | Archive, theme, export / import | The **archive** and **⋮** buttons on the cards screen. |
 | Google sync | **⋮ → Google sync** to sign in; **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
+| Updates | **⋮ → Updates** turns the update check on or off. When a new version is out, **⋮ → Get PinList x.y.z** downloads it. |
 
 ## Sync
 
@@ -196,7 +208,7 @@ scripts\publish.bat
 |---|---|
 | `scripts\run.bat` | Runs the Windows app in Debug mode (`dotnet run`) while you're developing |
 | `scripts\publish.bat` | Builds a Release exe into `publish\PinList.exe` and starts it |
-| `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.1.0`) |
+| `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.2.0`) |
 
 Both `.bat` scripts close a running PinList first, because only one instance can run at a time. Debug and Release builds share the same data.
 
@@ -234,8 +246,8 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 2. Commit and push to `master`.
 3. Create and push a tag with the same version:
    ```powershell
-   git tag v2.1.0
-   git push origin v2.1.0
+   git tag v2.2.0
+   git push origin v2.2.0
    ```
 4. The workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section, runs the tests, builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk`, and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 
@@ -264,7 +276,8 @@ pin-list/
 ├─ src/PinList.Core/        no UI, runs everywhere
 │  ├─ Models/               Board → Category → TodoItem, ArchivedItem, Settings, AppData
 │  ├─ Services/             Actions (every change + undo), Store (data.json, backups, export/import),
-│  │                        Reminders, WallClockConverter (times in data.json)
+│  │                        Reminders, Updates (the daily check for a new version on GitHub),
+│  │                        WallClockConverter (times in data.json)
 │  ├─ Sync/                 Google Drive sync: SyncService, SyncMerge (merge engine), ChangeTracker (stamps),
 │  │                        ListCopy (cloud files), DriveCloudStore, GoogleOAuth, LoopbackSignIn, SyncState
 │  └─ Platform/             timers and work areas the apps provide
@@ -273,7 +286,8 @@ pin-list/
 │  │                        (press-and-hold and drag), BoardCard, PhoneApp
 │  └─ SyncIcon.cs           a list's sync status as icon and tooltip (desktop and phone)
 ├─ src/PinList/             the desktop app (Windows and macOS)
-│  ├─ App.axaml(.cs)        startup, single instance, tray / menu bar icon, theme, reminders, export/import
+│  ├─ App.axaml(.cs)        startup, single instance, tray / menu bar icon, theme, reminders, export/import,
+│  │                        update notices
 │  ├─ Views/                BoardWindow (widget; split into core, keyboard, menus, drag & drop, sync),
 │  │                        ArchiveWindow, ConfirmDialog, SignInDialog, DateDialog, ReminderPopup
 │  ├─ Services/             Native (Win32) and MacNative (pinning), Displays (monitors), Autostart,

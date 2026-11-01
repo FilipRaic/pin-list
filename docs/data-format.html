@@ -224,6 +224,22 @@
                     </td>
                     <td><code>"System"</code></td>
                 </tr>
+                <tr>
+                    <td><code>checkForUpdates</code></td>
+                    <td>bool?</td>
+                    <td>Whether PinList asks GitHub about once a day for the number of its latest version (2.2.0).
+                        Missing until the user answered the question on start. Kept per device.
+                    </td>
+                    <td>missing</td>
+                </tr>
+                <tr>
+                    <td><code>updateAnnounced</code></td>
+                    <td>string?</td>
+                    <td>The newest version PinList already told about, e.g. <code>"2.3.0"</code>, so each new version
+                        is announced once (2.2.0). Kept per device.
+                    </td>
+                    <td>missing</td>
+                </tr>
                 </tbody>
             </table>
         </div>
@@ -738,6 +754,12 @@
                     <td>PinList 2.1.0 adds optional fields for sync (<code>syncInfo</code>, <code>synced</code>, <code>syncedChanged</code>,
                         <code>seen</code>, <code>sync</code>, <code>orderSync</code>) and <code>ArchivedItem.id</code>.
                         Older versions keep them when they save.
+                    </td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>PinList 2.2.0 adds the optional settings <code>checkForUpdates</code> and
+                        <code>updateAnnounced</code>. Older versions keep them when they save.
                     </td>
                 </tr>
                 </tbody>

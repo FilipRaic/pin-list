@@ -60,6 +60,7 @@ public static class UiHost
         App.OpenFolder = path => OpenedFolders.Add(path);
         App.ShutdownApp = _ => ShutdownRequests++;
         App.CreateSyncService = UnavailableSync;
+        App.CreateUpdates = () => NoUpdates();
         App.ManageAutostart = true;
         Autostart.RunKey = TestRunKey;
         if (!_hooked)
@@ -70,6 +71,9 @@ public static class UiHost
         if (!App.Instance.Start()) throw new InvalidOperationException("The app didn't start.");
         Pump();
     }
+
+    /// <summary>An update check that never finds anything (and never asks GitHub).</summary>
+    public static Updates NoUpdates() => new(_ => Task.FromResult<UpdateInfo?>(null), new Version(2, 2, 0));
 
     /// <summary>Sync as in a build without a Google client (whether or not a developer has one locally).</summary>
     public static PinList.Sync.SyncService UnavailableSync() =>

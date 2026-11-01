@@ -25,7 +25,8 @@
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
         </Style>
 
-        <!-- Cards and rows: lift while held or dragged, slide when the list is reordered -->
+        <!-- Cards and rows: lift while held or dragged, slide when the list is reordered.
+             PhoneDrag grows the lifted one (LiftScale) and keeps it under the finger. -->
         <Style Selector="Border.card, local|AccessibleRow.row">
             <Setter Property="Transitions">
                 <Transitions>
@@ -34,7 +35,6 @@
             </Setter>
         </Style>
         <Style Selector="Border.card.lifted">
-            <Setter Property="RenderTransform" Value="scale(1.03)"/>
             <Setter Property="BoxShadow" Value="0 6 18 0 #50000000"/>
             <Setter Property="ZIndex" Value="1"/>
         </Style>
@@ -44,7 +44,7 @@
         </Style>
         <Style Selector="local|AccessibleRow.row.lifted">
             <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
-            <Setter Property="RenderTransform" Value="scale(1.02)"/>
+            <Setter Property="BoxShadow" Value="0 4 12 0 #30000000"/>
             <Setter Property="ZIndex" Value="1"/>
         </Style>
 
@@ -324,7 +324,7 @@
                 Padding="16,6,6,6" Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1">
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock x:Name="SnackbarText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="15"/>
-                <Button x:Name="UndoButton" Grid.Column="1" Classes="option" Content="Undo" Padding="16,10" Click="Undo_Click"
+                <Button x:Name="UndoButton" Grid.Column="1" Classes="option" Content="Undo" Padding="16,10" Click="SnackbarButton_Click"
                         Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
             </Grid>
         </Border>
