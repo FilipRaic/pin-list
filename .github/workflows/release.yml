@@ -8,9 +8,11 @@ on:
 permissions:
   contents: write
 
+# Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
@@ -43,6 +45,7 @@ jobs:
   windows:
     needs: check
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -54,6 +57,7 @@ jobs:
         run: dotnet workload install android
 
       - name: Test
+        timeout-minutes: 10
         run: dotnet test PinList.sln -c Release
 
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
@@ -94,6 +98,7 @@ jobs:
   mac:
     needs: check
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -102,6 +107,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Test the shared code on macOS
+        timeout-minutes: 5
         run: dotnet test tests/PinList.Core.Tests -c Release
 
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
@@ -132,6 +138,7 @@ jobs:
   android:
     needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -175,6 +182,7 @@ jobs:
   publish:
     needs: [ windows, mac, android ]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 

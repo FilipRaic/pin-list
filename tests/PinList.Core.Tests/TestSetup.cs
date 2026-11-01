@@ -2,8 +2,7 @@ global using System.IO;
 using PinList;
 using Xunit;
 
-// Store and Actions are static, so tests must not run at the same time
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+// No assembly settings here: the UI tests compile this file too, with another xUnit version (see Parallelization.cs)
 
 namespace PinList.Tests;
 

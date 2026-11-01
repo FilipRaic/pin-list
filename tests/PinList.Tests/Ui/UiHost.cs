@@ -7,6 +7,10 @@ using Avalonia.Threading;
 
 [assembly: AvaloniaTestApplication(typeof(PinList.Tests.UiHost))]
 
+// Store, Actions and the app are static, so tests must not run at the same time.
+// With xUnit v3 4.x this becomes [assembly: Xunit.v3.Parallelization(Mode = Xunit.Sdk.ParallelMode.None)].
+[assembly: Xunit.CollectionBehavior(DisableTestParallelization = true)]
+
 namespace PinList.Tests;
 
 /// <summary>

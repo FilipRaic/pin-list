@@ -300,9 +300,12 @@ public sealed class SyncService
     /// <summary>One quick pass when the app exits; never waits longer than <paramref name="limit"/>.</summary>
     public async Task SyncBeforeExit(TimeSpan limit)
     {
-        using var cts = new CancellationTokenSource(limit);
+        using var cts = new CancellationTokenSource();
         var pass = RunOnce(cts.Token);
         await Task.WhenAny(pass, Task.Delay(limit));
+        // Cancel here, not with a second timer: a token source disposed before its timer fires never cancels,
+        // and the pass would then wait for the network forever and hold the one-pass-at-a-time lock
+        cts.Cancel();
     }
 
     /// <summary>The background job's entry point (Android). Uses the running app's data when there is one.</summary>

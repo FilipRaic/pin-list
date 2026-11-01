@@ -304,9 +304,9 @@
                                     <TextBlock Text="{Binding Text, Converter={x:Static local:Converters.FirstLine}}" FontSize="16"
                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource ArcText}"/>
                                     <TextBlock FontSize="13" Foreground="{DynamicResource ArcMuted}">
-                                        <Run Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy HH:mm'}"/>
+                                        <Run Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy HH:mm', Mode=OneWay}"/>
                                         <Run Text="  ·  "/>
-                                        <Run Text="{Binding CategoryName}"/>
+                                        <Run Text="{Binding CategoryName, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </Grid>

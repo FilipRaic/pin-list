@@ -10,9 +10,11 @@ on:
 permissions:
   contents: read
 
+# Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -31,6 +33,7 @@ jobs:
       # The UI tests run the real app headless (nothing is shown). The build fails if coverage drops
       # below 99 % of lines or 92 % of branches (Release builds count branches a little differently).
       - name: Test
+        timeout-minutes: 10
         run: >
           dotnet test PinList.sln -c Release --no-build
           -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
@@ -50,6 +53,7 @@ jobs:
       matrix:
         os: [ ubuntu-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -58,11 +62,13 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Test Core
+        timeout-minutes: 5
         run: dotnet test tests/PinList.Core.Tests -c Release
 
   # Builds PinList.app with the same script as the release, so a broken Mac build shows up before tagging
   mac:
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -77,6 +83,7 @@ jobs:
   # The signing key isn't used here, so the APK gets the debug key.
   android:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 

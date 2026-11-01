@@ -664,12 +664,43 @@ public class SyncServiceTests : StoreTestBase
     {
         Shared();
         Use(A);
-        _cloud.Gate = new TaskCompletionSource(); // the network hangs
-        var started = DateTime.UtcNow;
-        Await(A.Service.SyncBeforeExit(TimeSpan.FromMilliseconds(200)));
-        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(5));
-        Assert.True(SpinWait.SpinUntil(() => !A.Service.IsSyncing, 5000)); // the pass was cancelled too
-        _cloud.Gate = null;
+        var hang = _cloud.Gate = new TaskCompletionSource(); // the network hangs
+        try
+        {
+            var started = DateTime.UtcNow;
+            Await(A.Service.SyncBeforeExit(TimeSpan.FromMilliseconds(200)));
+            Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(5));
+            Assert.True(SpinWait.SpinUntil(() => !A.Service.IsSyncing, 5000)); // the pass was cancelled too
+        }
+        finally
+        {
+            // a pass left hanging would hold the one-pass-at-a-time lock and block every later test
+            _cloud.Gate = null;
+            hang.TrySetResult();
+        }
+    }
+
+    [Fact]
+    public void Exit_sync_always_cancels_a_hanging_pass()
+    {
+        // The time limit and the cancel used to be two timers. When the limit fired first (seen on macOS), the
+        // cancel was dropped and the pass kept waiting for the network forever. Repeated to give a race a chance.
+        Shared();
+        Use(A);
+        var hang = _cloud.Gate = new TaskCompletionSource();
+        try
+        {
+            for (int i = 0; i < 20; i++)
+            {
+                Await(A.Service.SyncBeforeExit(TimeSpan.FromMilliseconds(50)));
+                Assert.True(SpinWait.SpinUntil(() => !A.Service.IsSyncing, 2000), $"pass {i} wasn't cancelled");
+            }
+        }
+        finally
+        {
+            _cloud.Gate = null;
+            hang.TrySetResult();
+        }
     }
 
     [Fact]

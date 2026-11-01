@@ -20,12 +20,14 @@ Optional sync through your own Google Drive, on Windows, macOS and Android. Off 
 - Completed items keep their id in the archive, and every list, category and item gets a small change record in `data.json` (needed for merging). The data format stays at version 1, and 2.0.0 keeps the new fields ([data format](https://filipraic.github.io/pin-list/data-format))
 - Releases need the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` repository secrets and stop with an error if they're missing
 - GitHub release notes are now the version's section of this changelog (the release stops if it's missing)
+- Every build and release job, and every test step, has a time limit, so a hanging job fails within minutes
 - A new app icon on every platform (Windows, macOS, Android, the tray and the menu bar): the PinList logo from the website, a blue outlined check on a dark tile. The Mac app icon is now sharp on Retina screens too
 - Menu items and buttons no longer end with "…" (e.g. *Export*, *Color*, *Add reminder*)
 
 ### Fixed
 - Starting PinList while it's already running now always brings the widgets to the front (the signal to the running app could get lost)
 - On Android, opening PinList again after leaving it with Back now shows the lists reliably (the closing screen could still hold them)
+- On Android phones set to US English (or another language that writes the month first), opening the archive could crash the app or change when an item was completed. It happened for items completed on a day from the 1st to the 12th of a month
 
 ## [2.0.0] - 2026-10-31
 

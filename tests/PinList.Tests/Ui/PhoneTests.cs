@@ -557,6 +557,34 @@ public partial class PhoneTests : UiTest
     }
 
     [AvaloniaFact]
+    public void The_archive_shows_completion_times_without_changing_them()
+    {
+        // A phone set to US English reads "01.11.2026" as January 11. The archive only shows the time and must
+        // never parse it back into the item (that changed the date and looped until the app crashed).
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("en-US", false);
+            var b = MakeBoard(("Work", new[] { "milk" }));
+            Actions.Complete(b.Categories[0].Items[0]);
+            var completed = new DateTime(2026, 11, 1, 22, 5, 0);
+            Store.Data.Archive[0].CompletedAt = completed;
+
+            Show();
+            _view.ShowArchive();
+            Pump();
+
+            Assert.Equal(completed, Store.Data.Archive[0].CompletedAt);
+            Assert.Contains(FindAll<TextBlock>(_view).SelectMany(t => t.Inlines ?? new()).OfType<Avalonia.Controls.Documents.Run>(),
+                r => r.Text == "01.11.2026 22:05");
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [AvaloniaFact]
     public void Restoring_into_a_deleted_category_says_where_it_went()
     {
         var gone = MakeBoard(("Old", new[] { "x" }));
