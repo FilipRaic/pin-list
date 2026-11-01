@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -15,6 +16,7 @@ using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PinList.Sync;
 #if WINDOWS
 using Microsoft.Win32;
 #endif
@@ -47,6 +49,12 @@ public partial class App : Application
 
     internal static Action<App> ShutdownApp { get; set; } = ShutdownProcess;
 
+    /// <summary>Opens a web page in the default browser (Google sign-in).</summary>
+    internal static Action<string> OpenUrl { get; set; } = OpenInBrowser;
+
+    /// <summary>Creates the sync service when the app starts (tests use one without Google).</summary>
+    internal static Func<SyncService> CreateSyncService { get; set; } = CreateRealSync;
+
     // These act on the operating system itself (an icon in the real taskbar, a file manager window, ending the
     // process), so tests replace them and they're left out of the coverage numbers.
 
@@ -60,6 +68,19 @@ public partial class App : Application
     [ExcludeFromCodeCoverage(Justification = "Opens a file manager window.")]
     static void OpenInFileManager(string path) =>
         Process.Start(new ProcessStartInfo(OperatingSystem.IsWindows() ? "explorer.exe" : "open", $"\"{path}\"") { UseShellExecute = true });
+
+    [ExcludeFromCodeCoverage(Justification = "Opens the browser.")]
+    static void OpenInBrowser(string url) => Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+
+    static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    [ExcludeFromCodeCoverage(Justification = "Talks to Google with this build's client id; tests use fakes.")]
+    static SyncService CreateRealSync()
+    {
+        var auth = new DesktopGoogleAuth(GoogleClient.BuiltIn, TokenStores.ForThisOs(Store.Dir), Http,
+            url => { OpenUrl(url); return Task.CompletedTask; });
+        return new SyncService(auth, () => new DriveCloudStore(Http, auth.AccessToken), Environment.MachineName);
+    }
 
     [ExcludeFromCodeCoverage(Justification = "Ends the app (in tests: the test run).")]
     static void ShutdownProcess(App app) =>
@@ -163,8 +184,12 @@ public partial class App : Application
         if (ManageAutostart) Autostart.RefreshPath();
 
         Actions.BoardAdded += OpenBoard;
+        Actions.BoardDeleted += OnBoardDeleted;
+        UseSync(CreateSyncService());
+        System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkChange;
         OpenAllBoards();
         CreateTray();
+        _ = SyncService.Current?.SyncNow(); // on start (spec 5.2)
         _instance.ListenForShow(() => Dispatcher.UIThread.Post(ShowAllBoards));
 
         _reminders.Due += ShowReminders;
@@ -184,6 +209,9 @@ public partial class App : Application
     {
         ShuttingDown = true;
         Actions.BoardAdded -= OpenBoard;
+        Actions.BoardDeleted -= OnBoardDeleted;
+        System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkChange;
+        UseSync(null);
 #if WINDOWS
         SystemEvents.SessionEnding -= OnSessionEnding;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -201,10 +229,12 @@ public partial class App : Application
         _instance = null;
     }
 
-    public void ExitApp()
+    public async void ExitApp()
     {
         ShuttingDown = true;
         Store.Flush();
+        // one quick sync, never longer than 3 seconds (spec 5.2)
+        if (SyncService.Current is { } sync) await sync.SyncBeforeExit(TimeSpan.FromSeconds(3));
         ShutdownApp(this);
     }
 
@@ -212,6 +242,106 @@ public partial class App : Application
     {
         ShuttingDown = true;
         Store.Flush();
+        // the system is shutting down and doesn't wait for us: start the quick sync and let it run while it can
+        _ = SyncService.Current?.SyncBeforeExit(TimeSpan.FromSeconds(3));
+    }
+
+    // ================= Sync =================
+
+    [ExcludeFromCodeCoverage(Justification = "The operating system's network event; tests call OnNetworkAvailabilityChanged.")]
+    void OnNetworkChange(object? sender, System.Net.NetworkInformation.NetworkAvailabilityEventArgs e) =>
+        OnNetworkAvailabilityChanged(sender, e.IsAvailable);
+
+    /// <summary>The network came back: sync now instead of waiting for the next try (spec 5.2).</summary>
+    internal void OnNetworkAvailabilityChanged(object? sender, bool available)
+    {
+        if (available) Dispatcher.UIThread.Post(() => _ = SyncService.Current?.SyncNow());
+    }
+
+    /// <summary>Replaces the sync service (on start, on exit, and in tests).</summary>
+    internal void UseSync(SyncService? service)
+    {
+        if (SyncService.Current is { } old)
+        {
+            old.Stop();
+            old.Changed -= OnSyncChanged;
+            old.Message -= OnSyncMessage;
+        }
+        SyncService.Current = service;
+        if (service != null)
+        {
+            service.WorkArea = () => Displays.Primary.ToWorkArea();
+            service.IsBusy = o => BoardWindow.IsDragging || SyncService.IsEditing(o); // remote changes wait (spec 4.6)
+            service.Changed += OnSyncChanged;
+            service.Message += OnSyncMessage;
+            service.Start();
+        }
+        OnSyncChanged();
+    }
+
+    /// <summary>Sign-in or a list's sync state changed: the header icons and the tray menu follow.</summary>
+    void OnSyncChanged()
+    {
+        foreach (var w in _windows) w.RefreshSync();
+        _tray?.SetMenu(TrayMenuEntries());
+    }
+
+    void OnSyncMessage(string message) => _ = Dialogs.Info(null, "PinList", message);
+
+    /// <summary>A list deleted on another device: its window closes (one the user deleted here closed itself).</summary>
+    void OnBoardDeleted(Board board, bool byUser)
+    {
+        if (!byUser) _windows.FirstOrDefault(w => w.Board == board)?.CloseForReload();
+    }
+
+    /// <summary>Signs in, with the "waiting for your browser" dialog. True when signed in.</summary>
+    internal Task<bool> SignIn(Window? owner) => Dialogs.Current.WaitForSignIn(owner, SyncService.Current!.SignIn);
+
+    /// <summary>"Sync this window": turning it on signs in first when needed (spec 4.3).</summary>
+    internal async Task SetBoardSynced(Board board, bool on, Window owner)
+    {
+        var sync = SyncService.Current!;
+        if (on && sync.Account == null && !await SignIn(owner)) return;
+        await sync.SetSynced(board, on);
+    }
+
+    async Task SignOutAndDeleteCloudData(Window? owner)
+    {
+        if (await Dialogs.Ask(owner, "Delete PinList's cloud data?",
+                "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", "Delete"))
+            await SyncService.Current!.SignOut(true);
+    }
+
+    /// <summary>What a red sync icon means and how to fix it (spec 4.4).</summary>
+    internal async Task ExplainSyncProblem(Window owner, string problem)
+    {
+        var sync = SyncService.Current!;
+        if (sync.NeedsSignIn)
+        {
+            if (await Dialogs.Current.Choose(owner, "Sync stopped", "Google signed you out. Sign in again to keep syncing.", 1,
+                    ("Not now", DialogButtonKind.Normal), ("Sign in again", DialogButtonKind.Accent)) == 1)
+                await SignIn(owner);
+            return;
+        }
+        await Dialogs.Info(owner, "Sync problem", problem == "Can't reach Google Drive."
+            ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this device until it works again."
+            : problem);
+    }
+
+    /// <summary>The tray menu's "Google sync" entries (spec 4.2).</summary>
+    internal IReadOnlyList<TrayEntry> SyncEntries()
+    {
+        if (SyncService.Current is not { } sync) return Array.Empty<TrayEntry>(); // the app is stopping
+        if (!sync.IsAvailable) return new[] { new TrayEntry(sync.UnavailableText, null, false) };
+        if (sync.Account is not { } account) return new[] { new TrayEntry("Sign in with Google", () => _ = SignIn(null)) };
+        return new[]
+        {
+            new TrayEntry($"Signed in as {account.Email}", null, false),
+            new TrayEntry($"Last synced: {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}", null, false),
+            new TrayEntry("Sync now", () => _ = sync.SyncNow()),
+            new TrayEntry("Sign out", () => _ = sync.SignOut(false)),
+            new TrayEntry("Sign out and delete cloud data", () => _ = SignOutAndDeleteCloudData(null)),
+        };
     }
 
     // ================= Errors =================
@@ -334,7 +464,9 @@ public partial class App : Application
 #if WINDOWS
     internal void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
     {
-        if (e.Mode == PowerModes.Resume) OnDisplaySettingsChanged(sender, e);
+        if (e.Mode != PowerModes.Resume) return;
+        OnDisplaySettingsChanged(sender, e);
+        Dispatcher.UIThread.Post(() => _ = SyncService.Current?.SyncNow()); // spec 5.2: after waking up
     }
 #endif
 
@@ -476,6 +608,8 @@ public partial class App : Application
             $"{Plural(windows, "window")} with {Plural(items, "item")}, and {Plural(archived, "completed item")} in the archive.\n\n" +
             "Add them next to your current windows, or replace everything you have now? " +
             "Replacing keeps a copy of your current lists in the backups folder.";
+        if (Store.HasSyncedBoards)
+            message += "\n\nSynced windows aren't replaced.";
         if (fileVersion > AppData.CurrentVersion)
             message += "\n\nThe file is from a newer version of PinList, so some details may be lost.";
 
@@ -532,13 +666,16 @@ public partial class App : Application
         new TrayEntry("Archive", ShowArchive),
         new TrayEntry("Show all windows", ShowAllBoards),
         TrayEntry.Separator,
-        new TrayEntry("Export…", () => _ = ExportData(null)),
-        new TrayEntry("Import…", () => _ = ImportData(null)),
+        new TrayEntry("Export", () => _ = ExportData(null)),
+        new TrayEntry("Import", () => _ = ImportData(null)),
+        TrayEntry.Separator,
+    }.Concat(SyncEntries()).Concat(new[]
+    {
         TrayEntry.Separator,
         new TrayEntry("Open data folder", () => OpenFolder(Store.Dir)),
         TrayEntry.Separator,
         new TrayEntry("Exit", ExitApp),
-    };
+    }).ToList();
 
     /// <summary>Invisible window the tray menu belongs to (a menu needs a window; this one sits under the cursor).</summary>
     Window MenuHost()
@@ -581,8 +718,16 @@ public partial class App : Application
         menu.Items.Add(CreateMenuItem("Show all windows", ShowAllBoards));
         menu.Items.Add(new Separator());
         menu.Items.Add(ThemeMenu());
-        menu.Items.Add(CreateMenuItem("Export…", () => _ = ExportData(null)));
-        menu.Items.Add(CreateMenuItem("Import…", () => _ = ImportData(null)));
+        menu.Items.Add(CreateMenuItem("Export", () => _ = ExportData(null)));
+        menu.Items.Add(CreateMenuItem("Import", () => _ = ImportData(null)));
+        var sync = new MenuItem { Header = "Google sync" };
+        foreach (var e in SyncEntries())
+        {
+            var mi = CreateMenuItem(e.Text, e.Action ?? (() => { }));
+            mi.IsEnabled = e.Enabled;
+            sync.Items.Add(mi);
+        }
+        menu.Items.Add(sync);
         menu.Items.Add(new Separator());
         var auto = CreateMenuItem(OperatingSystem.IsWindows() ? "Start with Windows" : "Open at login", () => Autostart.Set(!Autostart.IsEnabled()));
         auto.ToggleType = MenuItemToggleType.CheckBox;

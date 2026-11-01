@@ -146,9 +146,13 @@ public partial class BoardWindow
         if (hadFocus) FocusRowOrContent(next);
     }
 
-    /// <summary>Deletes an item or category and moves focus to its neighbor, so keyboard users stay in the list.</summary>
-    void DeleteWithFocus(Observable element)
+    /// <summary>
+    /// Deletes an item or category after asking (spec 4.5) and moves focus to its neighbor, so keyboard users stay
+    /// in the list.
+    /// </summary>
+    async void DeleteWithFocus(Observable element)
     {
+        if (!await Dialogs.Ask(this, DeleteQuestion(element), DeleteDetails(element), "Delete")) return;
         var next = NeighborAfterRemoval(element);
         switch (element)
         {
@@ -164,6 +168,17 @@ public partial class BoardWindow
         SetActive(null);
         FocusRowOrContent(next);
     }
+
+    static string DeleteQuestion(Observable element) => element is TodoItem item
+        ? $"Delete {Quote(item.Text)}?"
+        : $"Delete category {Quote(((Category)element).Name)}?";
+
+    static string DeleteDetails(Observable element) => element switch
+    {
+        Category { Items.Count: 1 } => "Its 1 item is deleted too. Ctrl+Z brings it back.",
+        Category { Items.Count: > 1 } c => $"Its {c.Items.Count} items are deleted too. Ctrl+Z brings them back.",
+        _ => "Ctrl+Z brings it back.",
+    };
 
     void MoveItemBy(TodoItem item, int delta)
     {

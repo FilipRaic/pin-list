@@ -23,6 +23,12 @@ public interface IDialogs
 
     /// <summary>Returns the chosen path, or null if cancelled.</summary>
     Task<string?> OpenFile(Window? owner, string title);
+
+    /// <summary>
+    /// "Waiting for Google sign-in in your browser… [Cancel]" while <paramref name="signIn"/> runs; Cancel cancels
+    /// its token. Returns what the sign-in returned.
+    /// </summary>
+    Task<bool> WaitForSignIn(Window? owner, Func<System.Threading.CancellationToken, Task<bool>> signIn);
 }
 
 /// <summary>The real dialogs.</summary>
@@ -34,6 +40,9 @@ public sealed class AppDialogs : IDialogs
     public Task<DateTime?> PickDueDate(Window owner, DateTime? current) => DateDialog.PickDueDate(owner, current);
 
     public Task<DateTime?> PickReminder(Window owner, DateTime? current, DateTime? dueDate) => DateDialog.PickReminder(owner, current, dueDate);
+
+    public Task<bool> WaitForSignIn(Window? owner, Func<System.Threading.CancellationToken, Task<bool>> signIn) =>
+        SignInDialog.Run(owner, signIn);
 
     static readonly FilePickerFileType Json = new("PinList data") { Patterns = new[] { "*.json" } };
 

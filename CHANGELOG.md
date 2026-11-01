@@ -3,6 +3,27 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.1.0] - 2026-11-01
+
+Optional sync through your own Google Drive, on Windows, macOS and Android. Off until you sign in and turn it on for a list.
+
+### Added
+- **Google Drive sync** between any mix of Windows PCs, Macs and Android phones, per list: sign in from the tray / menu bar menu (*Google sync*) or the phone's ⋮ menu, then choose **Sync this window** / **Sync this list**. Changes are merged item by item – also after days offline on several devices – so no edit is lost and nothing you deleted comes back; an edit made after a delete on another device wins over the delete. Data goes only to a hidden app folder in your own Google Drive, never to a PinList server ([privacy policy](docs/privacy.md))
+- A sync icon in each list's header (and on the phone's cards) while signed in: synced, syncing, waiting while offline, or a problem with a click / tap to fix it
+- On Android, sync also runs in the background about every 15 minutes, so a reminder set on the PC rings on the phone even when PinList is closed
+- **Delete confirmations on the desktop**: deleting an item, a category or archived items asks first (Ctrl+Z still undoes), and so does emptying an item's text. Deleting a synced list says that it's deleted on your other devices too
+- The Windows and Mac release builds include PinList's Google sign-in client, written from the repository secrets at release time (never stored in git). A build without it works as before, with sync unavailable
+
+### Changed
+- *Replace everything* on import leaves synced lists alone, and exports never turn sync on for anyone who imports them
+- Completed items keep their id in the archive, and every list, category and item gets a small change record in `data.json` (needed for merging). The data format stays at version 1, and 2.0.0 keeps the new fields ([docs/data-format.md](docs/data-format.md))
+- Releases need the `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` repository secrets and stop with an error if they're missing
+- Menu items and buttons no longer end with "…" (e.g. *Export*, *Color*, *Add reminder*)
+
+### Fixed
+- Starting PinList while it's already running now always brings the widgets to the front (the signal to the running app could get lost)
+- On Android, opening PinList again after leaving it with Back now shows the lists reliably (the closing screen could still hold them)
+
 ## [2.0.0] - 2026-10-31
 
 PinList now runs on Windows, macOS and Android, from one codebase.
@@ -28,7 +49,7 @@ PinList now runs on Windows, macOS and Android, from one codebase.
 ## [1.1.0] - 2026-10-21
 
 ### Added
-- Due dates and reminders: right-click an item → *Add due date…* / *Add reminder…*. Reminders appear as Windows notifications; ones missed while PinList was closed are shown on start
+- Due dates and reminders: right-click an item → *Add due date* / *Add reminder*. Reminders appear as Windows notifications; ones missed while PinList was closed are shown on start
 - App theme for menus, dialogs and the archive: follows the Windows light/dark setting by default, or choose *Light* / *Dark* (⋯ menu or tray menu)
 - Export and import of all widgets and the archive (add next to your lists, or replace everything with a safety copy)
 - Starting PinList while it's already running brings its widgets to the front

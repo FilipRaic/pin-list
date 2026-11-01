@@ -342,7 +342,7 @@ public class AppTests : UiTest
         w.Board.Style = "Green";
         Tray.ClickRight();
         var menu = App.LastTrayMenu!;
-        Assert.Equal(new object[] { "New window", "Archive", "Show all windows", "App theme", "Export…", "Import…", "Start with Windows", "Open data folder", "Exit" },
+        Assert.Equal(new object[] { "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Open data folder", "Exit" },
             menu.Items.OfType<MenuItem>().Select(m => m.Header!));
 
         ChooseFromMenu(menu, "New window");
@@ -353,8 +353,8 @@ public class AppTests : UiTest
         ChooseFromMenu(App.ShowTrayMenu(), "Show all windows");
         ChooseFromMenu(App.ShowTrayMenu(), "App theme", "Light");
         Assert.Equal("Light", Store.Data.Settings.Theme);
-        ChooseFromMenu(App.ShowTrayMenu(), "Export…");
-        ChooseFromMenu(App.ShowTrayMenu(), "Import…");
+        ChooseFromMenu(App.ShowTrayMenu(), "Export");
+        ChooseFromMenu(App.ShowTrayMenu(), "Import");
         ChooseFromMenu(App.ShowTrayMenu(), "Open data folder");
         Assert.Equal(new[] { Store.Dir }, UiHost.OpenedFolders);
         ChooseFromMenu(App.ShowTrayMenu(), "Exit");
@@ -367,16 +367,18 @@ public class AppTests : UiTest
     {
         // macOS shows these entries in its menu bar menu (Windows shows the menu above on right click)
         var entries = Tray.Menu;
-        Assert.Equal(new[] { "New window", "Archive", "Show all windows", "-", "Export…", "Import…", "-", "Open data folder", "-", "Exit" },
+        Assert.Equal(new[] { "New window", "Archive", "Show all windows", "-", "Export", "Import", "-",
+                "Sync isn't available in this build.", "-", "Open data folder", "-", "Exit" },
             entries.Select(e => e.Text));
+        Assert.False(entries.Single(e => e.Text.StartsWith("Sync isn't")).Enabled);
         OpenNew(("A", new string[0]));
         entries.Single(e => e.Text == "New window").Action!();
         Assert.Equal(2, App.OpenWindows.Count);
         entries.Single(e => e.Text == "Archive").Action!();
         Assert.NotNull(App.Archive);
         entries.Single(e => e.Text == "Show all windows").Action!();
-        entries.Single(e => e.Text == "Export…").Action!();
-        entries.Single(e => e.Text == "Import…").Action!();
+        entries.Single(e => e.Text == "Export").Action!();
+        entries.Single(e => e.Text == "Import").Action!();
         Pump();
         entries.Single(e => e.Text == "Open data folder").Action!();
         Assert.Equal(new[] { Store.Dir }, UiHost.OpenedFolders);
@@ -530,6 +532,19 @@ public class AppTests : UiTest
         Assert.Single(App.OpenWindows);
         Assert.False(Actions.CanUndo); // the old undo history doesn't fit the new data
         Assert.Single(Directory.GetFiles(Path.Combine(Dir, "backups"), "before-import-*.json"));
+    }
+
+    [AvaloniaFact]
+    public void Replacing_says_that_synced_windows_stay()
+    {
+        var mine = OpenNew(("Mine", new[] { "mine" }));
+        mine.Board.Synced = true;
+        Dialogs.OpenFileAnswer = WriteFile(Dir, "good.json", ImportJson);
+        Dialogs.ChooseAnswer = _ => 1; // Replace everything
+        Await(App.ImportData(null));
+        Pump();
+        Assert.Contains(Dialogs.Shown, s => s.Contains("Synced windows aren't replaced."));
+        Assert.Equal(new[] { "Test", "Imported" }, Store.Data.Boards.Select(b => b.Title));
     }
 
     [AvaloniaFact]

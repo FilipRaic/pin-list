@@ -55,6 +55,7 @@ public static class UiHost
         PinList.Dialogs.Current = Dialogs;
         App.OpenFolder = path => OpenedFolders.Add(path);
         App.ShutdownApp = _ => ShutdownRequests++;
+        App.CreateSyncService = UnavailableSync;
         App.ManageAutostart = true;
         Autostart.RunKey = TestRunKey;
         if (!_hooked)
@@ -65,6 +66,11 @@ public static class UiHost
         if (!App.Instance.Start()) throw new InvalidOperationException("The app didn't start.");
         Pump();
     }
+
+    /// <summary>Sync as in a build without a Google client (whether or not a developer has one locally).</summary>
+    public static PinList.Sync.SyncService UnavailableSync() =>
+        new(new DesktopGoogleAuth(null, new MemoryTokenStore(), new HttpClient(), _ => Task.CompletedTask),
+            () => throw new InvalidOperationException("No cloud in tests."), "Test PC");
 
     // The headless platform has no OS timer that wakes the dispatcher, so due DispatcherTimers are started by hand
     static readonly System.Reflection.MethodInfo PromoteTimers =

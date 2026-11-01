@@ -96,6 +96,20 @@
             <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
         </Style>
 
+        <!-- Sync icon: red when there's a problem, slowly turning while it syncs -->
+        <Style Selector="Button.icon.danger">
+            <Setter Property="Foreground" Value="{DynamicResource Overdue}"/>
+        </Style>
+        <Style Selector="Button.icon.spinning PathIcon">
+            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+            <Style.Animations>
+                <Animation Duration="0:0:1.6" IterationCount="Infinite">
+                    <KeyFrame Cue="0%"><Setter Property="RotateTransform.Angle" Value="0"/></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="RotateTransform.Angle" Value="360"/></KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+
         <!-- Resize grips along the edges (hidden while the widget is locked) -->
         <Style Selector="Border.grip">
             <Setter Property="Background" Value="Transparent"/>
@@ -120,6 +134,10 @@
                                      IsVisible="{Binding IsEditingTitle}" AutomationProperties.Name="Window title"/>
                         </Panel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <!-- Google sync status; hidden while signed out (spec 4.4) -->
+                            <Button x:Name="SyncBtn" Classes="icon" IsVisible="False" Click="Sync_Click">
+                                <PathIcon/>
+                            </Button>
                             <Button Classes="icon" ToolTip.Tip="New category" AutomationProperties.Name="New category"
                                     Click="AddCategory_Click">
                                 <PathIcon Data="{StaticResource Icon.NewCategory}"/>
@@ -212,7 +230,7 @@
                                                         <PathIcon Data="{StaticResource Icon.Add}" Width="11" Height="11"
                                                                   Foreground="{DynamicResource TextMuted}" Margin="2,0,13,0" VerticalAlignment="Center"/>
                                                         <TextBox Grid.Column="1" Classes="bare addbox" FontSize="14" TextWrapping="Wrap" AcceptsReturn="True"
-                                                                 PlaceholderText="Add item…" Tag="{Binding}"
+                                                                 PlaceholderText="Add item" Tag="{Binding}"
                                                                  ToolTip.Tip="Enter adds the item · Shift+Enter starts a new line"
                                                                  AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"/>
                                                     </Grid>

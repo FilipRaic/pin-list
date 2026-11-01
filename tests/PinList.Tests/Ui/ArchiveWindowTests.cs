@@ -212,6 +212,7 @@ public class ArchiveWindowTests : UiTest
     [AvaloniaFact]
     public void Delete_removes_permanently_and_undo_brings_back()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         Completed("a", "b", "c");
         var a = OpenArchive();
         List(a).SelectedIndex = 2;

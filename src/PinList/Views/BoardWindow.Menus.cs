@@ -46,12 +46,13 @@ public partial class BoardWindow
         transparent.IsChecked = Board.Transparent;
         menu.Items.Add(transparent);
         menu.Items.Add(App.Instance.ThemeMenu());
+        AddSyncMenuItem(menu);
         menu.Items.Add(new Separator());
 
         menu.Items.Add(Item("New window", () => Actions.NewBoard(CurrentWorkArea().ToWorkArea(), Board)));
         menu.Items.Add(Item("Archive", App.Instance.ShowArchive));
-        menu.Items.Add(Item("Export…", () => _ = App.Instance.ExportData(this)));
-        menu.Items.Add(Item("Import…", () => _ = App.Instance.ImportData(this)));
+        menu.Items.Add(Item("Export", () => _ = App.Instance.ExportData(this)));
+        menu.Items.Add(Item("Import", () => _ = App.Instance.ImportData(this)));
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Delete window", DeleteThisBoard));
         Open(menu, MenuBtn);
@@ -125,13 +126,13 @@ public partial class BoardWindow
         menu.Items.Add(Item("Move down", () => MoveItemBy(item, +1), "Alt+Down"));
         menu.Items.Add(new Separator());
 
-        var due = Item(item.HasDue ? "Change due date…" : "Add due date…", () => EditDueDate(item));
+        var due = Item(item.HasDue ? "Change due date" : "Add due date", () => EditDueDate(item));
         due.Icon = Glyph("Icon.Calendar");
         menu.Items.Add(due);
         if (item.HasDue)
             menu.Items.Add(Item("Remove due date", () => { Actions.SetDueDate(item, null); A11y.Announce(this, "Due date removed"); FocusRow(item); }));
 
-        var reminder = Item(item.HasPendingReminder ? "Change reminder…" : "Add reminder…", () => EditReminder(item));
+        var reminder = Item(item.HasPendingReminder ? "Change reminder" : "Add reminder", () => EditReminder(item));
         reminder.Icon = Glyph("Icon.Bell");
         menu.Items.Add(reminder);
         if (item.ReminderAt != null)

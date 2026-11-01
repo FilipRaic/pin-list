@@ -14,7 +14,10 @@ public class DataFormatTests
         var data = Store.Parse(original, out int version);
         Assert.Equal(1, version);
         Assert.Equal(1, AppData.CurrentVersion);
-        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(original), JsonNode.Parse(Store.Serialize(data))));
+        // Unchanged except that archive entries from before 2.1.0 get an id (see Sync.ModelTests)
+        var saved = JsonNode.Parse(Store.Serialize(data))!;
+        foreach (var a in saved["archive"]!.AsArray()) a!.AsObject().Remove("id");
+        Assert.True(JsonNode.DeepEquals(JsonNode.Parse(original), saved));
     }
 }
 

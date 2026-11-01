@@ -25,6 +25,9 @@ coverage.cobertura.xml
 *.keystore
 *.jks
 
+# Google sign-in client for sync (written from the GitHub secrets at release time)
+src/PinList/google-client.json
+
 # Brainstorming mockups
 .superpowers/
 
@@ -33,3 +36,4 @@ coverage.cobertura.xml
 !README.md
 !CHANGELOG.md
 !docs/data-format.md
+!docs/privacy.md

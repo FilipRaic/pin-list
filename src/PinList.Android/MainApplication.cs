@@ -1,5 +1,6 @@
 using System;
 using Android.App;
+using Android.OS;
 using Android.Runtime;
 using Avalonia;
 using Avalonia.Android;
@@ -17,6 +18,11 @@ public class MainApplication : AvaloniaAndroidApplication<PhoneApp>
         PhoneApp.DataDir = FilesDir!.AbsolutePath;
         PhoneApp.ShowNotification = (title, text) => Notifications.Show(this, title, text);
         PhoneApp.Saved = () => Alarms.ScheduleNext(this);
+        PhoneApp.SyncSettingsChanged = () => BackgroundSync.Update(this);
+        // Google sync (also for background runs, when no screen was ever opened): sign-in through Play services,
+        // and the phone's name for sync messages
+        PhoneApp.Auth = new AndroidGoogleAuth(this);
+        PhoneApp.DeviceName = $"{Build.Manufacturer} {Build.Model}".Trim();
         base.OnCreate();
     }
 

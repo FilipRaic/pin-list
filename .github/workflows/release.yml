@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v2.0.0 (on a commit that is on master) to build every app and publish a GitHub release.
+# Push a tag like v2.1.0 (on a commit that is on master) to build every app and publish a GitHub release.
 on:
   push:
     tags: [ 'v*' ]
@@ -48,6 +48,21 @@ jobs:
       - name: Test
         run: dotnet test PinList.sln -c Release
 
+      # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
+      # The file is written only here, from the repository secrets, and is never committed.
+      - name: Add the Google client ID
+        shell: pwsh
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
+            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
+            exit 1
+          }
+          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
+            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
+
       - name: Publish
         shell: pwsh
         run: |
@@ -80,6 +95,21 @@ jobs:
 
       - name: Test the shared code on macOS
         run: dotnet test tests/PinList.Core.Tests -c Release
+
+      # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
+      # The file is written only here, from the repository secrets, and is never committed.
+      - name: Add the Google client ID
+        shell: pwsh
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
+            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
+            exit 1
+          }
+          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
+            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
 
       - name: Build PinList.app
         run: |

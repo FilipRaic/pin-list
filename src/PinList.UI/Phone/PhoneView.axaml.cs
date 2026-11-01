@@ -15,6 +15,7 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -114,6 +115,7 @@ public partial class PhoneView : UserControl
         foreach (var c in _cards) c.Dispose();
         _cards.Clear();
         foreach (var b in _data.Boards) _cards.Add(new BoardCard(b));
+        RefreshSync();
         RefreshArchive();
         if (_board != null && !_data.Boards.Contains(_board)) ShowHome();
     }
@@ -137,6 +139,7 @@ public partial class PhoneView : UserControl
             if (at < 0) _cards.Insert(i, new BoardCard(b));
             else if (at != i) _cards.Move(at, i);
         }
+        RefreshSync();
         if (_board != null && !_data.Boards.Contains(_board)) ShowHome(); // the open list is gone (e.g. undone)
     }
 
@@ -149,6 +152,81 @@ public partial class PhoneView : UserControl
     }
 
     // ================= Screens =================
+
+    // ================= Google sync =================
+
+    SyncService? _sync;
+
+    /// <summary>The phone's sync (null when this build or phone has none: then nothing about sync shows).</summary>
+    public SyncService? Sync
+    {
+        get => _sync;
+        set
+        {
+            if (_sync != null)
+            {
+                _sync.Changed -= RefreshSync;
+                _sync.Message -= ShowMessage;
+            }
+            _sync = value;
+            if (_sync != null)
+            {
+                _sync.IsBusy = o => IsDragging || SyncService.IsEditing(o); // spec 4.6
+                _sync.Changed += RefreshSync;
+                _sync.Message += ShowMessage;
+            }
+            RefreshSync();
+        }
+    }
+
+    /// <summary>A card, category or item is held or dragged right now.</summary>
+    internal bool IsDragging => _homeDrag.Lifted != null || _boardDrag.Lifted != null;
+
+    /// <summary>The sync icons on the cards and in the open list's header.</summary>
+    void RefreshSync()
+    {
+        foreach (var c in _cards) c.RefreshSync(_sync?.StateOf(c.Board));
+        if (_board == null) return;
+        var look = _sync == null ? null : SyncIcon.For(_sync.StateOf(_board), DateTime.UtcNow);
+        BoardSyncBtn.IsVisible = look != null;
+        if (look is not { } l) return;
+        ((PathIcon)BoardSyncBtn.Content!).Data = (Avalonia.Media.Geometry)this.FindResource(l.IconKey)!;
+        Avalonia.Automation.AutomationProperties.SetName(BoardSyncBtn, l.Tip);
+        BoardSyncBtn.Classes.Set("danger", l.Danger);
+    }
+
+    /// <summary>A red icon explains what's wrong and offers the fix; other states just show.</summary>
+    void BoardSync_Click(object? sender, RoutedEventArgs e)
+    {
+        var state = _sync!.StateOf(_board!);
+        if (state.Status != SyncStatus.Problem) return;
+        if (_sync.NeedsSignIn)
+            ShowSheet("Google signed you out. Sign in again to keep syncing.",
+                ("Sign in again", () => _ = _sync.SignIn(System.Threading.CancellationToken.None), false),
+                ("Not now", () => { }, false));
+        else
+            ShowSheet(state.Problem == "Can't reach Google Drive."
+                    ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this phone until it works again."
+                    : state.Problem!,
+                ("OK", () => { }, false));
+    }
+
+    /// <summary>The ⋮ menu's "Google sync" (the same choices as the desktop's tray menu).</summary>
+    void ShowSyncSheet()
+    {
+        var sync = _sync!;
+        if (!sync.IsAvailable) ShowSheet(sync.UnavailableText, ("OK", () => { }, false));
+        else if (sync.Account is not { } account)
+            ShowSheet("Google sync", ("Sign in with Google", () => _ = sync.SignIn(System.Threading.CancellationToken.None), false));
+        else
+            ShowSheet($"Signed in as {account.Email} · Last synced: {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}",
+                ("Sync now", () => _ = sync.SyncNow(), false),
+                ("Sign out", () => _ = sync.SignOut(false), false),
+                ("Sign out and delete cloud data", () => ShowSheet(
+                    "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
+                    ("Delete", () => _ = sync.SignOut(true), true),
+                    ("Cancel", () => { }, false)), true));
+    }
 
     void ShowHome()
     {
@@ -165,6 +243,7 @@ public partial class PhoneView : UserControl
         ApplyBoardLook(board);
         Categories.ItemsSource = board.Categories;
         UpdateBoardTitle();
+        RefreshSync();
         BoardScroller.Offset = default;
         HomeScreen.IsVisible = false;
         AddBoardButton.IsVisible = false;
@@ -547,13 +626,13 @@ public partial class PhoneView : UserControl
     {        var options = new System.Collections.Generic.List<(string, Action, bool)>
         {
             ("Edit", () => BeginEdit(item), false),
-            (item.HasDue ? "Change due date…" : "Add due date…", () => PickDate(item, reminder: false), false),
+            (item.HasDue ? "Change due date" : "Add due date", () => PickDate(item, reminder: false), false),
         };
         if (item.HasDue) options.Add(("Remove due date", () => Actions.SetDueDate(item, null), false));
-        options.Add((item.HasPendingReminder ? "Change reminder…" : "Add reminder…", () => PickDate(item, reminder: true), false));
+        options.Add((item.HasPendingReminder ? "Change reminder" : "Add reminder", () => PickDate(item, reminder: true), false));
         if (item.ReminderAt != null) options.Add(("Remove reminder", () => Actions.SetReminder(item, null), false));
         if (Store.Data.Boards.Any(b => b != _board && b.Categories.Count > 0))
-            options.Add(("Move to list…", () => ShowMoveToBoard(item), false));
+            options.Add(("Move to list", () => ShowMoveToBoard(item), false));
         options.Add(("Delete", () => { Actions.Delete(item); ShowUndo($"Deleted {FirstLine(item.Text)}"); }, true));
         ShowSheet(FirstLine(item.Text), options.ToArray());
     }
@@ -577,7 +656,7 @@ public partial class PhoneView : UserControl
     {
         ShowSheet(cat.Name,
             ("Rename", () => BeginEdit(cat), false),
-            ("Color…", () => ShowSheet("Color", Actions.Palette.Select((hex, i) =>
+            ("Color", () => ShowSheet("Color", Actions.Palette.Select((hex, i) =>
                 (Actions.PaletteNames[i], (Action)(() => Actions.SetCategoryColor(cat, hex)), false)).ToArray()), false),
             ("Delete category", () => { Actions.DeleteCategory(cat); ShowUndo($"Deleted category {cat.Name}"); }, true));
     }
@@ -593,8 +672,10 @@ public partial class PhoneView : UserControl
         var options = new System.Collections.Generic.List<(string, Action, bool)>();
         if (fromCard) options.Add(("Open", () => ShowBoard(board), false));
         else options.Add(("Rename", BeginTitleEdit, false));
-        options.Add(("Color…", () => ShowSheet("Color", Themes.BoardStyles.Select(s =>
+        options.Add(("Color", () => ShowSheet("Color", Themes.BoardStyles.Select(s =>
             (s.Name, (Action)(() => SetBoardStyle(board, s.Key)), false)).ToArray()), false));
+        if (_sync?.IsAvailable == true)
+            options.Add(((board.Synced ? "✓ " : "") + "Sync this list", () => _ = _sync.SetSynced(board, !board.Synced), false));
         options.Add(("Delete list", () => ConfirmDeleteBoard(board, name), true));
         ShowSheet(name, options.ToArray());
     }
@@ -610,7 +691,9 @@ public partial class PhoneView : UserControl
     void ConfirmDeleteBoard(Board board, string name)
     {
         int items = board.Categories.Sum(c => c.Items.Count);
-        ShowSheet(items > 0 ? $"Delete \"{name}\" with {items} items? They don't go to the archive." : $"Delete \"{name}\"?",
+        var question = items > 0 ? $"Delete \"{name}\" with {items} items? They don't go to the archive." : $"Delete \"{name}\"?";
+        if (board.Synced) question += " It will also be deleted from your other devices.";
+        ShowSheet(question,
             ("Delete", () =>
             {
                 Actions.DeleteBoard(board); // asked first, so not undoable
@@ -619,13 +702,19 @@ public partial class PhoneView : UserControl
             ("Cancel", () => { }, false));
     }
 
-    void AppMenu_Click(object? sender, RoutedEventArgs e) =>
-        ShowSheet("PinList",
+    void AppMenu_Click(object? sender, RoutedEventArgs e)
+    {
+        var options = new System.Collections.Generic.List<(string, Action, bool)>
+        {
             ("Archive", ShowArchive, false),
-            ("App theme…", () => ShowSheet("App theme", Themes.AppThemes.Select(t =>
+            ("App theme", () => ShowSheet("App theme", Themes.AppThemes.Select(t =>
                 ((Store.Data.Settings.Theme == t.Key ? "✓ " : "") + t.Name, (Action)(() => SetTheme(t.Key)), false)).ToArray()), false),
-            ("Export…", () => _ = Export(), false),
-            ("Import…", () => _ = Import(), false));
+        };
+        if (_sync != null) options.Add(("Google sync", ShowSyncSheet, false));
+        options.Add(("Export", () => _ = Export(), false));
+        options.Add(("Import", () => _ = Import(), false));
+        ShowSheet("PinList", options.ToArray());
+    }
 
     /// <summary>Changes the app theme (the head app applies it to the app's colors).</summary>
     public static Action<string> SetTheme { get; set; } = _ => { };
@@ -791,8 +880,7 @@ public partial class PhoneView : UserControl
         {
             await using var stream = await PickExportFile(top);
             if (stream == null) return;
-            Store.Flush();
-            var bytes = Encoding.UTF8.GetBytes(Store.Serialize(Store.Data));
+            var bytes = Encoding.UTF8.GetBytes(Store.ExportJson());
             await stream.WriteAsync(bytes);
             ShowMessage("Exported");
         }
@@ -822,7 +910,8 @@ public partial class PhoneView : UserControl
         }
 
         int lists = imported.Boards.Count, items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
-        ShowSheet($"Import {lists} list{(lists == 1 ? "" : "s")} with {items} item{(items == 1 ? "" : "s")}?",
+        ShowSheet($"Import {lists} list{(lists == 1 ? "" : "s")} with {items} item{(items == 1 ? "" : "s")}?" +
+                  (Store.HasSyncedBoards ? " Synced lists aren't replaced." : ""),
             ("Add next to mine", () => { Store.Merge(imported); ShowMessage("Imported"); }, false),
             ("Replace everything (a copy of mine is kept)", () =>
             {

@@ -76,6 +76,7 @@ public abstract class UiTest : IDisposable
         UiHost.ShutdownRequests = 0;
         Store.Data.Settings.Theme = "Dark";
         app.ApplyTheme();
+        app.UseSync(UiHost.UnavailableSync());
     }
 
     protected static void Pump() => UiHost.Pump();

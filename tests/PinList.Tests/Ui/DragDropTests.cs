@@ -346,4 +346,18 @@ public class DragDropTests : UiTest
     }
 
     static Avalonia.Threading.Dispatcher Dispatcher() => Avalonia.Threading.Dispatcher.UIThread;
+
+    [AvaloniaFact]
+    public void Remote_changes_wait_while_dragging()
+    {
+        App.UseSync(new PinList.Sync.SyncService(new PinList.Tests.Sync.FakeAuth(), () => new PinList.Tests.Sync.FakeCloud(), "PC"));
+        var w = OpenNew(("A", new[] { "a", "b" }));
+        var other = new TodoItem { Text = "elsewhere" };
+        Assert.False(PinList.Sync.SyncService.Current!.IsBusy(other));
+        Pick(w, Row(w, w.Board.Categories[0].Items[0]));
+        Assert.True(BoardWindow.IsDragging);
+        Assert.True(PinList.Sync.SyncService.Current!.IsBusy(other));
+        Release();
+        Assert.False(PinList.Sync.SyncService.Current!.IsBusy(other));
+    }
 }

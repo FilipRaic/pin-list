@@ -71,4 +71,11 @@ public sealed class FakeDialogs : IDialogs
         Shown.Add("open");
         return Task.FromResult(OpenFileAnswer);
     }
+
+    /// <summary>The user finishes in the browser right away (what the sign-in itself returns decides).</summary>
+    public Task<bool> WaitForSignIn(Window? owner, Func<CancellationToken, Task<bool>> signIn)
+    {
+        Shown.Add("waiting for sign-in");
+        return signIn(CancellationToken.None);
+    }
 }

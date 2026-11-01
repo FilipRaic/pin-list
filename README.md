@@ -4,7 +4,7 @@
 
 # PinList
 
-To-do lists pinned to your desktop – on **Windows** and **macOS** – and in your pocket on **Android**. Categories, drag-and-drop, due dates, reminders and an archive of completed items. No account, no cloud: everything stays on your device.
+To-do lists pinned to your desktop – on **Windows** and **macOS** – and in your pocket on **Android**. Categories, drag-and-drop, due dates, reminders and an archive of completed items. No account needed. Optional sync through your own Google Drive.
 
 ---
 
@@ -19,6 +19,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 - **Archive.** Completed items are kept with the date and time they were completed; search, restore or delete them.
 - **Undo.** On the desktop, Ctrl+Z undoes almost anything: deleting, completing, editing, renaming, moving, restoring. On the phone, the bar that appears after a change has an *Undo* button.
 - **Dark, light or pastel lists**, optional transparency, menus that follow the system light/dark setting.
+- **Optional Google Drive sync.** Sign in with Google and choose which lists sync between your PCs, Macs and phone. Changes are merged item by item, also after days offline, and nothing you deleted comes back. Your lists go only to a hidden folder in **your own** Google Drive – see [Sync](#sync).
 - **Your data is safe.** Every change is saved right away to a local JSON file, with atomic writes and daily backups. Export and import your lists at any time – also to move them between a PC, a Mac and a phone.
 
 ## Requirements
@@ -77,12 +78,12 @@ Updates install over the old version and keep your lists.
 
 | Action | How |
 |---|---|
-| Add an item | Type in **Add item…** and press **Enter**. Focus stays in the box for the next one. |
+| Add an item | Type in **Add item** and press **Enter**. Focus stays in the box for the next one. |
 | Multi-line item | **Shift+Enter** starts a new line (when adding and when editing). |
 | Complete an item | Click the circle. Click again within ~1 s to cancel. |
 | Edit | Double-click the text. **Enter** saves, **Esc** cancels. |
-| Due date / reminder | Right-click an item → **Add due date…** or **Add reminder…**. Overdue dates turn red, today's are highlighted. Reminders missed while PinList wasn't running are shown when it starts; clicking a reminder shows the item. |
-| Delete | Click an item or category (it gets highlighted) and press **Delete**. Not archived. |
+| Due date / reminder | Right-click an item → **Add due date** or **Add reminder**. Overdue dates turn red, today's are highlighted. Reminders missed while PinList wasn't running are shown when it starts; clicking a reminder shows the item. |
+| Delete | Click an item or category (it gets highlighted) and press **Delete**. PinList asks first (Ctrl+Z still brings it back). Not archived. Emptying an item's text deletes it too, after asking. |
 | Undo | **Ctrl+Z** undoes the last change – in any widget or in the archive (one undo history for the whole app, the last 50 changes). |
 | Reorder | Drag an item or a category header – within a widget or to another one. The list scrolls when you drag near its edge. |
 | New category | The folder button in the widget header. |
@@ -91,9 +92,10 @@ Updates install over the old version and keep your lists.
 | Widget color | **⋯ → Window color** and **⋯ → Transparent background**. |
 | App theme | **⋯ → App theme** or the tray / menu bar menu: follow the system (default), *Light* or *Dark*. Applies to menus, dialogs and the archive. |
 | Move / resize | Drag the header / drag the edges. The 🔒 button locks position and size. |
-| Archive | **⋯ → Archive** or the tray / menu bar menu. Enter or double-click restores, Delete removes permanently, Ctrl+Z undoes, Ctrl+F searches. |
-| Export / import | **⋯ → Export…** saves all lists and the archive to a file. **⋯ → Import…** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
-| Tray / menu bar icon | Brings all widgets to the front; its menu has new window, archive, theme, export/import, start at login, data folder and exit. |
+| Archive | **⋯ → Archive** or the tray / menu bar menu. Enter or double-click restores, Delete removes permanently (after asking), Ctrl+Z undoes, Ctrl+F searches. |
+| Sync a widget | **⋯ → Sync this window** (signs in with Google first if needed). See [Sync](#sync). |
+| Export / import | **⋯ → Export** saves all lists and the archive to a file. **⋯ → Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
+| Tray / menu bar icon | Brings all widgets to the front; its menu has new window, archive, theme, export/import, **Google sync**, start at login, data folder and exit. |
 
 Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window** to remove one.
 
@@ -103,13 +105,32 @@ Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window*
 |---|---|
 | Open a list | Tap its card. **Back** returns to the cards. |
 | New list | The **+** button on the cards screen. |
-| Add an item | Type in **Add item…** and press Enter on the keyboard; the keyboard stays open for the next one. |
+| Add an item | Type in **Add item** and press Enter on the keyboard; the keyboard stays open for the next one. |
 | Complete an item | Tap the circle (tap again quickly to cancel). |
 | Edit | Tap the text of an item, or the list's title. |
 | Menus | **Press and hold** a card, a category or an item: due date, reminder, move to another list, color, rename, delete. |
 | Reorder | Press and hold, then drag – cards on the first screen, items and categories in a list. Hold near the top or bottom edge to scroll. |
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
 | Archive, theme, export / import | The **archive** and **⋮** buttons on the cards screen. |
+| Google sync | **⋮ → Google sync** to sign in; **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
+
+## Sync
+
+Sync is optional and off until you turn it on. It works between any mix of Windows PCs, Macs and Android phones signed in with the same Google account.
+
+1. **Sign in.** Desktop: tray / menu bar icon → **Google sync → Sign in with Google** (your browser opens Google's sign-in page). Phone: **⋮ → Google sync → Sign in with Google**. Signing in doesn't sync anything yet.
+2. **Choose lists.** Desktop: **⋯ → Sync this window**. Phone: press and hold a card → **Sync this list**. The list then appears on your other signed-in devices. Turning it off on any device turns it off everywhere; every device keeps its copy as a normal local list.
+3. **The icon** in a synced list's header shows how it's doing: a cloud with a check (up to date), turning arrows (syncing), a cloud with an arrow (offline – changes sync later), a red cloud (a problem – click or tap it for what to do). A crossed-out cloud means the list isn't synced. Signed out, there's no icon at all.
+
+How it behaves:
+
+- Changes reach your other devices within about 20 seconds while PinList runs. The **phone also syncs in the background, about every 15 minutes** (only with a network, and only while you're signed in with at least one synced list), so reminders set on the PC ring on the phone even if PinList is closed. On **Xiaomi / HyperOS** and some other brands, set **Settings → Apps → PinList → Battery saver → No restrictions** for that.
+- Edits made on different devices, also offline, are merged item by item. If the same item was changed on two devices, the newer change wins. An item deleted on one device is deleted everywhere – unless it was edited on another device after that, then it stays.
+- Deleting a synced list deletes it on all devices (PinList asks first and says so).
+- **Sign out** keeps all lists on this device and pauses their sync. **Sign out and delete cloud data** also removes PinList's data from your Google Drive; your lists stay on every device as local lists.
+- Window positions and sizes, the lock, the app theme and "start with Windows" are per device and never synced.
+
+Privacy: PinList can only see its own hidden folder in your Drive, never your other files, and there is no PinList server. The full policy is in [docs/privacy.md](docs/privacy.md). Setting up the Google project for a fork of PinList is described in [GOOGLE-REQUIREMENTS.md](GOOGLE-REQUIREMENTS.md).
 
 ## Keyboard and accessibility
 
@@ -120,7 +141,7 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | **Tab** / **Shift+Tab**, **↑** / **↓** | Move between the header buttons, categories, items and *Add item* boxes |
 | **Space** | Complete the focused item (press again within ~1 s to cancel) |
 | **Enter** or **F2** | Edit the item · on a category: **Enter** collapses/expands, **F2** renames |
-| **Delete** | Delete the item or category (focus moves to the next one) |
+| **Delete** | Delete the item or category, after asking (focus moves to the next one) |
 | **Alt+↑** / **Alt+↓** | Move the item or category up or down (items move into the next category at the edges) |
 | **Context menu key** or **Shift+F10** | Open the item's or category's menu (due date, reminder, color, …) |
 | **Ctrl+Z** | Undo |
@@ -146,10 +167,12 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | `backups/before-import-….json` | Your lists as they were before an import replaced them |
 | `data.vN.json` | A copy of a file from a newer version of PinList, kept before this version saves over it |
 | `log.txt` | Errors, if any occur (older entries move to `log.old.txt` after 1 MB) |
+| `sync-state.json` | Google sync's state: the signed-in account and which cloud files were merged (only after signing in) |
+| `google-token.dat` | Windows: your Google sign-in, encrypted for your Windows user (macOS keeps it in the **Keychain**, Android in Google Play services). Removed when you sign out. |
 
 `data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. The format is the same on every platform and is described in [docs/data-format.md](docs/data-format.md).
 
-To move your lists to another device, use **Export…** and **Import…**.
+To move your lists to another device, use **Export** and **Import**.
 
 ## Building from source
 
@@ -171,7 +194,7 @@ scripts\publish.bat
 |---|---|
 | `scripts\run.bat` | Runs the Windows app in Debug mode (`dotnet run`) while you're developing |
 | `scripts\publish.bat` | Builds a Release exe into `publish\PinList.exe` and starts it |
-| `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.0.0`) |
+| `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.1.0`) |
 
 Both `.bat` scripts close a running PinList first, because only one instance can run at a time. Debug and Release builds share the same data.
 
@@ -188,7 +211,7 @@ dotnet run --project src\PinList\PinList.csproj -f net10.0-windows
 
 `dotnet test PinList.sln` runs two test projects:
 
-- `tests/PinList.Core.Tests` – the data, undo, reminders and file format logic. It runs on Windows, macOS and Linux (CI runs it on all three).
+- `tests/PinList.Core.Tests` – the data, undo, reminders and file format logic, and sync: the merge engine with simulated devices (offline for days, stale files, restored backups, three devices), the Drive client and the sign-in against fake HTTP. It runs on Windows, macOS and Linux (CI runs it on all three).
 - `tests/PinList.Tests` – the real windows and the phone screens, run with Avalonia's **headless** platform: nothing appears on your screen, and keys, mouse, touch-and-hold and drag-and-drop are simulated. The tests use their own data folder, a fake tray icon and scripted dialogs, and never touch your real lists or "Start with Windows".
 
 To see coverage:
@@ -209,8 +232,8 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 2. Commit and push to `master`.
 3. Create and push a tag with the same version:
    ```powershell
-   git tag v2.0.0
-   git push origin v2.0.0
+   git tag v2.1.0
+   git push origin v2.1.0
    ```
 4. The workflow checks that the tag is on `master` and matches `Version.props`, runs the tests, builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk`, and creates a GitHub release with all three and their `.sha256` checksums. Edit the release notes on GitHub if needed.
 
@@ -223,6 +246,8 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 (`keytool` comes with Android Studio: `C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe`.) Then add three secrets under **Settings → Secrets and variables → Actions**: `ANDROID_KEYSTORE_BASE64` (the clipboard), `ANDROID_KEYSTORE_PASSWORD` (the password you chose) and `ANDROID_KEY_ALIAS` (`pinlist`).
 
+**The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console.
+
 Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does, so a broken build shows up before you tag. Dependabot opens pull requests when the GitHub Actions or test packages have updates.
 
 ## Project structure
@@ -230,25 +255,31 @@ Every push and pull request to `master` is also built (warnings count as errors)
 ```
 pin-list/
 ├─ .github/                 CI (build + tests, releases) and Dependabot
-├─ docs/                    data-format.md, social preview image (social-preview.html is its source)
+├─ docs/                    data-format.md, privacy.md, social preview image (social-preview.html is its source)
 ├─ scripts/                 run.bat, publish.bat, package-mac.sh
 ├─ Version.props            the version of every app
 ├─ src/PinList.Core/        no UI, runs everywhere
 │  ├─ Models/               Board → Category → TodoItem, ArchivedItem, Settings, AppData
 │  ├─ Services/             Actions (every change + undo), Store (data.json, backups, export/import),
 │  │                        Reminders, WallClockConverter (times in data.json)
+│  ├─ Sync/                 Google Drive sync: SyncService, SyncMerge (merge engine), ChangeTracker (stamps),
+│  │                        ListCopy (cloud files), DriveCloudStore, GoogleOAuth, LoopbackSignIn, SyncState
 │  └─ Platform/             timers and work areas the apps provide
 ├─ src/PinList.UI/          shared Avalonia UI: themes, icons, styles, accessibility, row animations
-│  └─ Phone/                the Android screens: PhoneView (cards, list, archive, menus), PhoneDrag
-│                           (press-and-hold and drag), BoardCard, PhoneApp
+│  ├─ Phone/                the Android screens: PhoneView (cards, list, archive, menus), PhoneDrag
+│  │                        (press-and-hold and drag), BoardCard, PhoneApp
+│  └─ SyncIcon.cs           a list's sync status as icon and tooltip (desktop and phone)
 ├─ src/PinList/             the desktop app (Windows and macOS)
 │  ├─ App.axaml(.cs)        startup, single instance, tray / menu bar icon, theme, reminders, export/import
-│  ├─ Views/                BoardWindow (widget; split into core, keyboard, menus, drag & drop),
-│  │                        ArchiveWindow, ConfirmDialog, DateDialog, ReminderPopup
+│  ├─ Views/                BoardWindow (widget; split into core, keyboard, menus, drag & drop, sync),
+│  │                        ArchiveWindow, ConfirmDialog, SignInDialog, DateDialog, ReminderPopup
 │  ├─ Services/             Native (Win32) and MacNative (pinning), Displays (monitors), Autostart,
-│  │                        tray icons, SingleInstance, Dialogs, WindowsSettings
+│  │                        tray icons, SingleInstance, Dialogs, WindowsSettings,
+│  │                        GoogleClient (the built-in Google sign-in client for sync), DesktopGoogleAuth,
+│  │                        TokenStores (DPAPI / Keychain)
 │  └─ macOS/Info.plist      the Mac app bundle's settings
-├─ src/PinList.Android/     the Android app: data folder, notifications, reminder alarms
+├─ src/PinList.Android/     the Android app: data folder, notifications, reminder alarms, Google sign-in
+│                           (Play services) and background sync (WorkManager)
 ├─ tests/PinList.Core.Tests/
 ├─ tests/PinList.Tests/     UI tests (headless) for the desktop app and the phone screens
 ├─ CHANGELOG.md
