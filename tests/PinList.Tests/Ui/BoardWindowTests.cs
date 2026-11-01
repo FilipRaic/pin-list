@@ -558,6 +558,7 @@ public class BoardWindowTests : UiTest
     [AvaloniaFact]
     public void Emptying_an_item_deletes_it()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new[] { "a", "b" }));
         var cat = w.Board.Categories[0];
         var a = cat.Items[0];
@@ -620,6 +621,7 @@ public class BoardWindowTests : UiTest
     [AvaloniaFact]
     public void Edit_boxes_of_deleted_things_close_quietly()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new[] { "a" }));
         var cat = w.Board.Categories[0];
         var item = cat.Items[0];

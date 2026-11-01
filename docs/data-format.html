@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PinList data format</title>
+    <meta name="description"
+          content="The JSON file every PinList app reads and writes: data.json, exports and Google Drive sync files.">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;1,400&amp;family=Barlow+Condensed:wght@500;600&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<header class="site">
+    <a class="brand" href="./" aria-label="PinList home">
+        <svg class="logo" width="26" height="26" viewBox="0 0 34 34" fill="none" stroke="currentColor"
+             stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="28" height="28" rx="7"/>
+            <path d="M10.5 17.5l4.5 4.5 8.5-9"/>
+        </svg>
+        <span class="wordmark">PIN<span>LIST</span></span></a>
+    <nav class="site-nav" aria-label="Pages"><a href="privacy">Privacy</a><a href="data-format" aria-current="page">Data
+        format</a><a href="https://github.com/FilipRaic/pin-list">GitHub</a></nav>
+</header>
+<main id="content" class="doc has-toc">
+    <section class="hero hero-plain">
+        <div class="hero-text">
+            <h1>Data format</h1>
+            <p class="meta">Format version 1</p>
+            <div class="lede"><p>All PinList apps (Windows, macOS, Android) read and write the same JSON file. Exports
+                use the same format, so a
+                file exported on one platform can be imported on any other. The code is in <code>src/PinList.Core</code>
+                (<code>Models/AppData.cs</code>, <code>Services/Store.cs</code>), the test <code>DataFormatTests</code>
+                checks the example file
+                <code>tests/PinList.Core.Tests/Fixtures/data-v1.json</code>, so the format can't change by accident.</p>
+            </div>
+        </div>
+    </section>
+    <nav class="toc" aria-label="On this page"><p class="toc-title">On this page</p>
+        <div class="toc">
+            <ul>
+                <li><a href="#where-the-file-is">Where the file is</a></li>
+                <li><a href="#rules">Rules</a></li>
+                <li><a href="#objects">Objects</a>
+                    <ul>
+                        <li><a href="#root-appdata">Root (AppData)</a></li>
+                        <li><a href="#settings">Settings</a></li>
+                        <li><a href="#board-a-widget-on-the-desktop-a-card-on-the-phone">Board</a></li>
+                        <li><a href="#category">Category</a></li>
+                        <li><a href="#todoitem">TodoItem</a></li>
+                        <li><a href="#archiveditem-a-completed-item">ArchivedItem</a></li>
+                        <li><a href="#syncmeta-210">SyncMeta (2.1.0)</a></li>
+                        <li><a href="#deviceinfo-210">DeviceInfo (2.1.0)</a></li>
+                    </ul>
+                </li>
+                <li><a href="#sync">Sync</a>
+                    <ul>
+                        <li><a href="#cloud-files">Cloud files</a></li>
+                        <li><a href="#how-lists-are-merged">How lists are merged</a></li>
+                        <li><a href="#sync-statejson">sync-state.json</a></li>
+                        <li><a href="#export-and-import-with-sync">Export and import with sync</a></li>
+                    </ul>
+                </li>
+                <li><a href="#version-history">Version history</a></li>
+            </ul>
+        </div>
+    </nav>
+    <article class="prose">
+        <h2 id="where-the-file-is">Where the file is</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Platform</th>
+                    <th>Folder</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Windows</td>
+                    <td><code>%APPDATA%\PinList\</code></td>
+                </tr>
+                <tr>
+                    <td>macOS (from 2.0.0)</td>
+                    <td><code>~/Library/Application Support/PinList/</code></td>
+                </tr>
+                <tr>
+                    <td>Android (from 2.0.0)</td>
+                    <td>the app's private storage</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>The folder contains:</p>
+        <ul>
+            <li><code>data.json</code> – all widgets, categories, items, the archive and settings.</li>
+            <li><code>backups/data-YYYY-MM-DD.json</code> – one copy per day, the last 7 are kept.</li>
+            <li><code>backups/before-import-YYYY-MM-DD-HHMMSS.json</code> – a copy taken before an import replaced
+                everything.
+            </li>
+            <li><code>data.vN.json</code> – a copy of a file from a newer PinList (version N), kept before this version
+                saves over it.
+            </li>
+            <li><code>data.json.corrupt-…</code> – a damaged file that couldn't be read (the latest backup was loaded
+                instead).
+            </li>
+            <li><code>log.txt</code> / <code>log.old.txt</code> – errors and notes, at most about 1 MB each. Sync writes
+                one line for every object a
+                merge removes or overrides (ids only, never item text).
+            </li>
+            <li><code>sync-state.json</code> – Google sync's own state (from 2.1.0, only after signing in, see <a
+                    href="#sync">Sync</a>). Not exported
+                and not backed up.
+            </li>
+            <li><code>google-token.dat</code> – Windows only: the Google sign-in (refresh token), encrypted for the
+                Windows user with DPAPI.
+                Deleted when signing out. macOS keeps it in the login Keychain (service <code>PinList</code>, account
+                <code>google-refresh-token</code>), Android keeps no token (Google Play services does).
+            </li>
+        </ul>
+        <p>Writing is atomic: the new content goes to <code>data.json.tmp</code>, is flushed to disk, and then replaces
+            <code>data.json</code>.
+            If the app stops between the two steps, the <code>.tmp</code> file is used on the next start.</p>
+        <h2 id="rules">Rules</h2>
+        <ul>
+            <li>Property names are camelCase. Text is UTF-8, written with relaxed escaping (<code>“</code>,
+                <code>é</code>, <code>€</code> stay readable).
+            </li>
+            <li><strong>Times are local wall-clock time without a time zone</strong>, e.g.
+                <code>"2026-11-02T09:00:00"</code> (fractions of a second
+                may follow, e.g. <code>"…T09:00:00.1234567"</code>). A reminder for 09:00 fires at 09:00 on whichever
+                device has the
+                file. A time with an offset or <code>Z</code> (<code>"…T09:00:00+01:00"</code>) isn't valid, and the
+                file is rejected.
+            </li>
+            <li><strong><code>dueDate</code> is a date only</strong>, it is written with a time of <code>00:00:00</code>,
+                which is ignored.
+            </li>
+            <li><strong>Unknown fields are kept.</strong> A field this version doesn't know (from a newer PinList) is
+                read and written back
+                unchanged, on every object.
+            </li>
+            <li><strong>Desktop-only fields are kept by every platform.</strong> Android doesn't use a widget's
+                position, size, lock or
+                transparency, but keeps them, so the desktop layout survives a round trip through the phone.
+            </li>
+            <li>Ids are 32 lowercase hex characters (a GUID without dashes). Importing with <em>add next to mine</em>
+                gives every
+                imported widget, category and item a new id.
+            </li>
+            <li>Text may contain line breaks (<code>\n</code>) for multi-line items.</li>
+            <li>A missing <code>version</code> means the current version. A file without a <code>boards</code> array
+                isn't PinList data and is rejected.
+            </li>
+        </ul>
+        <h2 id="objects">Objects</h2>
+        <h3 id="root-appdata">Root (<code>AppData</code>)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                    <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>version</code></td>
+                    <td>number</td>
+                    <td>Format version</td>
+                    <td>1</td>
+                </tr>
+                <tr>
+                    <td><code>settings</code></td>
+                    <td>object</td>
+                    <td><code>Settings</code></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td><code>boards</code></td>
+                    <td>array</td>
+                    <td><code>Board</code> objects, in order (the phone's card list uses this order too)</td>
+                    <td><code>[]</code></td>
+                </tr>
+                <tr>
+                    <td><code>archive</code></td>
+                    <td>array</td>
+                    <td><code>ArchivedItem</code> objects, newest first</td>
+                    <td><code>[]</code></td>
+                </tr>
+                <tr>
+                    <td><code>syncInfo</code></td>
+                    <td>object or absent</td>
+                    <td><code>DeviceInfo</code>: this device's sync id and change counter (2.1.0). Not exported.</td>
+                    <td>absent</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="settings"><code>Settings</code></h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                    <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>theme</code></td>
+                    <td>string</td>
+                    <td>Theme for menus, dialogs and the archive: <code>"System"</code>, <code>"Light"</code> or <code>"Dark"</code>.
+                        Kept per device: an import doesn't change it.
+                    </td>
+                    <td><code>"System"</code></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="board-a-widget-on-the-desktop-a-card-on-the-phone"><code>Board</code> (a widget on the desktop, a card
+            on the phone)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                    <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>string</td>
+                    <td>Id</td>
+                    <td>new GUID</td>
+                </tr>
+                <tr>
+                    <td><code>title</code></td>
+                    <td>string</td>
+                    <td>Title may be empty (shown as no title)</td>
+                    <td><code>"My list"</code></td>
+                </tr>
+                <tr>
+                    <td><code>x</code>, <code>y</code></td>
+                    <td>number</td>
+                    <td>Desktop position, in device-independent pixels (desktop only)</td>
+                    <td>100, 100</td>
+                </tr>
+                <tr>
+                    <td><code>width</code>, <code>height</code></td>
+                    <td>number</td>
+                    <td>Desktop size (desktop only)</td>
+                    <td>320, 480</td>
+                </tr>
+                <tr>
+                    <td><code>locked</code></td>
+                    <td>bool</td>
+                    <td>Position and size locked (desktop only)</td>
+                    <td>false</td>
+                </tr>
+                <tr>
+                    <td><code>style</code></td>
+                    <td>string</td>
+                    <td>Color: <code>Dark</code>, <code>Light</code>, <code>Yellow</code>, <code>Green</code>, <code>Blue</code>,
+                        <code>Purple</code>, <code>Pink</code>, <code>Peach</code> or <code>Gray</code></td>
+                    <td><code>"Dark"</code></td>
+                </tr>
+                <tr>
+                    <td><code>transparent</code></td>
+                    <td>bool</td>
+                    <td>Semi-transparent background (desktop only)</td>
+                    <td>true</td>
+                </tr>
+                <tr>
+                    <td><code>categories</code></td>
+                    <td>array</td>
+                    <td><code>Category</code> objects, in order</td>
+                    <td><code>[]</code></td>
+                </tr>
+                <tr>
+                    <td><code>synced</code></td>
+                    <td>bool</td>
+                    <td>The list syncs through Google Drive (2.1.0 written only when true)</td>
+                    <td>false</td>
+                </tr>
+                <tr>
+                    <td><code>syncedChanged</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> of the last change of <code>synced</code></td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>seen</code></td>
+                    <td>object or absent</td>
+                    <td>Seen-list: device id → highest change counter this copy of the list contains</td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>sync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> of the list's synced fields</td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>orderSync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> of the order of its categories</td>
+                    <td>absent</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="category"><code>Category</code></h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                    <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>string</td>
+                    <td>Id</td>
+                    <td>new GUID</td>
+                </tr>
+                <tr>
+                    <td><code>name</code></td>
+                    <td>string</td>
+                    <td>Name</td>
+                    <td><code>"New category"</code></td>
+                </tr>
+                <tr>
+                    <td><code>color</code></td>
+                    <td>string</td>
+                    <td>Dot color, <code>#RRGGBB</code></td>
+                    <td><code>"#60CDFF"</code></td>
+                </tr>
+                <tr>
+                    <td><code>collapsed</code></td>
+                    <td>bool</td>
+                    <td>Items hidden</td>
+                    <td>false</td>
+                </tr>
+                <tr>
+                    <td><code>items</code></td>
+                    <td>array</td>
+                    <td><code>TodoItem</code> objects, in order</td>
+                    <td><code>[]</code></td>
+                </tr>
+                <tr>
+                    <td><code>sync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> (2.1.0)</td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>orderSync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> of the order of its items (2.1.0)</td>
+                    <td>absent</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="todoitem"><code>TodoItem</code></h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                    <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>string</td>
+                    <td>Id</td>
+                    <td>new GUID</td>
+                </tr>
+                <tr>
+                    <td><code>text</code></td>
+                    <td>string</td>
+                    <td>Text, may have line breaks</td>
+                    <td><code>""</code></td>
+                </tr>
+                <tr>
+                    <td><code>createdAt</code></td>
+                    <td>time</td>
+                    <td>When it was added</td>
+                    <td>now</td>
+                </tr>
+                <tr>
+                    <td><code>dueDate</code></td>
+                    <td>date or null</td>
+                    <td>Due day</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td><code>reminderAt</code></td>
+                    <td>time or null</td>
+                    <td>When to remind</td>
+                    <td>null</td>
+                </tr>
+                <tr>
+                    <td><code>reminderShown</code></td>
+                    <td>bool</td>
+                    <td>The reminder was shown (it is shown only once)</td>
+                    <td>false</td>
+                </tr>
+                <tr>
+                    <td><code>sync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> (2.1.0)</td>
+                    <td>absent</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="archiveditem-a-completed-item"><code>ArchivedItem</code> (a completed item)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>id</code></td>
+                    <td>string</td>
+                    <td>The completed item's id (2.1.0). Entries from older files get a new id when they're loaded.</td>
+                </tr>
+                <tr>
+                    <td><code>text</code></td>
+                    <td>string</td>
+                    <td>Text of the item</td>
+                </tr>
+                <tr>
+                    <td><code>createdAt</code></td>
+                    <td>time</td>
+                    <td>When the item was added</td>
+                </tr>
+                <tr>
+                    <td><code>completedAt</code></td>
+                    <td>time</td>
+                    <td>When it was completed</td>
+                </tr>
+                <tr>
+                    <td><code>dueDate</code></td>
+                    <td>date or null</td>
+                    <td>Its due day</td>
+                </tr>
+                <tr>
+                    <td><code>categoryId</code>, <code>categoryName</code>, <code>categoryColor</code></td>
+                    <td>string</td>
+                    <td>The category it was in (<code>categoryId</code> is empty if unknown) – restoring puts it back
+                        there, or into the first category if that one is gone
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>boardId</code>, <code>boardTitle</code></td>
+                    <td>string</td>
+                    <td>The widget it was on</td>
+                </tr>
+                <tr>
+                    <td><code>sync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> (2.1.0)</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h3 id="syncmeta-210"><code>SyncMeta</code> (2.1.0)</h3>
+        <p>Bookkeeping that lets sync merge item by item. Every list, category, item and archived item gets it the first
+            time
+            it's saved, also when sync isn't used (it never leaves the device then).</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>born</code></td>
+                    <td><code>Stamp</code></td>
+                    <td>The change that created the object</td>
+                </tr>
+                <tr>
+                    <td><code>changed</code></td>
+                    <td><code>Stamp</code></td>
+                    <td>The last change of the object's synced fields</td>
+                </tr>
+                <tr>
+                    <td><code>modifiedAt</code></td>
+                    <td>time (UTC)</td>
+                    <td>When that change was made. <strong>The only UTC time in the file</strong>, written with
+                        <code>Z</code>, e.g. <code>"2026-11-01T08:30:15.2500000Z"</code></td>
+                </tr>
+                <tr>
+                    <td><code>hash</code></td>
+                    <td>string</td>
+                    <td>Fingerprint (SHA-256, first 16 bytes as hex) of the synced fields when they were last stamped or
+                        merged
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>A <code>Stamp</code> is <code>{ "device": "&lt;device id&gt;", "counter": &lt;number&gt; }</code>: the device
+            that made the change and the value of
+            its change counter then. Counters only go up, so a stamp is never used twice.</p>
+        <p>Synced fields (what the fingerprint covers): list – title, style, transparent, category – name, color,
+            collapsed,
+            its list item – text, created, due date, reminder, reminder shown, its
+            category and list archived item – all its fields. The order of a list's categories and of a category's
+            items
+            has its own <code>SyncMeta</code> (<code>orderSync</code>), so reordering (also adding or removing a child)
+            on one device and renaming on
+            another are two separate changes and both are kept. Positions, sizes, <code>locked</code>, the theme and the
+            undo history are
+            per device and never synced.</p>
+        <h3 id="deviceinfo-210"><code>DeviceInfo</code> (2.1.0)</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Type</th>
+                    <th>Meaning</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>deviceId</code></td>
+                    <td>string</td>
+                    <td>This device's sync id (a GUID without dashes)</td>
+                </tr>
+                <tr>
+                    <td><code>counter</code></td>
+                    <td>number</td>
+                    <td>This device's change counter</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <h2 id="sync">Sync</h2>
+        <p>Optional Google Drive sync (2.1.0). Everything lives in the hidden <em>app data folder</em> of the user's own
+            Google Drive.
+            Each device writes only its own files, so two devices never write the same file.</p>
+        <h3 id="cloud-files">Cloud files</h3>
+        <ul>
+            <li><code>w-&lt;listId&gt;.&lt;deviceId&gt;.json</code> – this device's latest copy of one synced list:</li>
+        </ul>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Meaning</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>format</code></td>
+                    <td>Cloud file format, currently 1. A device that finds a higher number stops syncing that list and
+                        asks to update PinList, it never overwrites the file.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>boardId</code>, <code>device</code>, <code>deviceName</code>, <code>updatedAt</code></td>
+                    <td>The list, the device that wrote the file, its name (computer name, or phone maker and model),
+                        when it was written (UTC)
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>seen</code></td>
+                    <td>Seen-list of this copy (device id → highest counter it contains)</td>
+                </tr>
+                <tr>
+                    <td><code>synced</code>, <code>syncedChanged</code></td>
+                    <td>The sync switch and its <code>SyncMeta</code></td>
+                </tr>
+                <tr>
+                    <td><code>deleted</code>, <code>deletedChanged</code></td>
+                    <td>The list was deleted, and when (<code>SyncMeta</code>)</td>
+                </tr>
+                <tr>
+                    <td><code>board</code></td>
+                    <td><code>{ title, style, transparent, categoryOrder, sync, orderSync }</code> null in a
+                        <em>marker</em></td>
+                </tr>
+                <tr>
+                    <td><code>categories</code></td>
+                    <td><code>{ id, name, color, collapsed, itemOrder, sync, orderSync }</code></td>
+                </tr>
+                <tr>
+                    <td><code>items</code></td>
+                    <td><code>{ id, text, createdAt, dueDate, reminderAt, reminderShown, categoryId, sync }</code></td>
+                </tr>
+                <tr>
+                    <td><code>archive</code></td>
+                    <td>The list's <code>ArchivedItem</code>s</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>Times follow the same rules as in <code>data.json</code> (wall-clock time, except <code>modifiedAt</code> and
+            <code>updatedAt</code>). A <em>marker</em>
+            has only the flags and no content: what remains after sync was turned off (<code>synced: false</code>) or
+            the list was
+            deleted (<code>deleted: true</code>).</p>
+        <ul>
+            <li><code>reset.json</code> – <code>{ "device": "&lt;deviceId&gt;", "at": "&lt;UTC time&gt;" }</code>, left
+                after <em>Sign out and delete cloud data</em>. Other
+                devices that see it turn their synced lists into local lists.
+            </li>
+        </ul>
+        <h3 id="how-lists-are-merged">How lists are merged</h3>
+        <p>For every object, "has this side already seen the other side's version?" is answered with stamps and
+            seen-lists:
+            a side has seen a version when its seen-list covers that version's <code>changed</code> stamp. Changed on
+            one side only → that
+            side wins. Changed on both without seeing each other → the newer <code>modifiedAt</code> wins (the same
+            reminder shown on
+            either side stays shown). Present on one side only → it was deleted on the other side if that side had seen
+            it,
+            otherwise it's new (an edit made after a delete wins over the delete). Completed on one side → stays
+            completed. The
+            order of categories and items comes from the side whose order changed last, new ids keep their place next to
+            their
+            old neighbour. A list a device doesn't have appears only if all copies of it together say it syncs and none
+            says it
+            was deleted. A device's counter is also raised to the highest of its own stamps any cloud file has seen. The
+            code is in <a
+                    href="https://github.com/FilipRaic/pin-list/blob/master/src/PinList.Core/Sync/SyncMerge.cs"><code>src/PinList.Core/Sync/SyncMerge.cs</code></a>.
+        </p>
+        <h3 id="sync-statejson"><code>sync-state.json</code></h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Meaning</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><code>account</code></td>
+                    <td><code>{ userId, email }</code> of the signed-in Google account, or null after signing out</td>
+                </tr>
+                <tr>
+                    <td><code>lastUserId</code></td>
+                    <td>The account of the last sign-in (to tell the same account from another one)</td>
+                </tr>
+                <tr>
+                    <td><code>deviceId</code>, <code>counter</code></td>
+                    <td>Copy of <code>syncInfo</code>. On load the higher counter wins, so a <code>data.json</code>
+                        restored from a backup never reuses a stamp. Data copied from another device (a different id)
+                        gets a new device id.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>mergedFiles</code></td>
+                    <td>Cloud file name → its modified time when it was last merged</td>
+                </tr>
+                <tr>
+                    <td><code>uploaded</code>, <code>uploadedSeen</code></td>
+                    <td>Own cloud file name → fingerprint of what was uploaded last, and this device's counter in its
+                        seen-list. If the list here is behind its own cloud copy (data.json restored from a backup),
+                        that copy is merged instead of overwritten.
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>turningOff</code>, <code>stripping</code>, <code>markers</code>, <code>deletedLists</code>
+                    </td>
+                    <td>Pending "sync off" uploads, own copies to shrink to a marker, markers still to upload, and lists
+                        deleted on this device (they never come back from other devices' older files)
+                    </td>
+                </tr>
+                <tr>
+                    <td><code>lastSyncUtc</code></td>
+                    <td>The last successful sync</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>Losing this file is harmless: every cloud file is merged again, and the stamps make that safe.</p>
+        <h3 id="export-and-import-with-sync">Export and import with sync</h3>
+        <p>An export never contains <code>syncInfo</code>, and every list in it has <code>synced: false</code>. <em>Add
+            next to mine</em> imports lists as
+            new local lists (new ids, no sync bookkeeping). <em>Replace everything</em> replaces only the lists that
+            don't sync: synced
+            lists and their archived items stay, so an import can't delete lists on the user's other devices.</p>
+        <h2 id="version-history">Version history</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Changes</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>First format (PinList 2.0.0): widgets, categories, items, due dates, reminders, archive and
+                        settings
+                    </td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>PinList 2.1.0 adds optional fields for sync (<code>syncInfo</code>, <code>synced</code>, <code>syncedChanged</code>,
+                        <code>seen</code>, <code>sync</code>, <code>orderSync</code>) and <code>ArchivedItem.id</code>.
+                        Older versions keep them when they save.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p>New fields are optional and unknown fields are kept, so most changes need no new version. Raise
+            <code>AppData.CurrentVersion</code> only when older files have to be converted: then convert them in <code>Store.Parse</code>,
+            add a
+            fixture next to <code>data-v1.json</code>, and update this page (<code>docs/data-format.html</code>). A
+            newer file opened by an older PinList is loaded with a
+            warning, and a copy of it is kept as <code>data.vN.json</code>.</p>
+    </article>
+</main>
+<footer class="site">
+    <p>PinList is open source under the <a href="https://github.com/FilipRaic/pin-list/blob/master/LICENSE">MIT
+        license</a>.
+        Questions? <a href="https://github.com/FilipRaic/pin-list/issues">Open an issue</a>.</p>
+</footer>
+</body>
+</html>

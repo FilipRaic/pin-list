@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag like v2.0.0 (on a commit that is on master) to build every app and publish a GitHub release.
+# Push a tag like v2.1.0 (on a commit that is on master) to build every app and publish a GitHub release.
 on:
   push:
     tags: [ 'v*' ]
@@ -8,9 +8,11 @@ on:
 permissions:
   contents: write
 
+# Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
@@ -32,9 +34,18 @@ jobs:
             exit 1
           fi
 
+      - name: Make sure CHANGELOG.md has an entry for this version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          if ! awk -v h="## [$tag]" 'index($0, h) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$tag]' section - the release notes come from it."
+            exit 1
+          fi
+
   windows:
     needs: check
     runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -46,7 +57,23 @@ jobs:
         run: dotnet workload install android
 
       - name: Test
+        timeout-minutes: 10
         run: dotnet test PinList.sln -c Release
+
+      # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
+      # The file is written only here, from the repository secrets, and is never committed.
+      - name: Add the Google client ID
+        shell: pwsh
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
+            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
+            exit 1
+          }
+          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
+            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
 
       - name: Publish
         shell: pwsh
@@ -71,6 +98,7 @@ jobs:
   mac:
     needs: check
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -79,7 +107,23 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Test the shared code on macOS
+        timeout-minutes: 5
         run: dotnet test tests/PinList.Core.Tests -c Release
+
+      # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
+      # The file is written only here, from the repository secrets, and is never committed.
+      - name: Add the Google client ID
+        shell: pwsh
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
+            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
+            exit 1
+          }
+          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
+            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
 
       - name: Build PinList.app
         run: |
@@ -94,6 +138,7 @@ jobs:
   android:
     needs: check
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -137,7 +182,19 @@ jobs:
   publish:
     needs: [ windows, mac, android ]
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v7
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          # The version's section, without its heading; links to repo files point at this tag
+          awk -v h="## [$tag]" 'index($0, h) == 1 { on = 1; next } on && /^## \[/ { exit } on' CHANGELOG.md \
+            | sed -E "s#\]\((docs/|README\.md|CHANGELOG\.md)#](https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/\1#g" \
+            > "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md"
+
       - uses: actions/download-artifact@v4
         with:
           path: release
@@ -154,4 +211,4 @@ jobs:
             release/PinList-android.apk
             release/PinList-android.apk.sha256
           fail_on_unmatched_files: true
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-notes.md

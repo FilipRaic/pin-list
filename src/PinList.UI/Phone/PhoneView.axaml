@@ -136,15 +136,19 @@
                                     Padding="16,12,16,14" Margin="12,0,12,10" Focusable="True"
                                     AutomationProperties.Name="{Binding AccessibleName}" Tapped="Card_Tapped">
                                 <StackPanel Spacing="3">
-                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,4">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,4">
                                         <TextBlock Text="{Binding DisplayTitle}" FontSize="18" FontWeight="SemiBold"
                                                    Foreground="{Binding Foreground}" TextTrimming="CharacterEllipsis"
                                                    Classes.untitled="{Binding !HasTitle}"/>
-                                        <Border Grid.Column="1" IsVisible="{Binding HasOverdue}" Background="{Binding Overdue}"
-                                                CornerRadius="9" Padding="7,1" Margin="8,0" VerticalAlignment="Center">
+                                        <PathIcon Grid.Column="1" Classes="sync" Width="15" Height="15" Margin="8,0,0,0"
+                                                  VerticalAlignment="Center" IsVisible="{Binding HasSyncIcon}"
+                                                  Data="{Binding SyncIcon}" Foreground="{Binding SyncBrush}"
+                                                  AutomationProperties.Name="{Binding SyncTip}"/>
+                                        <Border Grid.Column="2" IsVisible="{Binding HasOverdue}" Background="{Binding Overdue}"
+                                                CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding OverdueText}" FontSize="12" Foreground="{Binding Background}"/>
                                         </Border>
-                                        <TextBlock Grid.Column="2" Text="{Binding OpenCount}" FontSize="14"
+                                        <TextBlock Grid.Column="3" Text="{Binding OpenCount}" FontSize="14" Margin="10,0,0,0"
                                                    Foreground="{Binding Muted}" VerticalAlignment="Center"/>
                                     </Grid>
                                     <ItemsControl ItemsSource="{Binding Preview}">
@@ -191,7 +195,7 @@
         <ThemeVariantScope x:Name="BoardScope" IsVisible="False">
             <Border x:Name="BoardScreen" Classes="boardscreen" Background="{DynamicResource BoardBg}">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto" Margin="4,8,4,4">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="4,8,4,4">
                         <Button Classes="bar" Click="Back_Click" AutomationProperties.Name="Back">
                             <PathIcon Data="{StaticResource Icon.Back}"/>
                         </Button>
@@ -201,10 +205,14 @@
                             <TextBox x:Name="BoardTitleBox" Classes="bare" FontSize="22" FontWeight="SemiBold" IsVisible="False"
                                      PlaceholderText="Title (optional)" AutomationProperties.Name="List title"/>
                         </Panel>
-                        <Button Grid.Column="2" Classes="bar" Click="AddCategory_Click" AutomationProperties.Name="New category">
+                        <!-- Google sync status of the list (hidden while signed out) -->
+                        <Button x:Name="BoardSyncBtn" Grid.Column="2" Classes="bar" Click="BoardSync_Click" IsVisible="False">
+                            <PathIcon/>
+                        </Button>
+                        <Button Grid.Column="3" Classes="bar" Click="AddCategory_Click" AutomationProperties.Name="New category">
                             <PathIcon Data="{StaticResource Icon.NewCategory}"/>
                         </Button>
-                        <Button Grid.Column="3" Classes="bar" Click="BoardMenu_Click" AutomationProperties.Name="List menu">
+                        <Button Grid.Column="4" Classes="bar" Click="BoardMenu_Click" AutomationProperties.Name="List menu">
                             <PathIcon Data="{StaticResource Icon.MoreVertical}"/>
                         </Button>
                     </Grid>
@@ -261,7 +269,7 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
-                                            <TextBox Classes="bare phoneadd" PlaceholderText="Add item…" Tag="{Binding}" Margin="56,4,16,4"
+                                            <TextBox Classes="bare phoneadd" PlaceholderText="Add item" Tag="{Binding}" Margin="56,4,16,4"
                                                      AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"/>
                                         </StackPanel>
                                     </StackPanel>
@@ -296,9 +304,9 @@
                                     <TextBlock Text="{Binding Text, Converter={x:Static local:Converters.FirstLine}}" FontSize="16"
                                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource ArcText}"/>
                                     <TextBlock FontSize="13" Foreground="{DynamicResource ArcMuted}">
-                                        <Run Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy HH:mm'}"/>
+                                        <Run Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy HH:mm', Mode=OneWay}"/>
                                         <Run Text="  ·  "/>
-                                        <Run Text="{Binding CategoryName}"/>
+                                        <Run Text="{Binding CategoryName, Mode=OneWay}"/>
                                     </TextBlock>
                                 </StackPanel>
                             </Grid>

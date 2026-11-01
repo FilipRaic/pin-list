@@ -10,7 +10,7 @@ using Xunit;
 namespace PinList.Tests;
 
 /// <summary>The phone app's screen (PhoneView), in a phone-sized headless window.</summary>
-public class PhoneTests : UiTest
+public partial class PhoneTests : UiTest
 {
     Window _window = null!;
     PhoneView _view = null!;
@@ -221,10 +221,10 @@ public class PhoneTests : UiTest
         Show();
         LongPress(Card(a));
         Assert.Equal("Work", _view.SheetTitleText);
-        Assert.Equal(new[] { "Open", "Color…", "Delete list" }, Options());
+        Assert.Equal(new[] { "Open", "Color", "Delete list" }, Options());
         Assert.DoesNotContain("lifted", Card(a).Classes);
 
-        Choose("Color…");
+        Choose("Color");
         Choose("Green");
         Assert.Equal("Green", a.Style);
 
@@ -314,8 +314,8 @@ public class PhoneTests : UiTest
         Pump();
 
         LongPress(PhoneRow(cat.Items[0]));
-        Assert.Equal(new[] { "Edit", "Add due date…", "Add reminder…", "Move to list…", "Delete" }, Options());
-        Choose("Add due date…");
+        Assert.Equal(new[] { "Edit", "Add due date", "Add reminder", "Move to list", "Delete" }, Options());
+        Choose("Add due date");
         Assert.Equal("Add due date", _view.SheetTitleText);
         Choose_Chip("Tomorrow");
         Assert.Equal(new DateTime(2030, 6, 13), cat.Items[0].DueDate);
@@ -325,7 +325,7 @@ public class PhoneTests : UiTest
         Assert.Null(cat.Items[0].DueDate);
 
         LongPress(PhoneRow(cat.Items[0]));
-        Choose("Move to list…");
+        Choose("Move to list");
         Choose("Other");
         Assert.Equal("a", other.Categories[0].Items.Single().Text);
         Assert.Equal("Moved to Other", _view.SnackbarMessage);
@@ -348,7 +348,7 @@ public class PhoneTests : UiTest
         Show();
         Tap(Card(b));
         LongPress(PhoneRow(b.Categories[0].Items[0]));
-        Assert.DoesNotContain("Move to list…", Options());
+        Assert.DoesNotContain("Move to list", Options());
     }
 
     [AvaloniaFact]
@@ -359,7 +359,7 @@ public class PhoneTests : UiTest
         _view.ShowBoard(b);
         Pump();
         LongPress(PhoneRow(b.Categories[0].Items[0]));
-        Choose("Add reminder…");
+        Choose("Add reminder");
 
         _view.KeyboardChanged(400); // the keyboard opened: 400 of the 760 high screen are covered
         Pump();
@@ -406,7 +406,7 @@ public class PhoneTests : UiTest
         _view.ShowBoard(b);
         Pump();
         LongPress(PhoneRow(item));
-        Choose("Add reminder…");
+        Choose("Add reminder");
         var buttons = FindAll<Button>(_view.SheetPanel!).Select(x => x.Content as string).ToList();
         Assert.Equal(new[] { "In 1 hour", "This evening", "Tomorrow 9:00" }, buttons.Take(3));
         Assert.Contains("Save", buttons);
@@ -427,23 +427,23 @@ public class PhoneTests : UiTest
         Assert.False(_view.SheetOpen);
 
         LongPress(PhoneRow(item));
-        Assert.Contains("Change reminder…", Options());
+        Assert.Contains("Change reminder", Options());
         Choose("Remove reminder");
         Assert.Null(item.ReminderAt);
 
         LongPress(PhoneRow(item));
-        Choose("Add reminder…");
+        Choose("Add reminder");
         Choose_Chip("In 1 hour");
         Assert.Equal(new DateTime(2030, 6, 12, 11, 15, 0), item.ReminderAt);
 
         LongPress(PhoneRow(item));
-        Choose("Add due date…");
+        Choose("Add due date");
         FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate = new DateTime(2030, 7, 1);
         Click(FindAll<Button>(_view.SheetPanel!).Single(x => x.Content as string == "Save"));
         Assert.Equal(new DateTime(2030, 7, 1), item.DueDate);
 
         LongPress(PhoneRow(item));
-        Choose("Change due date…");
+        Choose("Change due date");
         FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate = null;
         Click(FindAll<Button>(_view.SheetPanel!).Single(x => x.Content as string == "Save"));
         Assert.Equal("Pick a day.", A11y.LastAnnouncement);
@@ -489,8 +489,8 @@ public class PhoneTests : UiTest
         Pump();
 
         LongPress(PhoneRow(b.Categories[0]));
-        Assert.Equal(new[] { "Rename", "Color…", "Delete category" }, Options());
-        Choose("Color…");
+        Assert.Equal(new[] { "Rename", "Color", "Delete category" }, Options());
+        Choose("Color");
         Choose("Red");
         Assert.Equal("#F1707A", b.Categories[0].Color);
         LongPress(PhoneRow(b.Categories[1]));
@@ -505,8 +505,8 @@ public class PhoneTests : UiTest
 
         _view.ShowBoard(b);
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Assert.Equal(new[] { "Rename", "Color…", "Delete list" }, Options());
-        Choose("Color…");
+        Assert.Equal(new[] { "Rename", "Color", "Delete list" }, Options());
+        Choose("Color");
         Choose("Dark");
         Assert.Equal(Avalonia.Styling.ThemeVariant.Dark, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
@@ -557,6 +557,34 @@ public class PhoneTests : UiTest
     }
 
     [AvaloniaFact]
+    public void The_archive_shows_completion_times_without_changing_them()
+    {
+        // A phone set to US English reads "01.11.2026" as January 11. The archive only shows the time and must
+        // never parse it back into the item (that changed the date and looped until the app crashed).
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("en-US", false);
+            var b = MakeBoard(("Work", new[] { "milk" }));
+            Actions.Complete(b.Categories[0].Items[0]);
+            var completed = new DateTime(2026, 11, 1, 22, 5, 0);
+            Store.Data.Archive[0].CompletedAt = completed;
+
+            Show();
+            _view.ShowArchive();
+            Pump();
+
+            Assert.Equal(completed, Store.Data.Archive[0].CompletedAt);
+            Assert.Contains(FindAll<TextBlock>(_view).SelectMany(t => t.Inlines ?? new()).OfType<Avalonia.Controls.Documents.Run>(),
+                r => r.Text == "01.11.2026 22:05");
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = culture;
+        }
+    }
+
+    [AvaloniaFact]
     public void Restoring_into_a_deleted_category_says_where_it_went()
     {
         var gone = MakeBoard(("Old", new[] { "x" }));
@@ -579,8 +607,8 @@ public class PhoneTests : UiTest
         {
             Show();
             Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
-            Assert.Equal(new[] { "Archive", "App theme…", "Export…", "Import…" }, Options());
-            Choose("App theme…");
+            Assert.Equal(new[] { "Archive", "App theme", "Export", "Import" }, Options());
+            Choose("App theme");
             Choose("Light");
             Assert.Equal("Light", theme);
             Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
@@ -588,6 +616,22 @@ public class PhoneTests : UiTest
             Assert.True(Named<DockPanel>(_view, "ArchiveScreen").IsVisible);
         }
         finally { PhoneView.SetTheme = real; }
+    }
+
+    [AvaloniaFact]
+    public void Import_says_that_synced_lists_stay()
+    {
+        MakeBoard(("Mine", new[] { "mine" })).Synced = true;
+        Show();
+        var realImport = PhoneView.PickImportFile;
+        try
+        {
+            var json = Store.ExportJson();
+            PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
+            Await(_view.Import());
+            Assert.Equal("Import 1 list with 1 item? Synced lists aren't replaced.", _view.SheetTitleText);
+        }
+        finally { PhoneView.PickImportFile = realImport; }
     }
 
     [AvaloniaFact]
@@ -730,7 +774,7 @@ public class PhoneTests : UiTest
         try
         {
             Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
-            Choose("Export…");
+            Choose("Export");
             Assert.True(UiHost.WaitUntil(() => exported));
         }
         finally { PhoneView.PickExportFile = real; }
@@ -907,12 +951,12 @@ public class PhoneTests : UiTest
         _view.ShowBoard(b);
         Pump();
         LongPress(PhoneRow(b.Categories[0].Items[0]));
-        Choose("Move to list…");
+        Choose("Move to list");
         Choose("No title");
         Assert.Single(untitled.Categories[0].Items);
 
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Choose("Color…");
+        Choose("Color");
         Choose("Light");
         Assert.Equal(Avalonia.Styling.ThemeVariant.Light, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);
         _view.App_ThemeOrDataChanged(); // the app theme changed while a board is open: it keeps its colors
@@ -938,35 +982,35 @@ public class PhoneTests : UiTest
         Pump();
 
         LongPress(PhoneRow(item));
-        Choose("Change due date…");
+        Choose("Change due date");
         Assert.Equal(new DateTime(2030, 6, 17), FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate); // not in the past
         Choose_Chip("Next week");
         Assert.Equal(new DateTime(2030, 6, 24), item.DueDate);
 
         LongPress(PhoneRow(item));
-        Choose("Add reminder…");
+        Choose("Add reminder");
         Assert.DoesNotContain(FindAll<Button>(_view.SheetPanel!), x => x.Content as string == "This evening");
         Assert.Equal(new DateTime(2030, 6, 24), FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate); // starts on the due day
         Choose_Chip("Tomorrow 9:00");
         Assert.Equal(new DateTime(2030, 6, 18, 9, 0, 0), item.ReminderAt);
 
         LongPress(PhoneRow(item));
-        Choose("Change reminder…");
+        Choose("Change reminder");
         Assert.Equal("Change reminder", _view.SheetTitleText);
         Assert.Equal("09:00", FindAll<TextBox>(_view.SheetPanel!).Single().Text);
         Assert.True(_view.GoBack());
 
         PhoneView.Clock = () => new DateTime(2030, 6, 12, 10, 15, 0); // Wednesday morning
         LongPress(PhoneRow(item));
-        Choose("Change due date…");
+        Choose("Change due date");
         Choose_Chip("Next week");
         Assert.Equal(new DateTime(2030, 6, 17), item.DueDate);
         LongPress(PhoneRow(item));
-        Choose("Change due date…");
+        Choose("Change due date");
         Choose_Chip("Today");
         Assert.Equal(new DateTime(2030, 6, 12), item.DueDate);
         LongPress(PhoneRow(item));
-        Choose("Change reminder…");
+        Choose("Change reminder");
         Choose_Chip("This evening");
         Assert.Equal(new DateTime(2030, 6, 12, 18, 0, 0), item.ReminderAt);
     }

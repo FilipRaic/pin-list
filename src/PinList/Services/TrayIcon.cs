@@ -22,8 +22,8 @@ public interface ITrayIcon : IDisposable
     void SetMenu(System.Collections.Generic.IReadOnlyList<TrayEntry> entries);
 }
 
-/// <summary>One tray menu entry; <see cref="Separator"/> draws a line.</summary>
-public sealed record TrayEntry(string Text, Action? Action)
+/// <summary>One tray menu entry; <see cref="Separator"/> draws a line. A disabled entry is a line of text (e.g. the account).</summary>
+public sealed record TrayEntry(string Text, Action? Action, bool Enabled = true)
 {
     public static readonly TrayEntry Separator = new("-", null);
 }

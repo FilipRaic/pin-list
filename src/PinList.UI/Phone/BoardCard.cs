@@ -4,7 +4,10 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Media;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -118,10 +121,26 @@ public sealed class BoardCard : Observable, IDisposable
         Raise(nameof(AccessibleName));
     }
 
+    // ---- Google sync icon (spec 9.10); hidden while signed out ----
+
+    (string IconKey, string Tip, bool Danger)? _sync;
+
+    public bool HasSyncIcon => _sync != null;
+    public Geometry? SyncIcon => _sync is { } s ? Application.Current?.FindResource(s.IconKey) as Geometry : null;
+    public string SyncTip => _sync?.Tip ?? "";
+    public IBrush SyncBrush => _sync is { Danger: true } ? Overdue : Muted;
+
+    /// <summary>Shows the list's sync state (null: no sync on this phone).</summary>
+    public void RefreshSync(ListSyncState? state)
+    {
+        _sync = state == null ? null : PinList.SyncIcon.For(state, DateTime.UtcNow);
+        foreach (var p in new[] { nameof(HasSyncIcon), nameof(SyncIcon), nameof(SyncTip), nameof(SyncBrush) }) Raise(p);
+    }
+
     /// <summary>The board's color changed (Style isn't observable, so the screen calls this).</summary>
     public void RefreshColors()
     {
-        foreach (var p in new[] { nameof(Background), nameof(Foreground), nameof(Muted), nameof(Overdue), nameof(Border) })
+        foreach (var p in new[] { nameof(Background), nameof(Foreground), nameof(Muted), nameof(Overdue), nameof(Border), nameof(SyncBrush) })
             Raise(p);
     }
 

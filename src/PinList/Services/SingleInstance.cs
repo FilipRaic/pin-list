@@ -42,7 +42,10 @@ public sealed class SingleInstance : IDisposable
                 {
                     using (server)
                     {
-                        await server.WaitForConnectionAsync(token);
+                        try { await server.WaitForConnectionAsync(token); }
+                        // the other start connected and closed its end before this side finished accepting
+                        // ("the pipe is being closed"): it still asked to show the widgets
+                        catch (System.IO.IOException) { }
                         onShow();
                     }
                 }

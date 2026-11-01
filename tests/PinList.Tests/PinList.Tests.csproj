@@ -24,6 +24,10 @@
     <!-- Shared with PinList.Core.Tests: each test gets its own data folder and fresh data -->
     <Compile Include="..\PinList.Core.Tests\TestSetup.cs" Link="TestSetup.cs" />
     <Compile Include="..\PinList.Core.Tests\ManualTimer.cs" Link="ManualTimer.cs" />
+    <!-- Fakes for sync: Google sign-in, the cloud folder and HTTP -->
+    <Compile Include="..\PinList.Core.Tests\Sync\FakeAuth.cs" Link="Sync\FakeAuth.cs" />
+    <Compile Include="..\PinList.Core.Tests\Sync\FakeCloud.cs" Link="Sync\FakeCloud.cs" />
+    <Compile Include="..\PinList.Core.Tests\Sync\FakeHttp.cs" Link="Sync\FakeHttp.cs" />
   </ItemGroup>
 
   <ItemGroup>

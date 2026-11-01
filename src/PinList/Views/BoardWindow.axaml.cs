@@ -44,6 +44,7 @@ public partial class BoardWindow : Window
         ApplyLock();
         ApplyAppearance();
         ApplyTextScale();
+        RefreshSync();
 
         // Not in the taskbar or Alt+Tab, and owned by the desktop so "Show desktop" leaves it alone. Done here
         // rather than with ShowInTaskbar, which manages the window's owner itself (and would undo the desktop owner).
@@ -432,6 +433,7 @@ public partial class BoardWindow : Window
         string msg = items > 0
             ? $"This removes the window with {Board.Categories.Count} categories and {items} items. Items are not moved to the archive."
             : "This removes the window from your desktop.";
+        if (Board.Synced) msg += " It will also be deleted from your other devices.";
         string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this window?" : $"Delete \"{Board.Title}\"?";
         if (!await Dialogs.Ask(this, title, msg, "Delete"))
             return;
@@ -535,14 +537,14 @@ public partial class BoardWindow : Window
     /// <summary>Unified line breaks, no blank lines at the start/end; indentation inside the text is kept.</summary>
     static string Normalize(string text) => text.Replace("\r\n", "\n").Replace('\r', '\n').Trim();
 
-    static void CommitEdit(TextBox tb)
+    void CommitEdit(TextBox tb)
     {
         var text = Normalize(tb.Text ?? "");
         switch (tb.DataContext)
         {
             case TodoItem i when i.IsEditing:
                 i.IsEditing = false;
-                if (text.Length == 0) Actions.Delete(i);
+                if (text.Length == 0) DeleteEmptied(i);
                 else Actions.SetItemText(i, text);
                 break;
             case Category c when c.IsEditing:
@@ -554,6 +556,21 @@ public partial class BoardWindow : Window
                 Actions.RenameBoard(b, text); // the title is optional: empty text = widget without a title
                 break;
         }
+    }
+
+    /// <summary>All text was removed: that deletes the item, after asking (Cancel keeps the old text).</summary>
+    async void DeleteEmptied(TodoItem item)
+    {
+        if (await Dialogs.Ask(this, $"Delete {Quote(item.Text)}?", "Its text is empty. Ctrl+Z brings it back.", "Delete"))
+            Actions.Delete(item);
+    }
+
+    /// <summary>The first line of a text in quotes, at most 60 characters.</summary>
+    internal static string Quote(string text)
+    {
+        var line = text.Split('\n')[0];
+        if (line.Length > 60) line = line[..60] + "…";
+        return $"“{line}”";
     }
 
     static void CancelEdit(TextBox tb)

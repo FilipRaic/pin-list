@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -82,6 +83,9 @@ public static class Store
         Converters = { new WallClockConverter() },
     };
 
+    /// <summary>The JSON settings of data.json, also used for the cloud files.</summary>
+    internal static JsonSerializerOptions JsonOptions => Options;
+
     public static AppData Data { get; private set; } = new();
 
     /// <summary>When saves run. Tests replace this with one that does nothing.</summary>
@@ -103,6 +107,17 @@ public static class Store
         _failedSaves = 0;
     }
 
+    /// <summary>Uses a folder and data that are already in memory (tests switch between simulated devices).</summary>
+    internal static void Use(string dir, AppData data)
+    {
+        Dir = dir;
+        Data = data;
+        _failedSaves = 0;
+    }
+
+    /// <summary>data.json was written (sync uploads changes a few seconds later).</summary>
+    public static event Action? Saved;
+
     // ================= Loading =================
 
     /// <summary>Returns true if existing data was loaded, false on first run.</summary>
@@ -122,6 +137,7 @@ public static class Store
         {
             Data = ReadMainFile();
             DailyBackup();
+            Loaded();
             return true;
         }
         catch (Exception ex)
@@ -137,6 +153,7 @@ public static class Store
                 try
                 {
                     Data = ReadFile(latest, out _);
+                    Loaded();
                     Notify($"The data file was damaged, so the latest backup was loaded:\n{Path.GetFileName(latest)}", false);
                     return true;
                 }
@@ -147,6 +164,15 @@ public static class Store
             Data = new AppData();
             return true; // don't run first-run setup on top of damaged data
         }
+    }
+
+    /// <summary>
+    /// After loading: a change that was saved but not yet stamped (the app was killed in between) gets its stamp now.
+    /// </summary>
+    static void Loaded()
+    {
+        SyncState.ReconcileCounter(Data, SyncState.Load(Dir)); // the counter never goes back, even after a restore
+        ChangeTracker.StampChanges(Data, DateTime.UtcNow);
     }
 
     /// <summary>Reads data.json. A file from a newer PinList is loaded too, after a copy of it was kept.</summary>
@@ -178,6 +204,8 @@ public static class Store
         data.Settings ??= new Settings();
         data.Boards ??= new();
         data.Archive ??= new();
+        foreach (var a in data.Archive)
+            if (string.IsNullOrEmpty(a.Id)) a.Id = Guid.NewGuid().ToString("N");
         data.Version = AppData.CurrentVersion;
         return data;
     }
@@ -207,9 +235,11 @@ public static class Store
         try
         {
             Directory.CreateDirectory(Dir);
+            ChangeTracker.StampChanges(Data, DateTime.UtcNow);
             WriteAtomic(FilePath, Data);
             _failedSaves = 0;
             DailyBackup();
+            Saved?.Invoke();
         }
         catch (Exception ex)
         {
@@ -219,13 +249,16 @@ public static class Store
         }
     }
 
-    /// <summary>The JSON written to data.json and export files (see docs/data-format.md).</summary>
+    /// <summary>The JSON written to data.json and export files (see docs/data-format.html).</summary>
     public static string Serialize(AppData data) => JsonSerializer.Serialize(data, Options);
 
-    static void WriteAtomic(string path, AppData data)
+    static void WriteAtomic(string path, AppData data) => WriteTextAtomic(path, Serialize(data));
+
+    /// <summary>Writes a file so that a crash leaves either the old or the new content, never a mix.</summary>
+    internal static void WriteTextAtomic(string path, string text)
     {
         var temp = path + ".tmp";
-        var bytes = Encoding.UTF8.GetBytes(Serialize(data));
+        var bytes = Encoding.UTF8.GetBytes(text);
         using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
         {
             fs.Write(bytes, 0, bytes.Length);
@@ -240,6 +273,9 @@ public static class Store
     /// One copy of data.json per day, the last 7 are kept. Runs on start and after saving,
     /// so the backups stay current even if PinList runs for weeks without a restart.
     /// </summary>
+    /// <summary>Called before a sync merge removes anything: today's backup must exist first (spec 6.2).</summary>
+    public static void BackupBeforeSync() => DailyBackup();
+
     static void DailyBackup()
     {
         try
@@ -257,13 +293,32 @@ public static class Store
 
     // ================= Export and import =================
 
-    public static void Export(string path)
+    public static void Export(string path) => WriteTextAtomic(path, ExportJson());
+
+    /// <summary>
+    /// The export file: all data, but without this device's sync identity and with every list's sync turned off,
+    /// so importing it somewhere never makes a list sync by itself (spec 5.8).
+    /// </summary>
+    public static string ExportJson()
     {
         Flush();
-        WriteAtomic(path, Data);
+        var copy = Parse(Serialize(Data), out _);
+        foreach (var b in copy.Boards)
+        {
+            b.Synced = false;
+            b.SyncedChanged = null;
+        }
+        copy.SyncInfo = null;
+        return Serialize(copy);
     }
 
-    /// <summary>Replaces all data (import). A copy of the current data is kept in the backups folder first.</summary>
+    /// <summary>True if any list syncs (import then leaves those alone).</summary>
+    public static bool HasSyncedBoards => Data.Boards.Any(b => b.Synced);
+
+    /// <summary>
+    /// Replaces all data (import). A copy of the current data is kept in the backups folder first. Synced lists and
+    /// their archive stay: replacing them would delete them on the user's other devices too (spec 5.8).
+    /// </summary>
     public static string ReplaceAll(AppData imported)
     {
         Flush();
@@ -271,7 +326,23 @@ public static class Store
         var safety = Path.Combine(BackupDir, $"before-import-{DateTime.Now:yyyy-MM-dd-HHmmss}.json");
         WriteAtomic(safety, Data);
 
+        var synced = Data.Boards.Where(b => b.Synced).ToList();
+        var syncedIds = synced.Select(b => b.Id).ToHashSet();
+        foreach (var b in imported.Boards.Where(b => syncedIds.Contains(b.Id)).ToList()) imported.Boards.Remove(b);
+        foreach (var b in imported.Boards)
+        {
+            // a raw backup may still say "synced": an import never turns sync on (spec 5.8)
+            b.Synced = false;
+            b.SyncedChanged = null;
+        }
+        for (int i = 0; i < synced.Count; i++) imported.Boards.Insert(i, synced[i]);
+        var archive = imported.Archive.Where(a => !syncedIds.Contains(a.BoardId))
+            .Concat(Data.Archive.Where(a => syncedIds.Contains(a.BoardId)))
+            .OrderByDescending(a => a.CompletedAt).ToList();
+        imported.Archive = new(archive);
+
         imported.Settings = Data.Settings; // the theme is a setting of this PC, not of the lists
+        imported.SyncInfo = Data.SyncInfo; // still the same device
         Data = imported;
         SaveNow();
         return safety;
@@ -281,6 +352,7 @@ public static class Store
     public static IReadOnlyList<Board> Merge(AppData imported)
     {
         ReassignIds(imported);
+        ForgetSync(imported);
         foreach (var b in imported.Boards) Data.Boards.Add(b);
         foreach (var a in imported.Archive) Data.Archive.Add(a);
         var archive = Data.Archive.OrderByDescending(a => a.CompletedAt).ToList();
@@ -288,6 +360,21 @@ public static class Store
         foreach (var a in archive) Data.Archive.Add(a);
         MarkDirty();
         return imported.Boards.ToList();
+    }
+
+    /// <summary>Imported lists are new local lists here: no sync flag, no stamps (they're stamped as new).</summary>
+    static void ForgetSync(AppData data)
+    {
+        foreach (var b in data.Boards)
+        {
+            (b.Synced, b.Sync, b.OrderSync, b.SyncedChanged, b.Seen) = (false, null, null, null, null);
+            foreach (var c in b.Categories)
+            {
+                (c.Sync, c.OrderSync) = (null, null);
+                foreach (var i in c.Items) i.Sync = null;
+            }
+        }
+        foreach (var a in data.Archive) a.Sync = null;
     }
 
     /// <summary>New ids for every window, category and item; archive entries follow their category and window.</summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -19,6 +20,9 @@ public static class Actions
 
     /// <summary>A new widget was added (the app opens a window for it).</summary>
     public static event Action<Board>? BoardAdded;
+
+    /// <summary>A widget was deleted: by the user on this device (true), or by sync because it was deleted elsewhere.</summary>
+    public static event Action<Board, bool>? BoardDeleted;
 
     const int MaxUndo = 50;
     static readonly List<(string what, Action undo)> UndoStack = new();
@@ -69,6 +73,7 @@ public static class Actions
         item.IsCompleting = false;
         item.IsEditing = false;
         cat.Items.Insert(Math.Clamp(index, 0, cat.Items.Count), item);
+        ChangeTracker.Touch(item.Sync); // a new change, so sync doesn't remove it again
     }
 
     public static TodoItem AddItem(Category category, string text)
@@ -121,6 +126,7 @@ public static class Actions
 
         var archived = new ArchivedItem
         {
+            Id = item.Id, // so sync knows the item was completed, not deleted
             Text = item.Text,
             CreatedAt = item.CreatedAt,
             CompletedAt = DateTime.Now,
@@ -205,7 +211,10 @@ public static class Actions
     static void ReinsertArchived(IEnumerable<(ArchivedItem item, int index)> entries)
     {
         foreach (var (item, index) in entries.OrderBy(x => x.index)) // ascending, so the indexes stay correct
+        {
             Store.Data.Archive.Insert(Math.Min(index, Store.Data.Archive.Count), item);
+            ChangeTracker.Touch(item.Sync);
+        }
     }
 
     /// <summary>
@@ -236,7 +245,10 @@ public static class Actions
             foreach (var (_, _, item) in undo) Store.Locate(item)?.category.Items.Remove(item);
             // undo in reverse order, so each archive index is valid again when its item goes back
             foreach (var (a, index, _) in Enumerable.Reverse(undo))
+            {
                 Store.Data.Archive.Insert(Math.Min(index, Store.Data.Archive.Count), a);
+                ChangeTracker.Touch(a.Sync);
+            }
         });
         Store.MarkDirty();
         return done;
@@ -280,6 +292,9 @@ public static class Actions
         if (target == null) return;
         Store.BoardOf(category)?.Categories.Remove(category);
         target.Categories.Insert(Math.Clamp(index, 0, target.Categories.Count), category);
+        ChangeTracker.Touch(category.Sync);
+        ChangeTracker.Touch(category.OrderSync);
+        foreach (var item in category.Items) ChangeTracker.Touch(item.Sync);
     }
 
     /// <summary>Deletes a category with all its items (without archiving).</summary>
@@ -333,22 +348,39 @@ public static class Actions
     /// <summary>New widget near the middle of the given work area; inherits color and transparency from the widget it was opened from.</summary>
     public static Board NewBoard(WorkArea workArea, Board? template = null)
     {
-        int n = Store.Data.Boards.Count;
         var b = new Board
         {
             Title = "New list",
-            Width = 320,
-            Height = 400,
-            X = Math.Round(workArea.Left + workArea.Width / 2 - 160 + (n % 5) * 30),
-            Y = Math.Round(workArea.Top + workArea.Height / 2 - 200 + (n % 5) * 30),
             Style = template?.Style ?? "Dark",
             Transparent = template?.Transparent ?? true,
         };
         b.Categories.Add(new Category { Name = "General", Color = Palette[0] });
+        Add(b, workArea);
+        return b;
+    }
+
+    /// <summary>A list that sync brought from another device: placed like a new widget, not undoable.</summary>
+    public static void AddSyncedBoard(Board board, WorkArea workArea) => Add(board, workArea);
+
+    /// <summary>Near the middle of the work area, cascaded so new widgets don't cover each other.</summary>
+    static void Add(Board b, WorkArea workArea)
+    {
+        int n = Store.Data.Boards.Count;
+        b.Width = 320;
+        b.Height = 400;
+        b.X = Math.Round(workArea.Left + workArea.Width / 2 - 160 + (n % 5) * 30);
+        b.Y = Math.Round(workArea.Top + workArea.Height / 2 - 200 + (n % 5) * 30);
         Store.Data.Boards.Add(b);
         Store.MarkDirty();
         BoardAdded?.Invoke(b);
-        return b;
+    }
+
+    /// <summary>Removes a list that was deleted on another device (the app closes its window).</summary>
+    public static void RemoveSyncedBoard(Board board)
+    {
+        Store.Data.Boards.Remove(board);
+        Store.MarkDirty();
+        BoardDeleted?.Invoke(board, false);
     }
 
     /// <summary>Moves a widget to another place in the list (the order of the cards on the phone).</summary>
@@ -373,5 +405,6 @@ public static class Actions
     {
         Store.Data.Boards.Remove(board);
         Store.MarkDirty();
+        BoardDeleted?.Invoke(board, true);
     }
 }

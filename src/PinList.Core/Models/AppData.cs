@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -30,6 +31,9 @@ public class TodoItem : Observable
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>Sync bookkeeping (stamps and fingerprint); null until the object is first stamped.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? Sync { get; set; }
 
     string _text = "";
     public string Text { get => _text; set { if (Set(ref _text, value)) Raise(nameof(AccessibleName)); } }
@@ -119,6 +123,12 @@ public class Category : Observable
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
+    /// <summary>Sync bookkeeping (stamps and fingerprint); null until the object is first stamped.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? Sync { get; set; }
+
+    /// <summary>Sync bookkeeping of the order of its items (separate, so reordering never overrides a rename).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? OrderSync { get; set; }
+
     string _name = "New category";
     public string Name { get => _name; set { if (Set(ref _name, value)) Raise(nameof(AccessibleName)); } }
 
@@ -164,6 +174,23 @@ public class Board : Observable
 
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
+    /// <summary>Sync bookkeeping (stamps and fingerprint); null until the object is first stamped.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? Sync { get; set; }
+
+    /// <summary>Sync bookkeeping of the order of its categories (separate, so reordering never overrides a rename).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? OrderSync { get; set; }
+
+    bool _synced;
+    /// <summary>The list syncs through Google Drive (the same on every device; see docs/data-format.html).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Synced { get => _synced; set => Set(ref _synced, value); }
+
+    /// <summary>Stamps of the last change of <see cref="Synced"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? SyncedChanged { get; set; }
+
+    /// <summary>For each device, the highest change counter this copy of the list contains.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SeenList? Seen { get; set; }
+
     string _title = "My list";
     public string Title { get => _title; set { if (Set(ref _title, value)) Raise(nameof(WindowTitle)); } }
 
@@ -196,6 +223,12 @@ public class ArchivedItem
     /// <summary>Fields this version doesn't know (from a newer PinList); kept so saving doesn't drop them.</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 
+    /// <summary>The completed item's id (entries from before 2.1.0 get a new one when loaded).</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>Sync bookkeeping (stamps and fingerprint); null until the object is first stamped.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? Sync { get; set; }
+
     public string Text { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public DateTime CompletedAt { get; set; }
@@ -225,13 +258,16 @@ public class AppData
     /// <summary>Fields this version doesn't know (from a newer PinList); kept so saving doesn't drop them.</summary>
     [JsonExtensionData] public Dictionary<string, JsonElement>? Extra { get; set; }
 
-    /// <summary>Version of the data format (see docs/data-format.md).</summary>
+    /// <summary>Version of the data format (see docs/data-format.html).</summary>
     public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;
     public Settings Settings { get; set; } = new();
     public ObservableCollection<Board> Boards { get; set; } = new();
     public ObservableCollection<ArchivedItem> Archive { get; set; } = new();
+
+    /// <summary>This device's sync id and change counter; null until something was first stamped.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public DeviceInfo? SyncInfo { get; set; }
 }
 
 /// <summary>Short, friendly date texts for due dates and reminders.</summary>

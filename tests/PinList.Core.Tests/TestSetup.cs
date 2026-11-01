@@ -2,8 +2,7 @@ global using System.IO;
 using PinList;
 using Xunit;
 
-// Store and Actions are static, so tests must not run at the same time
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+// No assembly settings here: the UI tests compile this file too, with another xUnit version (see Parallelization.cs)
 
 namespace PinList.Tests;
 
@@ -22,17 +21,21 @@ public abstract class StoreTestBase : IDisposable
     protected readonly List<(string message, bool isError)> Messages = new();
     internal readonly ManualSaver Saver = new();
 
-    // The UI tests' app listens for new widgets (to open their windows). These tests run on another thread
-    // without that app, so its listeners are taken off while they run.
-    static readonly System.Reflection.FieldInfo BoardAddedField =
-        typeof(Actions).GetField(nameof(Actions.BoardAdded), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
-    readonly object? _appListeners;
+    // The UI tests' app listens for new and deleted widgets (to open and close their windows) and for saves (sync).
+    // These tests run on another thread without that app, so its listeners are taken off while they run.
+    static readonly System.Reflection.FieldInfo[] EventFields =
+    {
+        typeof(Actions).GetField(nameof(Actions.BoardAdded), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!,
+        typeof(Actions).GetField(nameof(Actions.BoardDeleted), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!,
+        typeof(Store).GetField(nameof(Store.Saved), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!,
+    };
+    readonly object?[] _appListeners;
     readonly Func<IUiTimer> _timerFactory = UiTimers.Factory;
 
     protected StoreTestBase()
     {
-        _appListeners = BoardAddedField.GetValue(null);
-        BoardAddedField.SetValue(null, null);
+        _appListeners = EventFields.Select(f => f.GetValue(null)).ToArray();
+        foreach (var f in EventFields) f.SetValue(null, null);
         // Timers that only tick when a test fires them (the app's real timers come back in Dispose)
         ManualTimer.Created.Clear();
         UiTimers.Factory = () => new ManualTimer();
@@ -44,7 +47,7 @@ public abstract class StoreTestBase : IDisposable
 
     public virtual void Dispose()
     {
-        BoardAddedField.SetValue(null, _appListeners);
+        for (int i = 0; i < EventFields.Length; i++) EventFields[i].SetValue(null, _appListeners[i]);
         UiTimers.Factory = _timerFactory;
         try { Directory.Delete(Dir, true); } catch { }
     }

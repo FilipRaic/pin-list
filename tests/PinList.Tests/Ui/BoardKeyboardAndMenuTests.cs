@@ -97,6 +97,7 @@ public class BoardKeyboardTests : UiTest
     [AvaloniaFact]
     public void Delete_moves_focus_to_the_next_then_previous_then_the_category()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new[] { "a", "b", "c" }));
         var cat = w.Board.Categories[0];
         FocusOn(Row(w, cat.Items[1]));
@@ -120,6 +121,7 @@ public class BoardKeyboardTests : UiTest
     [AvaloniaFact]
     public void Deleting_categories_moves_focus_too()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new string[0]), ("B", new string[0]));
         var (a, b) = (w.Board.Categories[0], w.Board.Categories[1]);
         FocusOn(Row(w, a));
@@ -415,8 +417,8 @@ public class BoardMenuTests : UiTest
         ChooseFromMenu(WidgetMenu(w), "Archive");
         Assert.NotNull(App.Archive);
 
-        ChooseFromMenu(WidgetMenu(w), "Export…");
-        ChooseFromMenu(WidgetMenu(w), "Import…");
+        ChooseFromMenu(WidgetMenu(w), "Export");
+        ChooseFromMenu(WidgetMenu(w), "Import");
         Assert.Contains("open", Dialogs.Shown);
         Assert.Contains(Dialogs.Shown, s => s.StartsWith("save: PinList-"));
     }
@@ -424,6 +426,7 @@ public class BoardMenuTests : UiTest
     [AvaloniaFact]
     public void Category_menu()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new[] { "a" }), ("B", new string[0]));
         var (a, b) = (w.Board.Categories[0], w.Board.Categories[1]);
 
@@ -457,6 +460,7 @@ public class BoardMenuTests : UiTest
     [AvaloniaFact]
     public void Item_menu_edit_complete_move_delete()
     {
+        Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
         var w = OpenNew(("A", new[] { "a", "b", "c" }));
         var cat = w.Board.Categories[0];
         var (a, b, c) = (cat.Items[0], cat.Items[1], cat.Items[2]);
@@ -485,18 +489,18 @@ public class BoardMenuTests : UiTest
         var a = w.Board.Categories[0].Items[0];
 
         var menu = ItemMenu(w, a);
-        Assert.IsType<PathIcon>(MenuItem(menu, "Add due date…").Icon);
+        Assert.IsType<PathIcon>(MenuItem(menu, "Add due date").Icon);
         Assert.Throws<InvalidOperationException>(() => MenuItem(menu, "Remove due date"));
-        ChooseFromMenu(menu, "Add due date…"); // cancelled
+        ChooseFromMenu(menu, "Add due date"); // cancelled
         Assert.Null(a.DueDate);
 
         Dialogs.DueDateAnswer = new DateTime(2031, 3, 4);
-        ChooseFromMenu(ItemMenu(w, a), "Add due date…");
+        ChooseFromMenu(ItemMenu(w, a), "Add due date");
         Assert.Equal(new DateTime(2031, 3, 4), a.DueDate);
         Pump();
         Assert.Same(Row(w, a), Focused(w)); // focus back on the item
 
-        ChooseFromMenu(ItemMenu(w, a), "Change due date…");
+        ChooseFromMenu(ItemMenu(w, a), "Change due date");
         ChooseFromMenu(ItemMenu(w, a), "Remove due date");
         Assert.Null(a.DueDate);
         Assert.Equal("Due date removed", A11y.LastAnnouncement);
@@ -508,17 +512,17 @@ public class BoardMenuTests : UiTest
         var w = OpenNew(("A", new[] { "a" }));
         var a = w.Board.Categories[0].Items[0];
 
-        ChooseFromMenu(ItemMenu(w, a), "Add reminder…"); // cancelled
+        ChooseFromMenu(ItemMenu(w, a), "Add reminder"); // cancelled
         Assert.Null(a.ReminderAt);
 
         Dialogs.ReminderAnswer = new DateTime(2031, 3, 4, 9, 0, 0);
-        ChooseFromMenu(ItemMenu(w, a), "Add reminder…");
+        ChooseFromMenu(ItemMenu(w, a), "Add reminder");
         Assert.Equal(new DateTime(2031, 3, 4, 9, 0, 0), a.ReminderAt);
 
-        ChooseFromMenu(ItemMenu(w, a), "Change reminder…");
+        ChooseFromMenu(ItemMenu(w, a), "Change reminder");
         a.ReminderShown = true; // went off: "Add" again, but it can still be removed
         var menu = ItemMenu(w, a);
-        Assert.Equal("Add reminder…", Header(MenuItem(menu, "Add reminder…")));
+        Assert.Equal("Add reminder", Header(MenuItem(menu, "Add reminder")));
         ChooseFromMenu(menu, "Remove reminder");
         Assert.Null(a.ReminderAt);
     }

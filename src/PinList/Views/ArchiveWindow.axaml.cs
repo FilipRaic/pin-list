@@ -199,11 +199,15 @@ public partial class ArchiveWindow : Window
     }
 
     /// <summary>Permanently deletes the selected items (Ctrl+Z brings them back while the app is running).</summary>
-    void DeleteSelected()
+    async void DeleteSelected()
     {
         var selected = List.SelectedItems!.Cast<ArchivedItem>().ToList();
         if (selected.Count == 0) return;
         int index = List.SelectedIndex;
+        bool one = selected.Count == 1;
+        if (!await Dialogs.Ask(this, one ? "Delete 1 item permanently?" : $"Delete {selected.Count} items permanently?",
+                $"Ctrl+Z brings {(one ? "it" : "them")} back while PinList is running.", "Delete"))
+            return;
 
         Actions.DeleteArchived(selected);
         A11y.Announce(this, (selected.Count == 1 ? "Deleted 1 item" : $"Deleted {selected.Count} items") + " permanently. Ctrl+Z undoes.");

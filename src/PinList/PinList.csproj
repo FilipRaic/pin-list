@@ -46,6 +46,13 @@
     <ProjectReference Include="..\PinList.UI\PinList.UI.csproj" />
   </ItemGroup>
 
+  <!-- PinList's Google sign-in client for sync (GoogleClient.cs, GOOGLE-REQUIREMENTS.md). The file isn't in git:
+       a developer creates it locally, the release workflow writes it from the GitHub secrets. Without it the app
+       builds normally and sync is off. -->
+  <ItemGroup Condition="Exists('google-client.json')">
+    <EmbeddedResource Include="google-client.json" LogicalName="PinList.google-client.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="PinList.Tests" />
     <AvaloniaResource Include="Assets\**" />
