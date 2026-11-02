@@ -5,6 +5,10 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # all action updates in one pull request (and one Build run) a month
+    groups:
+      actions:
+        patterns: [ "*" ]
 
   - package-ecosystem: nuget
     directory: /tests/PinList.Tests

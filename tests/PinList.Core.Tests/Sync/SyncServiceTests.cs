@@ -375,7 +375,7 @@ public class SyncServiceTests : StoreTestBase
         Assert.NotEqual(b.Id, onB.Id);
         Assert.Equal("edited on B,b", Texts(onB));
         Assert.Equal(onB.Id, B.Data.Archive.Single().BoardId); // its archive stays with it
-        Assert.Equal("“Shared” was deleted on another device. Your recent changes on this device were kept in a local window.",
+        Assert.Equal("“Shared” was deleted on another device. Your recent changes on this device were kept in a list that stays on this device.",
             B.Messages.Single());
         Assert.False(Sync(B)); // and it stays local
         Assert.False(onB.Synced);

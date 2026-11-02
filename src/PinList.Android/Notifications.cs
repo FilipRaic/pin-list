@@ -54,8 +54,12 @@ static class Notifications
             new Intent(context, typeof(MainActivity)).AddFlags(ActivityFlags.NewTask | ActivityFlags.SingleTop),
             PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent);
 
+        // The small icon is drawn from its shape only (white in the status bar), the color tints it in the
+        // notification itself, and the large icon is the full app icon
         return new Notification.Builder(context, channel)
-            .SetSmallIcon(Resource.Drawable.icon)
+            .SetSmallIcon(Resource.Drawable.ic_notification)
+            .SetColor(unchecked((int)0xFF60CDFF)) // the logo's blue
+            .SetLargeIcon(global::Android.Graphics.BitmapFactory.DecodeResource(context.Resources, Resource.Drawable.icon))
             .SetContentTitle(title)
             .SetContentText(text)
             .SetStyle(new Notification.BigTextStyle().BigText(text))

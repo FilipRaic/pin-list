@@ -1,3 +1,4 @@
+using Avalonia.Input.Platform;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
@@ -362,6 +363,129 @@ public class BoardKeyboardTests : UiTest
 /// <summary>The widget's ⋯ menu and the right-click menus of categories and items.</summary>
 public class BoardMenuTests : UiTest
 {
+    /// <summary>The app's settings (Google sync, updates, start at login, Exit) are in every widget's menu too.</summary>
+    [AvaloniaFact]
+    public void Widget_menu_has_the_app_settings()
+    {
+        var w = OpenNew(("A", new string[0]));
+        var menu = WidgetMenu(w);
+        var app = MenuItem(menu, "PinList");
+        Assert.Equal(new object?[] { "Google sync", null, "Start with Windows", "Check for updates", "Open data folder", null, "Exit" },
+            app.Items.Select(i => i is MenuItem m ? (object?)Header(m) : null).ToArray());
+        menu.Close();
+    }
+
+    [AvaloniaFact]
+    public void Exit_in_the_widget_menu_exits()
+    {
+        var w = OpenNew(("A", new string[0]));
+        int before = UiHost.ShutdownRequests;
+        ChooseFromMenu(WidgetMenu(w), "PinList", "Exit");
+        Assert.True(UiHost.WaitUntil(() => UiHost.ShutdownRequests == before + 1));
+        App.ShuttingDown = false;
+    }
+
+    [AvaloniaFact]
+    public void The_app_is_named_PinList() => Assert.Equal("PinList", Avalonia.Application.Current!.Name);
+
+    static string? Clipboard(TopLevel w)
+    {
+        var task = w.Clipboard!.TryGetTextAsync();
+        Assert.True(UiHost.WaitUntil(() => task.IsCompleted));
+        return task.Result;
+    }
+
+    [AvaloniaFact]
+    public void Category_menu_copies_its_items()
+    {
+        var w = OpenNew(("Shopping", new[] { "Milk", "Bread" }), ("Empty", new string[0]));
+        ChooseFromMenu(CategoryMenu(w, w.Board.Categories[0]), "Copy items");
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Milk\n- Bread"));
+        Assert.Equal("Copied 2 items", A11y.LastAnnouncement);
+
+        var menu = CategoryMenu(w, w.Board.Categories[1]);
+        Assert.False(MenuItem(menu, "Copy items").IsEnabled); // nothing to copy
+        menu.Close();
+    }
+
+    [AvaloniaFact]
+    public void Widget_menu_copies_all_items()
+    {
+        var w = OpenNew(("Shopping", new[] { "Milk" }), ("Work", new[] { "Call" }));
+        ChooseFromMenu(WidgetMenu(w), "Copy all items");
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "Shopping\n- Milk\n\nWork\n- Call"));
+        Assert.Equal("Copied 2 items", A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void Ctrl_C_copies_the_selected_item_and_Ctrl_Shift_C_its_category()
+    {
+        var w = OpenNew(("Shopping", new[] { "Milk", "Bread" }));
+        var cat = w.Board.Categories[0];
+        Row(w, cat.Items[1]).Focus();
+        Pump();
+        Press(w, Key.C, KeyModifiers.Control);
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Bread"));
+        Assert.Equal("Copied 1 item", A11y.LastAnnouncement);
+
+        Press(w, Key.C, KeyModifiers.Control | KeyModifiers.Shift);
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Milk\n- Bread"));
+
+        Row(w, cat).Focus(); // on a category, Ctrl+C copies its items
+        Pump();
+        Press(w, Key.C, KeyModifiers.Control);
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Milk\n- Bread"));
+    }
+
+    [AvaloniaFact]
+    public void Item_menu_copies_the_item()
+    {
+        var w = OpenNew(("Work", new[] { "Send the invoice\nto Ana" }));
+        ChooseFromMenu(ItemMenu(w, w.Board.Categories[0].Items[0]), "Copy");
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Send the invoice\n  to Ana"));
+        Assert.Equal("Copied 1 item", A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void Cmd_C_copies_on_a_Mac_and_other_combinations_do_not()
+    {
+        var w = OpenNew(("Shopping", new[] { "Milk" }));
+        Row(w, w.Board.Categories[0].Items[0]).Focus();
+        Pump();
+        A11y.Announce(w, "before");
+        Press(w, Key.C, KeyModifiers.Control | KeyModifiers.Alt);
+        Assert.Equal("before", A11y.LastAnnouncement);
+        Press(w, Key.C, KeyModifiers.Meta);
+        Assert.Equal("Copied 1 item", A11y.LastAnnouncement);
+        Assert.True(UiHost.WaitUntil(() => Clipboard(w) == "- Milk"));
+    }
+
+    [AvaloniaFact]
+    public void Copying_from_something_not_on_screen_does_nothing()
+    {
+        var cat = new Category { Name = "A" };
+        cat.Items.Add(new TodoItem { Text = "a" });
+        Copying.Category(new Border(), cat); // no window: no clipboard and no screen reader to tell
+        Assert.Null(A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void Long_texts_are_shortened_in_questions() =>
+        Assert.Equal("“" + new string('a', 60) + "…”", BoardWindow.Quote(new string('a', 70) + "\nsecond line"));
+
+    [AvaloniaFact]
+    public void Ctrl_C_while_typing_is_left_to_the_text_box()
+    {
+        var w = OpenNew(("Shopping", new[] { "Milk" }));
+        var add = AddBox(w, w.Board.Categories[0]);
+        add.Text = "typing";
+        add.Focus();
+        Pump();
+        A11y.Announce(w, "before");
+        Press(w, Key.C, KeyModifiers.Control);
+        Assert.Equal("before", A11y.LastAnnouncement);
+    }
+
     static ContextMenu WidgetMenu(BoardWindow w)
     {
         Click(Named<Button>(w, "MenuBtn"));
@@ -520,11 +644,22 @@ public class BoardMenuTests : UiTest
         Assert.Equal(new DateTime(2031, 3, 4, 9, 0, 0), a.ReminderAt);
 
         ChooseFromMenu(ItemMenu(w, a), "Change reminder");
-        a.ReminderShown = true; // went off: "Add" again, but it can still be removed
         var menu = ItemMenu(w, a);
-        Assert.Equal("Add reminder", Header(MenuItem(menu, "Add reminder")));
         ChooseFromMenu(menu, "Remove reminder");
         Assert.Null(a.ReminderAt);
+    }
+
+    [AvaloniaFact]
+    public void A_reminder_that_rang_is_gone_from_the_item_menu()
+    {
+        var w = OpenNew(("A", new[] { "a" }));
+        var a = w.Board.Categories[0].Items[0];
+        a.ReminderAt = new DateTime(2031, 3, 4, 9, 0, 0);
+        Reminders.TakeDue(new[] { a }, new DateTime(2031, 3, 4, 9, 0, 0)); // it rings
+        var menu = ItemMenu(w, a);
+        Assert.Equal("Add reminder", Header(MenuItem(menu, "Add reminder")));
+        Assert.DoesNotContain(menu.Items.OfType<MenuItem>(), m => Header(m) == "Remove reminder");
+        menu.Close();
     }
 
     [AvaloniaFact]

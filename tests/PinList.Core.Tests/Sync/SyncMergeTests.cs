@@ -198,6 +198,87 @@ public class SyncMergeTests
         Assert.True(B.Item("x").ReminderShown);
     }
 
+    /// <summary>A rang the reminder and removed it, B edited the item before it heard about that. The reminder stays gone.</summary>
+    [Fact]
+    public void A_reminder_removed_after_ringing_stays_removed_when_the_other_side_edited()
+    {
+        SyncMerge.Clock = () => new DateTime(2026, 11, 2, 10, 0, 0);
+        try
+        {
+            Shared();
+            A.Item("x").ReminderAt = new DateTime(2026, 11, 2, 9, 0, 0);
+            A.Stamp();
+            B.SyncFrom(A);
+            Reminders.TakeDue(new[] { A.Item("x") }, new DateTime(2026, 11, 2, 9, 0, 0));
+            A.Stamp();
+            B.Item("x").Text = "x edited"; // newer, the reminder is still there on B
+            B.Stamp();
+            Both();
+            Assert.Null(A.Item("x").ReminderAt);
+            Assert.Null(B.Item("x").ReminderAt);
+            Assert.Equal("x edited", A.Item("x").Text);
+        }
+        finally { SyncMerge.Clock = () => DateTime.Now; }
+    }
+
+    /// <summary>A 2.2.0 device marks a reminder as shown, a new one removes it: no reminder either way.</summary>
+    [Fact]
+    public void A_reminder_shown_by_an_older_version_and_removed_by_a_new_one_is_gone()
+    {
+        SyncMerge.Clock = () => new DateTime(2026, 11, 2, 10, 0, 0);
+        try
+        {
+            Shared();
+            A.Item("x").ReminderAt = new DateTime(2026, 11, 2, 9, 0, 0);
+            A.Stamp();
+            B.SyncFrom(A);
+            A.Item("x").ReminderAt = null; // the new version, after ringing
+            A.Stamp();
+            B.Item("x").ReminderShown = true; // the old version, after ringing, later
+            B.Stamp();
+            Both();
+            Assert.False(A.Item("x").HasPendingReminder);
+            Assert.False(B.Item("x").HasPendingReminder);
+            Assert.Null(A.Item("x").ReminderAt);
+        }
+        finally { SyncMerge.Clock = () => DateTime.Now; }
+    }
+
+    /// <summary>B set a new reminder (still to come) while A removed the old one: the new reminder is kept.</summary>
+    [Fact]
+    public void A_new_reminder_set_on_the_other_side_is_kept()
+    {
+        SyncMerge.Clock = () => new DateTime(2026, 11, 2, 10, 0, 0);
+        try
+        {
+            Shared();
+            A.Item("x").ReminderAt = new DateTime(2026, 11, 2, 9, 0, 0);
+            A.Stamp();
+            B.SyncFrom(A);
+            A.Item("x").ReminderAt = null;
+            A.Stamp();
+            B.Item("x").ReminderAt = new DateTime(2026, 11, 3, 9, 0, 0);
+            B.Stamp();
+            Both();
+            Assert.Equal(new DateTime(2026, 11, 3, 9, 0, 0), A.Item("x").ReminderAt);
+            Assert.Equal(new DateTime(2026, 11, 3, 9, 0, 0), B.Item("x").ReminderAt);
+        }
+        finally { SyncMerge.Clock = () => DateTime.Now; }
+    }
+
+    /// <summary>Whether a list is a widget is each device's own choice; the list itself syncs as always.</summary>
+    [Fact]
+    public void The_widget_choice_stays_on_each_device()
+    {
+        Shared();
+        A.List().Widget = false;
+        A.Edit("x", "x edited");
+        Both();
+        Assert.False(A.List().Widget);
+        Assert.True(B.List().Widget);
+        Assert.Equal("x edited", B.Item("x").Text);
+    }
+
     [Fact]
     public void Different_reminder_times_newer_wins_with_its_flag()
     {

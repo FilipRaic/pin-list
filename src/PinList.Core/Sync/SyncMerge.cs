@@ -12,6 +12,9 @@ namespace PinList.Sync;
 /// </summary>
 public static class SyncMerge
 {
+    /// <summary>The current time (local, like reminder times). Tests replace it.</summary>
+    internal static Func<DateTime> Clock { get; set; } = () => DateTime.Now;
+
     enum Side { Mine, Theirs }
 
     public static ListCopy Merge(ListCopy mine, ListCopy theirs, out MergeReport report)
@@ -73,11 +76,24 @@ public static class SyncMerge
             winner: (id, side) => itemWinners[id] = side,
             conflict: (side, m, t) =>
             {
-                // Rule 6: the same reminder shown on either device stays shown (a conflict otherwise takes it all)
-                if (m.ReminderAt != t.ReminderAt) return null;
-                var chosen = (side == Side.Mine ? m : t).Clone();
+                // Rule 6: a reminder rings once. It's removed when it rings (2.2.0 and older marked it as shown).
+                var winner = side == Side.Mine ? m : t;
+                if (m.ReminderAt != t.ReminderAt)
+                {
+                    // one side has no reminder, the other one's time has passed: it rang there, so it stays removed
+                    bool Passed(ItemCopy i) => i.ReminderAt is { } at && at <= Clock();
+                    bool rang = (m.ReminderAt == null && Passed(t)) || (t.ReminderAt == null && Passed(m));
+                    if (!rang || winner.ReminderAt == null) return null;
+                    var cleared = winner.Clone();
+                    cleared.ReminderAt = null;
+                    cleared.ReminderShown = false;
+                    cleared.Combined = true;
+                    return cleared;
+                }
+                // the same reminder shown on either device stays shown (a conflict otherwise takes it all)
+                var chosen = winner.Clone();
                 chosen.ReminderShown = m.ReminderShown || t.ReminderShown;
-                chosen.Combined = chosen.ReminderShown != (side == Side.Mine ? m : t).ReminderShown;
+                chosen.Combined = chosen.ReminderShown != winner.ReminderShown;
                 return chosen;
             });
 

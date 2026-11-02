@@ -121,6 +121,7 @@ public partial class App : Application
         {
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => Stop();
+            desktop.ShutdownRequested += OnShutdownRequested;
             if (!Start())
             {
                 ShuttingDown = true;
@@ -194,6 +195,7 @@ public partial class App : Application
 
         Actions.BoardAdded += OpenBoard;
         Actions.BoardDeleted += OnBoardDeleted;
+        Actions.WidgetChanged += OnWidgetChanged;
         UseSync(CreateSyncService());
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkChange;
         OpenAllBoards();
@@ -221,6 +223,7 @@ public partial class App : Application
         ShuttingDown = true;
         Actions.BoardAdded -= OpenBoard;
         Actions.BoardDeleted -= OnBoardDeleted;
+        Actions.WidgetChanged -= OnWidgetChanged;
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkChange;
         UseSync(null);
         UseUpdates(null);
@@ -250,6 +253,13 @@ public partial class App : Application
         if (SyncService.Current is { } sync) await sync.SyncBeforeExit(TimeSpan.FromSeconds(3));
         ShutdownApp(this);
     }
+
+    /// <summary>
+    /// Windows is shutting down, or Quit on a Mac (Cmd+Q, the Dock). Avalonia asks this before it closes the
+    /// windows. PinList saves and never says no.
+    /// </summary>
+    internal void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs e) =>
+        OnSessionEnding(sender, EventArgs.Empty);
 
     internal void OnSessionEnding(object? sender, EventArgs e)
     {
@@ -284,7 +294,8 @@ public partial class App : Application
         if (service != null)
         {
             service.WorkArea = () => Displays.Primary.ToWorkArea();
-            service.IsBusy = o => BoardWindow.IsDragging || SyncService.IsEditing(o); // remote changes wait (spec 4.6)
+            // remote changes wait while something is dragged, in a widget or in "All lists" (spec 4.6)
+            service.IsBusy = o => BoardWindow.IsDragging || _lists?.View.IsDragging == true || SyncService.IsEditing(o);
             service.Changed += OnSyncChanged;
             service.Message += OnSyncMessage;
             service.Start();
@@ -301,10 +312,13 @@ public partial class App : Application
 
     void OnSyncMessage(string message) => _ = Dialogs.Info(null, "PinList", message);
 
-    /// <summary>A list deleted on another device: its window closes (one the user deleted here closed itself).</summary>
+    /// <summary>
+    /// A deleted list's widget closes: deleted on another device, or here in "All lists". A widget that deleted its
+    /// own list is already closing.
+    /// </summary>
     void OnBoardDeleted(Board board, bool byUser)
     {
-        if (!byUser) _windows.FirstOrDefault(w => w.Board == board)?.CloseForReload();
+        _windows.FirstOrDefault(w => w.Board == board && !w.UserDeleted)?.CloseForReload();
     }
 
     /// <summary>Signs in, with the "waiting for your browser" dialog. True when signed in.</summary>
@@ -395,7 +409,7 @@ public partial class App : Application
     internal async Task AskAboutUpdates()
     {
         if (_updates is not { Enabled: null } updates) return;
-        var menu = OperatingSystem.IsWindows() ? "tray menu" : "menu bar menu";
+        var menu = OsText.AppMenu;
         int choice = await Dialogs.Current.Choose(null, "Check for updates?",
             "PinList can look for a new version about once a day and tell you when there is one. " +
             "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent.\n\n" +
@@ -543,10 +557,56 @@ public partial class App : Application
         foreach (var w in _windows.ToList()) w.EnsureOnScreen();
     }
 
+    /// <summary>Opens a widget for every list that is one on this computer, or "All lists" when none is.</summary>
     internal void OpenAllBoards()
     {
-        foreach (var board in Store.Data.Boards.ToList())
+        foreach (var board in Store.Data.Boards.Where(b => b.Widget).ToList())
             OpenBoard(board);
+        _lists?.View.Reload();
+        if (_windows.Count == 0) ShowListsWindow();
+    }
+
+    /// <summary>A list became a widget on this computer (it opens where it was) or stopped being one (it closes).</summary>
+    void OnWidgetChanged(Board board)
+    {
+        var open = _windows.FirstOrDefault(w => w.Board == board);
+        if (board.Widget && open == null && Store.Data.Boards.Contains(board)) OpenBoard(board);
+        else if (!board.Widget)
+        {
+            open?.CloseForReload();
+            if (_windows.Count == 0) ShowListsWindow(); // the last widget went: keep a way back to the lists
+        }
+    }
+
+    ListsWindow? _lists;
+
+    /// <summary>The "All lists" window, once it was opened (it's hidden, not closed, when the user closes it).</summary>
+    internal ListsWindow? ListsWindow => _lists;
+
+    /// <summary>Shows "All lists" (opens it the first time, brings it to the front after that).</summary>
+    internal void ShowListsWindow()
+    {
+        if (_lists == null)
+        {
+            _lists = new ListsWindow();
+            var created = _lists;
+            created.Closed += (_, _) => { if (_lists == created) _lists = null; };
+        }
+        if (!_lists.IsVisible) _lists.Show();
+        if (_lists.WindowState == WindowState.Minimized) _lists.WindowState = WindowState.Normal;
+        _lists.Activate();
+    }
+
+    /// <summary>Closes "All lists" for good (tests use it, the app closes it on exit through ShuttingDown).</summary>
+    internal void CloseListsWindow()
+    {
+        var lists = _lists;
+        _lists = null;
+        if (lists == null) return;
+        bool wasShuttingDown = ShuttingDown;
+        ShuttingDown = true; // so it closes instead of hiding
+        lists.Close();
+        ShuttingDown = wasShuttingDown;
     }
 
     /// <summary>How long to wait before reopening a widget that the system closed (e.g. because Explorer restarted).</summary>
@@ -585,7 +645,11 @@ public partial class App : Application
             w.Topmost = false;
         }
         var last = _windows.LastOrDefault();
-        if (last == null) return;
+        if (last == null)
+        {
+            ShowListsWindow(); // no widgets on this computer: the lists are there
+            return;
+        }
         last.Activate();
         // keyboard users can start working right away (Tab moves to the other parts of the widget)
         if (last.FocusManager?.GetFocusedElement() is not Visual v || !last.IsVisualAncestorOf(v)) last.FocusContent();
@@ -739,6 +803,7 @@ public partial class App : Application
     /// <summary>The tray menu's entries (shared by the Windows menu and the macOS menu bar menu).</summary>
     internal IReadOnlyList<TrayEntry> TrayMenuEntries() => UpdateEntries().Concat(new[]
     {
+        new TrayEntry("All lists", ShowListsWindow),
         new TrayEntry("New window", NewBoardAtCursor),
         new TrayEntry("Archive", ShowArchive),
         new TrayEntry("Show all windows", ShowAllBoards),
@@ -752,7 +817,7 @@ public partial class App : Application
         new TrayEntry("Check for updates", ToggleUpdates, Checked: _updates?.Enabled == true),
         new TrayEntry("Open data folder", () => OpenFolder(Store.Dir)),
         TrayEntry.Separator,
-        new TrayEntry("Exit", ExitApp),
+        new TrayEntry(OsText.Exit, ExitApp),
     }).ToList();
 
     /// <summary>Invisible window the tray menu belongs to (a menu needs a window; this one sits under the cursor).</summary>
@@ -796,6 +861,7 @@ public partial class App : Application
             menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", OpenUpdatePage));
             menu.Items.Add(new Separator());
         }
+        menu.Items.Add(CreateMenuItem("All lists", ShowListsWindow));
         menu.Items.Add(CreateMenuItem("New window", NewBoardAtCursor));
         menu.Items.Add(CreateMenuItem("Archive", ShowArchive));
         menu.Items.Add(CreateMenuItem("Show all windows", ShowAllBoards));
@@ -803,6 +869,18 @@ public partial class App : Application
         menu.Items.Add(ThemeMenu());
         menu.Items.Add(CreateMenuItem("Export", () => _ = ExportData(null)));
         menu.Items.Add(CreateMenuItem("Import", () => _ = ImportData(null)));
+        foreach (var item in AppSettingsItems()) menu.Items.Add(item);
+        menu.Open(host);
+        LastTrayMenu = menu;
+        return menu;
+    }
+
+    /// <summary>
+    /// The settings of the whole app, at the end of the tray menu and in every widget's ⋯ menu (under "PinList"),
+    /// so they can be found also when the tray or menu bar icon is hidden.
+    /// </summary>
+    internal List<Control> AppSettingsItems()
+    {
         var sync = new MenuItem { Header = "Google sync" };
         foreach (var e in SyncEntries())
         {
@@ -810,23 +888,23 @@ public partial class App : Application
             mi.IsEnabled = e.Enabled;
             sync.Items.Add(mi);
         }
-        menu.Items.Add(sync);
-        menu.Items.Add(new Separator());
-        var auto = CreateMenuItem(OperatingSystem.IsWindows() ? "Start with Windows" : "Open at login", () => Autostart.Set(!Autostart.IsEnabled()));
+        var auto = CreateMenuItem(OsText.Autostart, () => Autostart.Set(!Autostart.IsEnabled()));
         auto.ToggleType = MenuItemToggleType.CheckBox;
         auto.IsChecked = Autostart.IsEnabled();
         auto.IsEnabled = ManageAutostart;
-        menu.Items.Add(auto);
         var updates = CreateMenuItem("Check for updates", ToggleUpdates);
         updates.ToggleType = MenuItemToggleType.CheckBox;
         updates.IsChecked = _updates?.Enabled == true;
-        menu.Items.Add(updates);
-        menu.Items.Add(CreateMenuItem("Open data folder", () => OpenFolder(Store.Dir)));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(CreateMenuItem("Exit", ExitApp));
-        menu.Open(host);
-        LastTrayMenu = menu;
-        return menu;
+        return new List<Control>
+        {
+            sync,
+            new Separator(),
+            auto,
+            updates,
+            CreateMenuItem("Open data folder", () => OpenFolder(Store.Dir)),
+            new Separator(),
+            CreateMenuItem(OsText.Exit, ExitApp),
+        };
     }
 
     /// <summary>A menu entry; <paramref name="gesture"/> is shown on the right in muted text (e.g. "Del").</summary>

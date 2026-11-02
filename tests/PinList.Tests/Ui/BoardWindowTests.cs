@@ -5,6 +5,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Immutable;
+using System.Reflection;
 using Xunit;
 
 namespace PinList.Tests;
@@ -289,6 +290,50 @@ public class BoardWindowTests : UiTest
         Pump();
         Assert.False(w.IsVisible);
         Assert.DoesNotContain(w, App.OpenWindows);
+    }
+
+    [AvaloniaTheory]
+    [InlineData(WindowCloseReason.OSShutdown)]
+    [InlineData(WindowCloseReason.ApplicationShutdown)]
+    public void Close_from_a_shutdown_is_never_blocked(WindowCloseReason reason) =>
+        Assert.False(BoardWindow.BlocksClose(userDeleted: false, appShuttingDown: false, reason));
+
+    [AvaloniaTheory]
+    [InlineData(WindowCloseReason.WindowClosing)]
+    [InlineData(WindowCloseReason.Undefined)]
+    public void Alt_F4_and_other_closes_are_still_blocked(WindowCloseReason reason)
+    {
+        Assert.True(BoardWindow.BlocksClose(false, false, reason));
+        Assert.False(BoardWindow.BlocksClose(userDeleted: true, false, reason));
+        Assert.False(BoardWindow.BlocksClose(false, appShuttingDown: true, reason));
+    }
+
+    /// <summary>
+    /// Windows shutting down closes the widgets before PinList heard about it (SessionEnding comes later, on
+    /// another thread). They must close anyway and not be reopened.
+    /// </summary>
+    [AvaloniaFact]
+    public void Windows_shutdown_closes_every_widget_and_none_comes_back()
+    {
+        App.ReopenDelay = TimeSpan.FromMilliseconds(50);
+        try
+        {
+            var a = OpenNew(("A", new string[0]));
+            var b = OpenNew(("B", new string[0]));
+            foreach (var w in new[] { a, b })
+                typeof(Window).GetMethod("CloseCore", BindingFlags.NonPublic | BindingFlags.Instance)!
+                    .Invoke(w, new object[] { WindowCloseReason.OSShutdown, false, false });
+            UiHost.Wait(TimeSpan.FromMilliseconds(150));
+            Assert.False(a.IsVisible);
+            Assert.False(b.IsVisible);
+            Assert.True(App.ShuttingDown);
+            Assert.DoesNotContain(App.OpenWindows, x => x.Board == a.Board || x.Board == b.Board);
+        }
+        finally
+        {
+            App.ShuttingDown = false;
+            App.ReopenDelay = TimeSpan.FromSeconds(2);
+        }
     }
 
     [AvaloniaFact]
@@ -642,7 +687,7 @@ public class BoardWindowTests : UiTest
         w.Board.Title = "Work";
         Click(Named<Button>(w, "MenuBtn"));
         ChooseFromMenu(w.LastMenu!, "Delete window"); // Esc
-        Assert.Contains("Delete \"Work\"?: This removes the window with 2 categories and 2 items. Items are not moved to the archive.", Dialogs.Shown);
+        Assert.Contains("Delete \"Work\"?: This deletes the list with 2 categories and 2 items. Items are not moved to the archive.", Dialogs.Shown);
         Assert.True(w.IsVisible);
 
         Dialogs.ChooseAnswer = _ => 1;
@@ -662,6 +707,6 @@ public class BoardWindowTests : UiTest
         var w = Open(board);
         Click(Named<Button>(w, "MenuBtn"));
         ChooseFromMenu(w.LastMenu!, "Delete window");
-        Assert.Contains("Delete this window?: This removes the window from your desktop.", Dialogs.Shown);
+        Assert.Contains("Delete this window?: This deletes the list.", Dialogs.Shown);
     }
 }

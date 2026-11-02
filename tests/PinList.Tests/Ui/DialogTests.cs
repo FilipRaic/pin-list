@@ -152,6 +152,18 @@ public class DateDialogTests : DialogTest
         return Run(() => new AppDialogs().PickReminder(owner, current, due), act);
     }
 
+    [AvaloniaFact]
+    public void Only_Esc_closes_the_date_dialog()
+    {
+        var result = PickDue(null, d =>
+        {
+            Press(d, Key.A);
+            Assert.True(d.IsVisible);
+            Press(d, Key.Escape);
+        });
+        Assert.Null(result);
+    }
+
     [AvaloniaTheory]
     [InlineData(0, "2030-06-12")] // Today
     [InlineData(1, "2030-06-13")] // Tomorrow

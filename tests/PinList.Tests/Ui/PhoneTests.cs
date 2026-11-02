@@ -31,6 +31,119 @@ public partial class PhoneTests : UiTest
         base.Dispose();
     }
 
+    [AvaloniaFact]
+    public void A_reminder_that_rang_is_gone_from_the_item_menu()
+    {
+        var board = MakeBoard(("A", new[] { "a" }));
+        var item = board.Categories[0].Items[0];
+        item.ReminderAt = new DateTime(2030, 6, 12, 10, 0, 0);
+        Reminders.TakeDue(new[] { item }, new DateTime(2030, 6, 12, 10, 15, 0)); // it rings
+        Show();
+        _view.ShowBoard(board);
+        Pump();
+        LongPress(PhoneRow(item));
+        Assert.Contains("Add reminder", Options());
+        Assert.DoesNotContain("Remove reminder", Options());
+    }
+
+    /// <summary>A reminder marked as shown (sync from PinList 2.2.0, before the next check) offers no Remove either.</summary>
+    [AvaloniaFact]
+    public void A_reminder_shown_by_an_older_version_has_no_remove_in_the_item_menu()
+    {
+        var board = MakeBoard(("A", new[] { "a" }));
+        var item = board.Categories[0].Items[0];
+        item.ReminderAt = new DateTime(2030, 6, 12, 10, 0, 0);
+        item.ReminderShown = true;
+        Show();
+        _view.ShowBoard(board);
+        Pump();
+        LongPress(PhoneRow(item));
+        Assert.DoesNotContain("Remove reminder", Options());
+    }
+
+    /// <summary>The keyboard starts list names, category names and items with a capital (it can still be switched off).</summary>
+    [AvaloniaFact]
+    public void Lists_categories_and_items_start_with_a_capital()
+    {
+        var board = MakeBoard(("A", new[] { "a" }));
+        Show();
+        _view.ShowBoard(board);
+        Pump();
+        var boxes = FindAll<TextBox>(_view).Where(t => !t.Classes.Contains("search")).ToList();
+        Assert.Contains(boxes, t => t.Name == "BoardTitleBox");
+        Assert.Contains(boxes, t => t.Classes.Contains("phoneadd"));
+        Assert.Equal(2, boxes.Count(t => t.Classes.Contains("phoneedit"))); // the category and the item
+        Assert.All(boxes, t => Assert.True(Avalonia.Input.TextInput.TextInputOptions.GetAutoCapitalization(t), t.Name ?? string.Join(" ", t.Classes)));
+    }
+
+    string? Clipboard()
+    {
+        var task = Avalonia.Input.Platform.ClipboardExtensions.TryGetTextAsync(_window.Clipboard!);
+        Assert.True(UiHost.WaitUntil(() => task.IsCompleted));
+        return task.Result;
+    }
+
+    [AvaloniaFact]
+    public void Copy_items_from_the_category_list_and_item_menus()
+    {
+        var board = MakeBoard(("Shopping", new[] { "Milk", "Bread" }), ("Work", new[] { "Call" }), ("Empty", new string[0]));
+        Show();
+        _view.ShowBoard(board);
+        Pump();
+
+        LongPress(PhoneRow(board.Categories[0]));
+        Choose("Copy items");
+        Assert.True(UiHost.WaitUntil(() => Clipboard() == "- Milk\n- Bread"));
+        Assert.Equal("Copied 2 items", _view.SnackbarMessage);
+
+        LongPress(PhoneRow(board.Categories[2]));
+        Assert.DoesNotContain("Copy items", Options()); // nothing to copy
+        Assert.True(_view.GoBack());
+
+        LongPress(PhoneRow(board.Categories[1].Items[0]));
+        Choose("Copy");
+        Assert.True(UiHost.WaitUntil(() => Clipboard() == "- Call"));
+        Assert.Equal("Copied 1 item", _view.SnackbarMessage);
+
+        _view.ShowBoardMenu(board, fromCard: false);
+        Pump();
+        Choose("Copy all items");
+        Assert.True(UiHost.WaitUntil(() => Clipboard() == "Shopping\n- Milk\n- Bread\n\nWork\n- Call"));
+        Assert.Equal("Copied 3 items", _view.SnackbarMessage);
+    }
+
+    [AvaloniaFact]
+    public void An_empty_list_has_no_copy_all_items()
+    {
+        var board = MakeBoard(("Empty", new string[0]));
+        Show();
+        _view.ShowBoardMenu(board, fromCard: true);
+        Pump();
+        Assert.DoesNotContain("Copy all items", Options());
+    }
+
+    [AvaloniaFact]
+    public void Delete_a_list_from_its_card()
+    {
+        var keep = MakeBoard(("A", new[] { "a" }));
+        var gone = MakeBoard(("B", new[] { "b" }));
+        Show();
+        LongPress(Card(gone));
+        Choose("Delete list");
+        Choose("Delete");
+        Assert.Equal(new[] { keep }, Store.Data.Boards);
+        Assert.Null(_view.OpenBoard); // still on the cards
+    }
+
+    [AvaloniaFact]
+    public void A_new_list_when_there_are_none()
+    {
+        Show();
+        Assert.Empty(Store.Data.Boards);
+        Click(Named<Button>(_view, "AddBoardButton"));
+        Assert.Single(Store.Data.Boards);
+    }
+
     PhoneView Show()
     {
         _view = new PhoneView();
@@ -264,7 +377,7 @@ public partial class PhoneTests : UiTest
         Show();
         LongPress(Card(a));
         Assert.Equal("Work", _view.SheetTitleText);
-        Assert.Equal(new[] { "Open", "Color", "Delete list" }, Options());
+        Assert.Equal(new[] { "Open", "Color", "Copy all items", "Delete list" }, Options());
         Assert.DoesNotContain("lifted", Card(a).Classes);
 
         Choose("Color");
@@ -357,7 +470,7 @@ public partial class PhoneTests : UiTest
         Pump();
 
         LongPress(PhoneRow(cat.Items[0]));
-        Assert.Equal(new[] { "Edit", "Add due date", "Add reminder", "Move to list", "Delete" }, Options());
+        Assert.Equal(new[] { "Edit", "Copy", "Add due date", "Add reminder", "Move to list", "Delete" }, Options());
         Choose("Add due date");
         Assert.Equal("Add due date", _view.SheetTitleText);
         Choose_Chip("Tomorrow");
@@ -532,7 +645,7 @@ public partial class PhoneTests : UiTest
         Pump();
 
         LongPress(PhoneRow(b.Categories[0]));
-        Assert.Equal(new[] { "Rename", "Color", "Delete category" }, Options());
+        Assert.Equal(new[] { "Rename", "Color", "Copy items", "Delete category" }, Options());
         Choose("Color");
         Choose("Red");
         Assert.Equal("#F1707A", b.Categories[0].Color);
@@ -548,7 +661,7 @@ public partial class PhoneTests : UiTest
 
         _view.ShowBoard(b);
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Assert.Equal(new[] { "Rename", "Color", "Delete list" }, Options());
+        Assert.Equal(new[] { "Rename", "Color", "Copy all items", "Delete list" }, Options());
         Choose("Color");
         Choose("Dark");
         Assert.Equal(Avalonia.Styling.ThemeVariant.Dark, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);

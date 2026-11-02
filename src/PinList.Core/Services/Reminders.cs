@@ -54,14 +54,32 @@ public sealed class Reminders
         Due?.Invoke(due);
     }
 
-    /// <summary>Items whose reminder time has come and that weren't shown yet; marks them as shown.</summary>
+    /// <summary>
+    /// Items whose reminder time has come. Their reminder rings now, so it's removed from the item.
+    /// A reminder that rang in PinList 2.2.0 or older (kept and marked as shown) is removed without ringing again.
+    /// </summary>
     public static List<TodoItem> TakeDue(IEnumerable<TodoItem> items, DateTime now)
     {
-        var due = items.Where(i => i.ReminderAt is { } at && at <= now && !i.ReminderShown)
-                       .OrderBy(i => i.ReminderAt)
-                       .ToList();
-        foreach (var i in due) i.ReminderShown = true;
+        var all = items.ToList();
+        if (ClearRung(all)) Store.MarkDirty(); // saved also when nothing rings (the Android alarm saves only then)
+        var due = all.Where(i => i.ReminderAt is { } at && at <= now)
+                     .OrderBy(i => i.ReminderAt)
+                     .ToList();
+        foreach (var i in due) i.ReminderAt = null;
         return due;
+    }
+
+    /// <summary>Removes reminders that already rang in PinList 2.2.0 or older. True if there were any.</summary>
+    public static bool ClearRung(IEnumerable<TodoItem> items)
+    {
+        bool any = false;
+        foreach (var i in items.Where(i => i.ReminderShown))
+        {
+            i.ReminderAt = null;
+            i.ReminderShown = false;
+            any = true;
+        }
+        return any;
     }
 
     /// <summary>Notification title and text for the due items.</summary>

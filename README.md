@@ -15,9 +15,11 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 - **Desktop widgets** (Windows and macOS). Each list is a borderless widget that stays on the desktop. On Windows it survives **Win+D / Show desktop** and stays out of the taskbar and Alt+Tab; on macOS it's on every Space and out of the Dock and Cmd+Tab.
 - **Phone app** (Android). The first screen shows a card for every list with its color, item count, overdue items and a short preview; tap one to open it full screen.
 - **As many lists as you want.** Every widget remembers its position and size, and can be locked in place.
+- **All lists in one window** (Windows and macOS). **All lists** shows every list as a card, like the phone. Each card has a **Widget** switch, so a list can be a widget on one computer and not on another, and still be opened and edited there.
+- **Copy items.** Copy one item, a category or a whole list as text, to paste it into a message or another app.
 - **Categories.** Colored, collapsible and reorderable by drag-and-drop, also between widgets.
 - **Fast editing.** Type and press Enter to add, double-click (tap on the phone) to edit, Shift+Enter for multi-line items.
-- **Due dates and reminders.** Reminders show up as system notifications (on the phone also when the app is closed).
+- **Due dates and reminders.** A due date is a day: it shows on the item and turns red when it's overdue. A reminder is a day and time: it shows up once as a system notification (on the phone also when the app is closed) and is then removed.
 - **Archive.** Completed items are kept with the date and time they were completed; search, restore or delete them.
 - **Undo.** On the desktop, Ctrl+Z undoes almost anything: deleting, completing, editing, renaming, moving, restoring. On the phone, the bar that appears after a change has an *Undo* button.
 - **Dark, light or pastel lists**, optional transparency, menus that follow the system light/dark setting.
@@ -94,12 +96,15 @@ Change your answer at any time with **Check for updates** in the tray / menu bar
 | Multi-line item | **Shift+Enter** starts a new line (when adding and when editing). |
 | Complete an item | Click the circle. Click again within ~1 s to cancel. |
 | Edit | Double-click the text. **Enter** saves, **Esc** cancels. |
-| Due date / reminder | Right-click an item → **Add due date** or **Add reminder**. Overdue dates turn red, today's are highlighted. Reminders missed while PinList wasn't running are shown when it starts; clicking a reminder shows the item. |
+| Due date / reminder | Right-click an item → **Add due date** or **Add reminder**. Overdue dates turn red, today's are highlighted. A reminder is removed once it rang. Reminders missed while PinList wasn't running are shown when it starts, and clicking a reminder shows the item. |
 | Delete | Click an item or category (it gets highlighted) and press **Delete**. PinList asks first (Ctrl+Z still brings it back). Not archived. Emptying an item's text deletes it too, after asking. |
 | Undo | **Ctrl+Z** undoes the last change – in any widget or in the archive (one undo history for the whole app, the last 50 changes). |
 | Reorder | Drag an item or a category header – within a widget or to another one. The list scrolls when you drag near its edge. |
 | New category | The folder button in the widget header. |
-| Category options | Right-click a category header: rename, color, collapse, delete. |
+| Category options | Right-click a category header: rename, color, collapse, copy items, delete. |
+| Copy | Right-click an item → **Copy**, a category → **Copy items**, or **⋯ → Copy all items** for the whole list. One item per line with "- " in front, ready to paste anywhere. |
+| All lists | **⋯ → All lists** or the tray / menu bar menu. Every list as a card. Click one to open and edit it, right-click for its menu. The **Widget** switch on each card shows or hides that list's widget on this computer. Lists still sync, whatever the switch says. |
+| Remove a widget from the desktop | **⋯ → Remove from desktop**. The list stays in **All lists** and on your other devices. Ctrl+Z brings the widget back. |
 | Rename a widget | Double-click its header. The title is optional – leave it empty for no title. |
 | Widget color | **⋯ → Window color** and **⋯ → Transparent background**. |
 | App theme | **⋯ → App theme** or the tray / menu bar menu: follow the system (default), *Light* or *Dark*. Applies to menus, dialogs and the archive. |
@@ -107,10 +112,11 @@ Change your answer at any time with **Check for updates** in the tray / menu bar
 | Archive | **⋯ → Archive** or the tray / menu bar menu. Enter or double-click restores, Delete removes permanently (after asking), Ctrl+Z undoes, Ctrl+F searches. |
 | Sync a widget | **⋯ → Sync this window** (signs in with Google first if needed). See [Sync](#sync). |
 | Export / import | **⋯ → Export** saves all lists and the archive to a file. **⋯ → Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
-| Tray / menu bar icon | Brings all widgets to the front; its menu has new window, archive, theme, export/import, **Google sync**, start at login, **Check for updates**, data folder and exit. |
+| Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has all lists, new window, archive, theme, export/import, **Google sync**, start at login, **Check for updates**, data folder and exit (*Quit PinList* on a Mac). |
+| App settings | Also in every widget: **⋯ → PinList** has Google sync, start at login, check for updates, the data folder and exit. Handy on a Mac when the menu bar icon is hidden. |
 | Updates | When a new version is out, the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
-Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window** to remove one.
+Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete window** to delete the list. Shutting down or restarting the computer closes PinList without asking.
 
 ### Phone (Android)
 
@@ -121,7 +127,7 @@ Widgets can't be closed with Alt+F4 by accident – use **⋯ → Delete window*
 | Add an item | Type in **Add item** and press Enter on the keyboard; the keyboard stays open for the next one. |
 | Complete an item | Tap the circle (tap again quickly to cancel). |
 | Edit | Tap the text of an item, or the list's title. |
-| Menus | **Press and hold** a card, a category or an item: due date, reminder, move to another list, color, rename, delete. |
+| Menus | **Press and hold** a card, a category or an item: due date, reminder, move to another list, copy, color, rename, delete. |
 | Reorder | Press and hold, then drag – cards on the first screen, items and categories in a list. Hold near the top or bottom edge to scroll. |
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
 | Archive, theme, export / import | The **archive** and **⋮** buttons on the cards screen. |
@@ -158,6 +164,7 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | **Delete** | Delete the item or category, after asking (focus moves to the next one) |
 | **Alt+↑** / **Alt+↓** | Move the item or category up or down (items move into the next category at the edges) |
 | **Context menu key** or **Shift+F10** | Open the item's or category's menu (due date, reminder, color, …) |
+| **Ctrl+C** / **Ctrl+Shift+C** | Copy the focused item / its whole category (Cmd+C on a Mac). On a category, Ctrl+C copies its items |
 | **Ctrl+Z** | Undo |
 | **Ctrl+Arrows** / **Ctrl+Shift+Arrows** | Move / resize the widget (when it isn't locked) |
 
@@ -223,7 +230,7 @@ dotnet run --project src\PinList\PinList.csproj -f net10.0-windows
 
 ### Tests
 
-`dotnet test PinList.sln` runs two test projects:
+`dotnet test PinList.Desktop.slnf` runs the two test projects (the filter leaves out the Android app, which needs the .NET Android workload. `PinList.sln` has everything):
 
 - `tests/PinList.Core.Tests` – the data, undo, reminders and file format logic, and sync: the merge engine with simulated devices (offline for days, stale files, restored backups, three devices), the Drive client and the sign-in against fake HTTP. It runs on Windows, macOS and Linux (CI runs it on all three).
 - `tests/PinList.Tests` – the real windows and the phone screens, run with Avalonia's **headless** platform: nothing appears on your screen, and keys, mouse, touch-and-hold and drag-and-drop are simulated. The tests use their own data folder, a fake tray icon and scripted dialogs, and never touch your real lists or "Start with Windows".
@@ -231,10 +238,10 @@ dotnet run --project src\PinList\PinList.csproj -f net10.0-windows
 To see coverage:
 
 ```powershell
-dotnet test PinList.sln -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
+dotnet test PinList.Desktop.slnf -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
 ```
 
-CI fails if line coverage drops below 99 % or branch coverage below 92 %. The only code left out on purpose (`[ExcludeFromCodeCoverage]`) acts on the operating system itself: Win32 and macOS window calls, the real tray icon, opening Explorer/Finder, the system file pickers and the on-screen keyboard.
+CI fails if line coverage drops below 99 % or branch coverage below 92 %. The only code left out on purpose (`[ExcludeFromCodeCoverage]`) acts on the operating system itself: Win32 and macOS window calls, the real tray icon, opening Explorer/Finder, the system file pickers, the on-screen keyboard and the few words that differ between Windows and macOS (`OsText`).
 
 The solution (`PinList.sln`) opens in Rider, Visual Studio or VS Code with the C# Dev Kit.
 
@@ -243,13 +250,17 @@ The solution (`PinList.sln`) opens in Rider, Visual Studio or VS Code with the C
 Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
-2. Commit and push to `master`.
-3. Create and push a tag with the same version:
+2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.2.0
-   git push origin v2.2.0
+   git tag v2.3.0
+   git push origin master v2.3.0
    ```
-4. The workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section, runs the tests, builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk`, and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
+3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
+4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
+   ```powershell
+   git tag -f v2.3.0
+   git push -f origin v2.3.0
+   ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):
 
@@ -262,7 +273,7 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 **The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console (project with the Google Drive API enabled and the scopes `drive.appdata`, `openid` and `userinfo.email`). The Android app has nothing built in: Google recognizes it by an *Android* OAuth client with the package name `com.pinlist.app` and the **SHA-1 of the release signing key** (`keytool -list -v -keystore pinlist-release.keystore -alias pinlist`). Without it, sign-in fails in the released APK. Add a second Android client with your debug key's SHA-1 for local builds. While the consent screen's publishing status is *Testing*, only listed test users can sign in and sign-ins expire after 7 days. Set it to **In production** (no Google review needed for these non-sensitive scopes) before telling anyone else about sync.
 
-Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does, so a broken build shows up before you tag. Dependabot opens pull requests when the GitHub Actions or test packages have updates.
+Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does. Commits that only change `docs/`, Markdown files (except `CHANGELOG.md`) or the license skip it, and a new push to a pull request stops the run for its old commit. It can also be started by hand under **Actions → Build → Run workflow**, for example for a tagged commit that wasn't the last one of its push. Dependabot opens pull requests when the GitHub Actions or test packages have updates (all action updates together in one).
 
 ## Project structure
 

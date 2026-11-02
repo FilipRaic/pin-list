@@ -98,6 +98,22 @@ public partial class PhoneView : UserControl
         App_ThemeOrDataChanged();
     }
 
+    /// <summary>
+    /// The desktop's "All lists" window: right click opens the menus that a long press opens on the phone, cards get a
+    /// "Widget" switch, and the phone's own ⋮ menu is left out (the desktop has its menus in the tray and the widgets).
+    /// </summary>
+    public PhoneView(bool desktop) : this()
+    {
+        IsDesktop = desktop;
+        _homeDrag.RightClickOpensMenu = _boardDrag.RightClickOpensMenu = desktop;
+        AppMenuButton.IsVisible = !desktop;
+        Reload();
+    }
+
+    public bool IsDesktop { get; }
+
+    BoardCard NewCard(Board b) => new(b) { ShowWidgetSwitch = IsDesktop };
+
     // ---- For tests ----
     internal PhoneDrag HomeDrag => _homeDrag;
     internal Board? OpenBoard => _board;
@@ -122,7 +138,7 @@ public partial class PhoneView : UserControl
         _data.Archive.CollectionChanged += OnArchiveChanged;
         foreach (var c in _cards) c.Dispose();
         _cards.Clear();
-        foreach (var b in _data.Boards) _cards.Add(new BoardCard(b));
+        foreach (var b in _data.Boards) _cards.Add(NewCard(b));
         RefreshSync();
         RefreshArchive();
         if (_board != null && !_data.Boards.Contains(_board)) ShowHome();
@@ -144,7 +160,7 @@ public partial class PhoneView : UserControl
         {
             var b = _data.Boards[i];
             int at = _cards.ToList().FindIndex(c => c.Board == b);
-            if (at < 0) _cards.Insert(i, new BoardCard(b));
+            if (at < 0) _cards.Insert(i, NewCard(b));
             else if (at != i) _cards.Move(at, i);
         }
         RefreshSync();
@@ -289,6 +305,7 @@ public partial class PhoneView : UserControl
 
     void ShowHome()
     {
+        if (_board != null) _board.PropertyChanged -= OnOpenBoardChanged;
         _board = null;
         BoardScope.IsVisible = false;
         ArchiveScreen.IsVisible = false;
@@ -298,7 +315,9 @@ public partial class PhoneView : UserControl
 
     internal void ShowBoard(Board board)
     {
+        if (_board != null) _board.PropertyChanged -= OnOpenBoardChanged;
         _board = board;
+        board.PropertyChanged += OnOpenBoardChanged;
         ApplyBoardLook(board);
         Categories.ItemsSource = board.Categories;
         UpdateBoardTitle();
@@ -388,6 +407,7 @@ public partial class PhoneView : UserControl
     void Card_Tapped(object? sender, TappedEventArgs e)
     {
         if (_homeDrag.SuppressTap) return;
+        if (e.Source is Visual v && v.FindAncestorOfType<CheckBox>(includeSelf: true) != null) return; // the Widget switch
         ShowBoard((Board)((Control)sender!).Tag!);
     }
 
@@ -692,14 +712,16 @@ public partial class PhoneView : UserControl
     void SheetBackground_Tapped(object? sender, TappedEventArgs e) => HideSheet();
 
     internal void ShowItemMenu(TodoItem item)
-    {        var options = new System.Collections.Generic.List<(string, Action, bool)>
+    {
+        var options = new System.Collections.Generic.List<(string, Action, bool)>
         {
             ("Edit", () => BeginEdit(item), false),
+            ("Copy", () => Copied(Copying.Item(this, item)), false),
             (item.HasDue ? "Change due date" : "Add due date", () => PickDate(item, reminder: false), false),
         };
         if (item.HasDue) options.Add(("Remove due date", () => Actions.SetDueDate(item, null), false));
         options.Add((item.HasPendingReminder ? "Change reminder" : "Add reminder", () => PickDate(item, reminder: true), false));
-        if (item.ReminderAt != null) options.Add(("Remove reminder", () => Actions.SetReminder(item, null), false));
+        if (item.HasPendingReminder) options.Add(("Remove reminder", () => Actions.SetReminder(item, null), false));
         if (Store.Data.Boards.Any(b => b != _board && b.Categories.Count > 0))
             options.Add(("Move to list", () => ShowMoveToBoard(item), false));
         options.Add(("Delete", () => { Actions.Delete(item); ShowUndo($"Deleted {FirstLine(item.Text)}"); }, true));
@@ -723,12 +745,19 @@ public partial class PhoneView : UserControl
 
     internal void ShowCategoryMenu(Category cat)
     {
-        ShowSheet(cat.Name,
+        var options = new System.Collections.Generic.List<(string, Action, bool)>
+        {
             ("Rename", () => BeginEdit(cat), false),
             ("Color", () => ShowSheet("Color", Actions.Palette.Select((hex, i) =>
                 (Actions.PaletteNames[i], (Action)(() => Actions.SetCategoryColor(cat, hex)), false)).ToArray()), false),
-            ("Delete category", () => { Actions.DeleteCategory(cat); ShowUndo($"Deleted category {cat.Name}"); }, true));
+        };
+        if (cat.Items.Count > 0) options.Add(("Copy items", () => Copied(Copying.Category(this, cat)), false));
+        options.Add(("Delete category", () => { Actions.DeleteCategory(cat); ShowUndo($"Deleted category {cat.Name}"); }, true));
+        ShowSheet(cat.Name, options.ToArray());
     }
+
+    /// <summary>Says in the bar at the bottom how many items were copied (or that copying failed).</summary>
+    async void Copied(System.Threading.Tasks.Task<string> copying) => ShowMessage(await copying);
 
     void BoardMenu_Click(object? sender, RoutedEventArgs e)
     {
@@ -745,16 +774,22 @@ public partial class PhoneView : UserControl
             (s.Name, (Action)(() => SetBoardStyle(board, s.Key)), false)).ToArray()), false));
         if (_sync?.IsAvailable == true)
             options.Add(((board.Synced ? "✓ " : "") + "Sync this list", () => _ = _sync.SetSynced(board, !board.Synced), false));
+        if (CopyText.Count(board) > 0)
+            options.Add(("Copy all items", () => Copied(Copying.Board(this, board)), false));
         options.Add(("Delete list", () => ConfirmDeleteBoard(board, name), true));
         ShowSheet(name, options.ToArray());
     }
 
     void SetBoardStyle(Board board, string key)
     {
-        board.Style = key;
+        board.Style = key; // the card and the open list follow (OnOpenBoardChanged, BoardCard)
         Store.MarkDirty();
-        _cards.First(c => c.Board == board).RefreshColors();
-        if (_board == board) ApplyBoardLook(board);
+    }
+
+    /// <summary>The open list's color changed, also from its widget in the desktop's "All lists".</summary>
+    void OnOpenBoardChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(Board.Style) && sender is Board b && b == _board) ApplyBoardLook(b);
     }
 
     void ConfirmDeleteBoard(Board board, string name)

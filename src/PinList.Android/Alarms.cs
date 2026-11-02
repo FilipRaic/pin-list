@@ -60,11 +60,11 @@ public class ReminderReceiver : BroadcastReceiver
         var due = Reminders.TakeDue(Store.AllItems(), DateTime.Now);
         if (due.Count > 0)
         {
-            Store.SaveNow(); // marked as shown
+            Store.SaveNow(); // the reminders that rang are removed
             var (title, text) = Reminders.Describe(due);
             Notifications.Show(context, title, text);
         }
-        // Also save what the app's own check marked as shown (when Android started the app for this alarm),
+        // Also save what changed without ringing (old reminders removed, or the app's own check when Android started it),
         // as the system can end the process right after this method
         else Store.Flush();
         Alarms.ScheduleNext(context);

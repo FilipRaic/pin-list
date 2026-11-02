@@ -3,6 +3,32 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.3.0] - 2026-11-02
+
+Choose which lists are widgets on each computer, copy items as text, and fixes for shutting down Windows and for the Mac app.
+
+### Added
+- **All lists** on Windows and macOS: every list as a card, like on the phone, in one window (tray / menu bar menu or **⋯ → All lists**). Click a card to open and edit the list, right-click it for its menu
+- A **Widget** switch on every card in **All lists**. A list can be a widget on one computer and not on another, and lists still sync either way. The choice stays on each computer (`widget` in `data.json`, see the [data format](https://filipraic.github.io/pin-list/data-format))
+- **⋯ → Remove from desktop** hides a widget without deleting the list (Ctrl+Z brings it back). When the last widget goes, **All lists** opens. Deleting a synced list also offers **Remove from desktop instead**
+- **Copy items** as text, one item per line: **Copy** in an item's menu, **Copy items** in a category's menu and **Copy all items** in a list's menu, on the desktop and the phone. On the desktop also **Ctrl+C** (the selected item or category) and **Ctrl+Shift+C** (the selected item's category), **Cmd+C** on a Mac
+- Every widget's **⋯** menu has a **PinList** submenu with the app settings: Google sync, start at login, check for updates, the data folder and exit
+- On Android, notifications show the PinList check mark in the status bar and the app icon in the notification
+
+### Changed
+- A reminder is removed once it rang, on every device, also when the device that rang it syncs with one still on 2.2.0. Due dates stay, so overdue items still turn red
+- On Android, list names, category names and items start with a capital letter (the keyboard can still switch to lowercase)
+- On a Mac the exit entry is called **Quit PinList**
+- A release now waits for the Build of its commit and publishes nothing if it failed (tests, coverage and all three apps). The release no longer runs the tests a second time
+- Build runs skip commits that only change the website, Markdown files or the license, the Windows build no longer installs the Android tools, and Dependabot puts all GitHub Actions updates in one pull request
+
+### Fixed
+- Windows no longer says that PinList is preventing shutdown or restart. PinList saves and closes right away
+- On a Mac, **Cmd+Q** and Quit in the Dock quit PinList (before, only deleting every window let it quit)
+- On a Mac, PinList no longer shows in the Dock and Cmd+Tab, and the menu bar shows **PinList** instead of "Avalonia Application"
+- After a reminder rang, the item's menu no longer offers **Remove reminder** for a reminder that isn't shown anywhere
+- The Build of 2.2.0 failed on test coverage, which the release didn't check. Coverage is back above the limit
+
 ## [2.2.0] - 2026-11-02
 
 PinList can now tell you when a new version is out, and dragging on Android is smooth.

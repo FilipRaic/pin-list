@@ -42,6 +42,9 @@ public sealed class PhoneDrag
     /// <summary>How long a press must be held before it lifts the row (tests shorten it).</summary>
     public static TimeSpan HoldTime { get; set; } = TimeSpan.FromMilliseconds(450);
 
+    /// <summary>With a mouse (the desktop's "All lists" window), a right click opens the menu right away.</summary>
+    public bool RightClickOpensMenu { get; set; }
+
     /// <summary>How much bigger the lifted row is drawn.</summary>
     public double LiftScale { get; set; } = 1.02;
 
@@ -90,6 +93,15 @@ public sealed class PhoneDrag
         for (Visual? x = v; x != null && x != _root; x = x.GetVisualParent())
             if (x is Control c && IsRow(c)) { _candidate = c.Tag; _candidateRow = c; break; }
         if (_candidate == null) return;
+        if (RightClickOpensMenu && e.GetCurrentPoint(_root).Properties.IsRightButtonPressed)
+        {
+            var (target, row) = (_candidate, _candidateRow!);
+            _candidate = null;
+            _candidateRow = null;
+            e.Handled = true;
+            LongPressed(target, row);
+            return;
+        }
         _pointer = e.Pointer;
         _start = _last = e.GetPosition(_root);
         _holdTimer.Interval = HoldTime;

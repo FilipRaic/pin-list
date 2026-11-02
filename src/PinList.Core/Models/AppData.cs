@@ -206,8 +206,19 @@ public class Board : Observable
     bool _locked;
     public bool Locked { get => _locked; set => Set(ref _locked, value); }
 
+    bool _widget = true;
+    /// <summary>
+    /// Shown as a widget on this computer. Each device's own choice: sync never sends it, exports reset it.
+    /// Saved as "widget": false only when it's off (older versions ignore it and show every list).
+    /// </summary>
+    [JsonIgnore] public bool Widget { get => _widget; set => Set(ref _widget, value); }
+
+    [JsonPropertyName("widget"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? WidgetSaved { get => Widget ? null : false; set => Widget = value ?? true; }
+
     /// <summary>Key from Themes.BoardStyles (Dark, Light, Yellow, ...).</summary>
-    public string Style { get; set; } = "Dark";
+    string _style = "Dark";
+    public string Style { get => _style; set => Set(ref _style, value); }
 
     /// <summary>Semi-transparent background (fixed opacity) or solid color.</summary>
     public bool Transparent { get; set; } = true;

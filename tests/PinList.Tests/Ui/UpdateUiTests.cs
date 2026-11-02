@@ -87,7 +87,7 @@ public class UpdateUiTests : UiTest
         Assert.Equal(new[] { Page }, _opened);
 
         // the macOS menu bar menu too
-        Assert.Equal(new[] { "Get PinList 2.3.0", "-", "New window" }, Tray.Menu.Take(3).Select(e => e.Text));
+        Assert.Equal(new[] { "Get PinList 2.3.0", "-", "All lists" }, Tray.Menu.Take(3).Select(e => e.Text));
         Tray.Menu[0].Action!();
         Assert.Equal(2, _opened.Count);
     }

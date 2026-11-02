@@ -375,8 +375,32 @@ public partial class BoardWindow : Window
 
     void OnClosing(object? sender, WindowClosingEventArgs e)
     {
-        // Alt+F4 must not close a widget; deleting goes through the menu
-        if (!UserDeleted && !App.ShuttingDown) e.Cancel = true;
+        if (IsShutdown(e.CloseReason)) App.ShuttingDown = true; // so the widget isn't reopened after it closed
+        if (BlocksClose(UserDeleted, App.ShuttingDown, e.CloseReason)) e.Cancel = true;
+    }
+
+    internal static bool IsShutdown(WindowCloseReason reason) =>
+        reason is WindowCloseReason.OSShutdown or WindowCloseReason.ApplicationShutdown;
+
+    /// <summary>
+    /// Alt+F4 must not close a widget (deleting goes through the menu). Windows shutting down and Quit on a Mac
+    /// always may: the widgets can be asked to close before PinList heard about the shutdown, and saying no then
+    /// shows "PinList is preventing shutdown" or keeps the Mac app running.
+    /// </summary>
+    internal static bool BlocksClose(bool userDeleted, bool appShuttingDown, WindowCloseReason reason) =>
+        !userDeleted && !appShuttingDown && !IsShutdown(reason);
+
+    /// <summary>Ctrl+C (Cmd+C on a Mac), with Shift for the whole category.</summary>
+    static bool IsCopyGesture(KeyModifiers mods) =>
+        (mods & ~KeyModifiers.Shift) is KeyModifiers.Control or KeyModifiers.Meta;
+
+    /// <summary>Copies the selected item (or with <paramref name="category"/> its whole category), or a selected category.</summary>
+    void CopyActive(bool category)
+    {
+        // only categories and items are ever selected, and a selected item is always in a category
+        if (_active is Category cat) _ = Copying.Category(this, cat);
+        else if (category) _ = Copying.Category(this, Store.Locate((TodoItem)_active!)!.Value.category);
+        else _ = Copying.Item(this, (TodoItem)_active!);
     }
 
     void OnPreviewKeyDown(object? sender, KeyEventArgs e)
@@ -388,6 +412,11 @@ public partial class BoardWindow : Window
         }
         else if (HandleWindowKeys(e))
         {
+            e.Handled = true;
+        }
+        else if (e.Key == Key.C && IsCopyGesture(e.KeyModifiers) && ShortcutsAllowed() && _active != null && BelongsToThisBoard(_active))
+        {
+            CopyActive(e.KeyModifiers.HasFlag(KeyModifiers.Shift));
             e.Handled = true;
         }
         else if (e.Key == Key.Tab && (e.KeyModifiers == KeyModifiers.None || e.KeyModifiers == KeyModifiers.Shift)
@@ -431,16 +460,31 @@ public partial class BoardWindow : Window
         int items = 0;
         foreach (var c in Board.Categories) items += c.Items.Count;
         string msg = items > 0
-            ? $"This removes the window with {Board.Categories.Count} categories and {items} items. Items are not moved to the archive."
-            : "This removes the window from your desktop.";
+            ? $"This deletes the list with {Board.Categories.Count} categories and {items} items. Items are not moved to the archive."
+            : "This deletes the list.";
         if (Board.Synced) msg += " It will also be deleted from your other devices.";
         string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this window?" : $"Delete \"{Board.Title}\"?";
-        if (!await Dialogs.Ask(this, title, msg, "Delete"))
+        if (Board.Synced)
+        {
+            // deleting a synced list deletes it everywhere, which often isn't what's meant: offer to only remove the widget
+            int choice = await Dialogs.Current.Choose(this, title, msg, 1, ("Cancel", DialogButtonKind.Normal),
+                ("Remove from desktop instead", DialogButtonKind.Normal), ("Delete", DialogButtonKind.Danger));
+            if (choice == 1) RemoveFromDesktop();
+            if (choice != 2) return;
+        }
+        else if (!await Dialogs.Ask(this, title, msg, "Delete"))
             return;
 
+        UserDeleted = true; // first, so the app doesn't close this window a second time
         Actions.DeleteBoard(Board);
-        UserDeleted = true;
         Close();
+    }
+
+    /// <summary>The list stays (in "All lists" and on the other devices), only its widget on this computer goes.</summary>
+    void RemoveFromDesktop()
+    {
+        Actions.SetWidget(Board, false);
+        A11y.Announce(this, "Removed from the desktop. Open it again from All lists. Ctrl+Z undoes.");
     }
 
     // ================= Items =================

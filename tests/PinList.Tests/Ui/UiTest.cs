@@ -55,6 +55,7 @@ public abstract class UiTest : IDisposable
         }
         app.LastTrayMenu?.Close();
         app.Archive?.Close();
+        app.CloseListsWindow();
         DialogHost.Current?.Close();
         Pump();
         App.ShuttingDown = false;
