@@ -1,0 +1,12 @@
+{
+  "solution": {
+    "path": "PinList.sln",
+    "projects": [
+      "src\\PinList\\PinList.csproj",
+      "src\\PinList.Core\\PinList.Core.csproj",
+      "src\\PinList.UI\\PinList.UI.csproj",
+      "tests\\PinList.Core.Tests\\PinList.Core.Tests.csproj",
+      "tests\\PinList.Tests\\PinList.Tests.csproj"
+    ]
+  }
+}

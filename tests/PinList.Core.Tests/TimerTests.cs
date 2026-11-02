@@ -51,7 +51,64 @@ public class TimerTests : StoreTestBase
         ManualTimer.Created.Last().Fire();
         Assert.Equal(1, refreshes);
         Assert.Equal(new[] { item }, fired);
-        Assert.True(item.ReminderShown);
+        Assert.Null(item.ReminderAt); // it rang, so it's gone
+    }
+
+    [Fact]
+    public void A_reminder_is_removed_when_it_rings()
+    {
+        var now = new DateTime(2026, 11, 10, 9, 0, 0);
+        var item = new TodoItem { Text = "call", ReminderAt = now.AddMinutes(-1) };
+        Assert.Equal(new[] { item }, Reminders.TakeDue(new[] { item }, now));
+        Assert.Null(item.ReminderAt);
+        Assert.False(item.ReminderShown);
+        Assert.False(item.HasPendingReminder);
+        Assert.Equal(("Reminder", "call"), Reminders.Describe(new[] { item }));
+    }
+
+    [Fact]
+    public void A_future_reminder_stays()
+    {
+        var now = new DateTime(2026, 11, 10, 9, 0, 0);
+        var item = new TodoItem { Text = "call", ReminderAt = now.AddMinutes(1) };
+        Assert.Empty(Reminders.TakeDue(new[] { item }, now));
+        Assert.Equal(now.AddMinutes(1), item.ReminderAt);
+    }
+
+    /// <summary>PinList 2.2.0 and older kept a reminder that rang, marked as shown. It's removed without ringing again.</summary>
+    [Fact]
+    public void A_reminder_that_rang_in_an_older_version_is_removed_without_ringing()
+    {
+        var now = new DateTime(2026, 11, 10, 9, 0, 0);
+        var item = new TodoItem { Text = "call", ReminderAt = now.AddDays(-1), ReminderShown = true };
+        Assert.Empty(Reminders.TakeDue(new[] { item }, now));
+        Assert.Null(item.ReminderAt);
+        Assert.False(item.ReminderShown);
+    }
+
+    /// <summary>The Android alarm receiver saves only when something changed, so the cleanup must count as a change.</summary>
+    [Fact]
+    public void Removing_an_old_rung_reminder_is_saved()
+    {
+        var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];
+        item.ReminderAt = new DateTime(2026, 1, 1, 9, 0, 0);
+        item.ReminderShown = true;
+        int before = Saver.Requests;
+        Assert.Empty(Reminders.TakeDue(Store.AllItems(), new DateTime(2026, 11, 10, 9, 0, 0)));
+        Assert.True(Saver.Requests > before);
+    }
+
+    [Fact]
+    public void Old_rung_reminders_are_removed_when_the_data_loads()
+    {
+        var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];
+        item.ReminderAt = new DateTime(2026, 1, 1, 9, 0, 0);
+        item.ReminderShown = true;
+        Store.SaveNow();
+        Store.Load();
+        var loaded = Store.AllItems().Single();
+        Assert.Null(loaded.ReminderAt);
+        Assert.False(loaded.ReminderShown);
     }
 }
 

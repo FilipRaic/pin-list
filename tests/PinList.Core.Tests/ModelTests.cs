@@ -54,7 +54,7 @@ public class RemindersTests
         var items = new[] { later, due, none };
 
         Assert.Equal(new[] { due }, Reminders.TakeDue(items, now));
-        Assert.True(due.ReminderShown);
+        Assert.Null(due.ReminderAt); // it rang, so it is removed
         Assert.False(due.HasPendingReminder);
         Assert.Empty(Reminders.TakeDue(items, now));
         Assert.Equal(new[] { later }, Reminders.TakeDue(items, now.AddMinutes(10)));

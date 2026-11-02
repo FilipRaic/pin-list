@@ -98,6 +98,27 @@ public class AppTests : UiTest
         App.ShuttingDown = false;
     }
 
+    /// <summary>Windows shutting down or Cmd+Q on a Mac: PinList saves, and never says no.</summary>
+    [AvaloniaFact]
+    public void A_shutdown_request_saves_and_is_never_refused()
+    {
+        var w = OpenNew(("A", new[] { "x" }));
+        w.Board.Categories[0].Items[0].Text = "changed before shutdown";
+        Store.Saver = new PendingSaver(); // a save is waiting
+        var e = new Avalonia.Controls.ApplicationLifetimes.ShutdownRequestedEventArgs();
+        App.OnShutdownRequested(null, e);
+        Assert.False(e.Cancel);
+        Assert.True(App.ShuttingDown);
+        Assert.Contains("changed before shutdown", File.ReadAllText(Path.Combine(Dir, "data.json"))); // saved right away
+        App.ShuttingDown = false;
+    }
+
+    sealed class PendingSaver : ISaveScheduler
+    {
+        public void Schedule() { }
+        public bool CancelPending() => true;
+    }
+
     // ================= Errors =================
 
     sealed class ThrowingSaver : ISaveScheduler
@@ -342,7 +363,7 @@ public class AppTests : UiTest
         w.Board.Style = "Green";
         Tray.ClickRight();
         var menu = App.LastTrayMenu!;
-        Assert.Equal(new object[] { "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Check for updates", "Open data folder", "Exit" },
+        Assert.Equal(new object[] { "All lists", "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Check for updates", "Open data folder", "Exit" },
             menu.Items.OfType<MenuItem>().Select(m => m.Header!));
 
         ChooseFromMenu(menu, "New window");
@@ -367,7 +388,7 @@ public class AppTests : UiTest
     {
         // macOS shows these entries in its menu bar menu (Windows shows the menu above on right click)
         var entries = Tray.Menu;
-        Assert.Equal(new[] { "New window", "Archive", "Show all windows", "-", "Export", "Import", "-",
+        Assert.Equal(new[] { "All lists", "New window", "Archive", "Show all windows", "-", "Export", "Import", "-",
                 "Sync isn't available in this build.", "-", "Check for updates", "Open data folder", "-", "Exit" },
             entries.Select(e => e.Text));
         Assert.False(entries.Single(e => e.Text.StartsWith("Sync isn't")).Enabled);

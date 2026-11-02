@@ -49,11 +49,19 @@ public partial class BoardWindow
         AddSyncMenuItem(menu);
         menu.Items.Add(new Separator());
 
+        menu.Items.Add(Item("All lists", App.Instance.ShowListsWindow));
         menu.Items.Add(Item("New window", () => Actions.NewBoard(CurrentWorkArea().ToWorkArea(), Board)));
         menu.Items.Add(Item("Archive", App.Instance.ShowArchive));
+        var copyAll = Item("Copy all items", () => Copying.Board(this, Board));
+        copyAll.IsEnabled = CopyText.Count(Board) > 0;
+        menu.Items.Add(copyAll);
         menu.Items.Add(Item("Export", () => _ = App.Instance.ExportData(this)));
         menu.Items.Add(Item("Import", () => _ = App.Instance.ImportData(this)));
+        var app = new MenuItem { Header = "PinList" };
+        foreach (var item in App.Instance.AppSettingsItems()) app.Items.Add(item);
+        menu.Items.Add(app);
         menu.Items.Add(new Separator());
+        menu.Items.Add(Item("Remove from desktop", RemoveFromDesktop));
         menu.Items.Add(Item("Delete window", DeleteThisBoard));
         Open(menu, MenuBtn);
     }
@@ -103,6 +111,9 @@ public partial class BoardWindow
         menu.Items.Add(Item(cat.Collapsed ? "Expand" : "Collapse", () => ToggleCollapsed(cat), "Enter"));
         menu.Items.Add(Item("Move up", () => MoveCategoryBy(cat, -1), "Alt+Up"));
         menu.Items.Add(Item("Move down", () => MoveCategoryBy(cat, +1), "Alt+Down"));
+        var copy = Item("Copy items", () => Copying.Category(this, cat), OsText.CopyGesture);
+        copy.IsEnabled = cat.Items.Count > 0;
+        menu.Items.Add(copy);
         menu.Items.Add(new Separator());
         menu.Items.Add(Item("Delete category", () => DeleteWithFocus(cat), "Del"));
         Open(menu, target);
@@ -124,6 +135,7 @@ public partial class BoardWindow
         menu.Items.Add(Item("Complete", () => CompleteNow(item), "Space"));
         menu.Items.Add(Item("Move up", () => MoveItemBy(item, -1), "Alt+Up"));
         menu.Items.Add(Item("Move down", () => MoveItemBy(item, +1), "Alt+Down"));
+        menu.Items.Add(Item("Copy", () => Copying.Item(this, item), OsText.CopyGesture));
         menu.Items.Add(new Separator());
 
         var due = Item(item.HasDue ? "Change due date" : "Add due date", () => EditDueDate(item));
@@ -135,7 +147,7 @@ public partial class BoardWindow
         var reminder = Item(item.HasPendingReminder ? "Change reminder" : "Add reminder", () => EditReminder(item));
         reminder.Icon = Glyph("Icon.Bell");
         menu.Items.Add(reminder);
-        if (item.ReminderAt != null)
+        if (item.HasPendingReminder)
             menu.Items.Add(Item("Remove reminder", () => { Actions.SetReminder(item, null); A11y.Announce(this, "Reminder removed"); FocusRow(item); }));
 
         menu.Items.Add(new Separator());

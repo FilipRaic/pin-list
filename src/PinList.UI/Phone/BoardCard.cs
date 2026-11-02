@@ -113,8 +113,20 @@ public sealed class BoardCard : Observable, IDisposable
             Refresh();
     }
 
+    /// <summary>The "Widget" switch shows (only in the desktop's "All lists" window).</summary>
+    public bool ShowWidgetSwitch { get; init; }
+
+    /// <summary>Whether the list is a widget on this computer (the switch).</summary>
+    public bool IsWidget
+    {
+        get => Board.Widget;
+        set => Actions.SetWidget(Board, value);
+    }
+
     void OnBoardChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(Board.Widget)) Raise(nameof(IsWidget));
+        if (e.PropertyName == nameof(Board.Style)) RefreshColors(); // also when the widget or sync changes it
         if (e.PropertyName != nameof(Board.Title)) return;
         Raise(nameof(HasTitle));
         Raise(nameof(DisplayTitle));

@@ -172,6 +172,7 @@ public static class Store
     static void Loaded()
     {
         SyncState.ReconcileCounter(Data, SyncState.Load(Dir)); // the counter never goes back, even after a restore
+        Reminders.ClearRung(AllItems()); // reminders that rang in 2.2.0 or older are removed (a change, stamped below)
         ChangeTracker.StampChanges(Data, DateTime.UtcNow);
     }
 
@@ -307,6 +308,7 @@ public static class Store
         {
             b.Synced = false;
             b.SyncedChanged = null;
+            b.Widget = true; // this computer's choice, not part of the list
         }
         copy.SyncInfo = null;
         return Serialize(copy);
@@ -362,12 +364,16 @@ public static class Store
         return imported.Boards.ToList();
     }
 
-    /// <summary>Imported lists are new local lists here: no sync flag, no stamps (they're stamped as new).</summary>
+    /// <summary>
+    /// Imported lists are new local lists here: no sync flag, no stamps (they're stamped as new), and a widget on
+    /// this computer (a backup can say otherwise for the computer it came from).
+    /// </summary>
     static void ForgetSync(AppData data)
     {
         foreach (var b in data.Boards)
         {
             (b.Synced, b.Sync, b.OrderSync, b.SyncedChanged, b.Seen) = (false, null, null, null, null);
+            b.Widget = true;
             foreach (var c in b.Categories)
             {
                 (c.Sync, c.OrderSync) = (null, null);

@@ -300,6 +300,13 @@
                     <td>true</td>
                 </tr>
                 <tr>
+                    <td><code>widget</code></td>
+                    <td>bool or absent</td>
+                    <td>Shown as a widget on this computer (desktop only, 2.3.0). Written only when it's
+                        <code>false</code>. Per device: never synced, and exports leave it out</td>
+                    <td>true</td>
+                </tr>
+                <tr>
                     <td><code>categories</code></td>
                     <td>array</td>
                     <td><code>Category</code> objects, in order</td>
@@ -440,7 +447,9 @@
                 <tr>
                     <td><code>reminderShown</code></td>
                     <td>bool</td>
-                    <td>The reminder was shown (it is shown only once)</td>
+                    <td>The reminder was shown. Only written by 2.2.0 and older: since 2.3.0 a reminder is removed
+                        (<code>reminderAt</code> becomes null) when it rings, and one marked as shown is removed when
+                        the file loads</td>
                     <td>false</td>
                 </tr>
                 <tr>
@@ -558,7 +567,7 @@
             items
             has its own <code>SyncMeta</code> (<code>orderSync</code>), so reordering (also adding or removing a child)
             on one device and renaming on
-            another are two separate changes and both are kept. Positions, sizes, <code>locked</code>, the theme and the
+            another are two separate changes and both are kept. Positions, sizes, <code>locked</code>, <code>widget</code>, the theme and the
             undo history are
             per device and never synced.</p>
         <h3 id="deviceinfo-210"><code>DeviceInfo</code> (2.1.0)</h3>
@@ -760,6 +769,13 @@
                     <td>1</td>
                     <td>PinList 2.2.0 adds the optional settings <code>checkForUpdates</code> and
                         <code>updateAnnounced</code>. Older versions keep them when they save.
+                    </td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>PinList 2.3.0 adds the optional <code>Board.widget</code> and removes a reminder when it
+                        rings instead of setting <code>reminderShown</code>. Older versions keep <code>widget</code>
+                        when they save (and show every list as a widget).
                     </td>
                 </tr>
                 </tbody>

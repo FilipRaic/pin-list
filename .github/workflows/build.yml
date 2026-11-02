@@ -1,14 +1,26 @@
 name: Build
 
+# Changes to the website, Markdown files or the license only don't need a build. CHANGELOG.md always gets one:
+# a release waits for the Build of its commit, and a release fix is often only a CHANGELOG change.
+# A run can also be started by hand (Actions > Build > Run workflow), e.g. for a release commit that wasn't built.
 on:
   push:
     branches: [ master ]
+    paths: [ '**', '!docs/**', '!**.md', '!LICENSE', 'CHANGELOG.md' ]
   pull_request:
     branches: [ master ]
+    paths: [ '**', '!docs/**', '!**.md', '!LICENSE', 'CHANGELOG.md' ]
+  workflow_dispatch:
 
 # Read-only token: this workflow only compiles and tests the code.
 permissions:
   contents: read
+
+# A new push to a pull request stops the run that's still going for its old commit. On master every commit
+# keeps its run, because a release waits for the Build of its own commit.
+concurrency:
+  group: build-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
 jobs:
@@ -22,20 +34,17 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # The solution includes the Android app (the runner already has the Android SDK and a JDK)
-      - name: Install the .NET Android workload
-        run: dotnet workload install android
-
-      # Warnings fail the build here, so they get fixed before they pile up
+      # PinList.Desktop.slnf is the solution without the Android app (the android job builds that),
+      # so this job doesn't need the Android workload. Warnings fail the build, so they get fixed before they pile up.
       - name: Build
-        run: dotnet build PinList.sln -c Release -warnaserror
+        run: dotnet build PinList.Desktop.slnf -c Release -warnaserror
 
       # The UI tests run the real app headless (nothing is shown). The build fails if coverage drops
       # below 99 % of lines or 92 % of branches (Release builds count branches a little differently).
       - name: Test
         timeout-minutes: 10
         run: >
-          dotnet test PinList.sln -c Release --no-build
+          dotnet test PinList.Desktop.slnf -c Release --no-build
           -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
           -p:Threshold=99%2c92 -p:ThresholdType=line%2cbranch -p:ThresholdStat=total
 
@@ -47,25 +56,8 @@ jobs:
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$env:RUNNER_TEMP/windows"
           if (-not (Test-Path "$env:RUNNER_TEMP/windows/PinList.exe")) { throw "PinList.exe was not built" }
 
-  # PinList.Core has no UI, so it must build and pass its tests on every platform the apps run on
-  core:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, macos-latest ]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Test Core
-        timeout-minutes: 5
-        run: dotnet test tests/PinList.Core.Tests -c Release
-
-  # Builds PinList.app with the same script as the release, so a broken Mac build shows up before tagging
+  # Builds PinList.app with the same script as the release, so a broken Mac build shows up before tagging.
+  # PinList.Core has no UI, so its tests run here too: they must pass on every platform the apps run on.
   mac:
     runs-on: macos-latest
     timeout-minutes: 20
@@ -76,11 +68,15 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Test Core on macOS
+        timeout-minutes: 5
+        run: dotnet test tests/PinList.Core.Tests -c Release
+
       - name: Build PinList.app
         run: bash scripts/package-mac.sh 0.0.0-ci "$RUNNER_TEMP/mac"
 
   # Same publish as the release, on the same OS (trimming problems only show up here, not in a normal build).
-  # The signing key isn't used here, so the APK gets the debug key.
+  # The signing key isn't used here, so the APK gets the debug key. Core's tests run here on Linux.
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -90,6 +86,10 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Test Core on Linux
+        timeout-minutes: 5
+        run: dotnet test tests/PinList.Core.Tests -c Release
 
       - name: Install the .NET Android workload
         run: dotnet workload install android

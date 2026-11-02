@@ -1,18 +1,21 @@
 name: Release
 
 # Push a tag like v2.1.0 (on a commit that is on master) to build every app and publish a GitHub release.
+# The commit and the tag can be pushed together: the release waits for the Build workflow of that commit and
+# builds nothing unless it passed (tests, coverage, all three apps). So this workflow doesn't run the tests again.
 on:
   push:
     tags: [ 'v*' ]
 
 permissions:
   contents: write
+  actions: read   # to see the Build run of the tagged commit
 
 # Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 45   # most of it is waiting for the Build run below
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,6 +45,40 @@ jobs:
             exit 1
           fi
 
+      # After a failed Build: if it failed by chance, re-run the Build, then "Re-run failed jobs" here (the tag stays).
+      # If it needs a fix, commit it and move the tag: git tag -f vX.Y.Z, then git push -f origin vX.Y.Z.
+      - name: Wait for the Build of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          deadline=$((SECONDS + 40 * 60))
+          appeared=$((SECONDS + 5 * 60))
+          while true; do
+            # the newest Build of this commit from a push or started by hand (pull request runs don't count)
+            run=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build.yml --commit "$GITHUB_SHA" \
+              --limit 20 --json event,status,conclusion,url \
+              --jq '[.[] | select(.event == "push" or .event == "workflow_dispatch")][0] // empty')
+            if [ -z "$run" ]; then
+              if [ $SECONDS -ge $appeared ]; then
+                echo "::error::No Build ran for this exact commit (only the last commit of a push is built). Start one in Actions > Build > Run workflow on master, then re-run this release."
+                exit 1
+              fi
+            elif [ "$(jq -r .status <<< "$run")" = "completed" ]; then
+              conclusion=$(jq -r .conclusion <<< "$run")
+              if [ "$conclusion" = "success" ]; then
+                echo "The Build of this commit passed: $(jq -r .url <<< "$run")"
+                exit 0
+              fi
+              echo "::error::The Build of this commit ended with '$conclusion' ($(jq -r .url <<< "$run")). Fix it and re-run this release."
+              exit 1
+            fi
+            if [ $SECONDS -ge $deadline ]; then
+              echo "::error::The Build of this commit didn't finish within 40 minutes."
+              exit 1
+            fi
+            sleep 30
+          done
+
   windows:
     needs: check
     runs-on: windows-latest
@@ -52,13 +89,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
-      - name: Install the .NET Android workload
-        run: dotnet workload install android
-
-      - name: Test
-        timeout-minutes: 10
-        run: dotnet test PinList.sln -c Release
 
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
       # The file is written only here, from the repository secrets, and is never committed.
@@ -105,10 +135,6 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
-
-      - name: Test the shared code on macOS
-        timeout-minutes: 5
-        run: dotnet test tests/PinList.Core.Tests -c Release
 
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
       # The file is written only here, from the repository secrets, and is never committed.

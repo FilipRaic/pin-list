@@ -117,7 +117,7 @@ public partial class PhoneTests
         Assert.Equal("Not synced", AutomationProperties.GetName(CardSyncIcon(b)));
 
         LongPress(Card(b));
-        Assert.Equal(new[] { "Open", "Color", "Sync this list", "Delete list" }, Options());
+        Assert.Equal(new[] { "Open", "Color", "Sync this list", "Copy all items", "Delete list" }, Options());
         Choose("Sync this list");
         Assert.True(b.Synced);
         Assert.Contains(_phoneCloud.Names, n => n.StartsWith($"w-{b.Id}."));

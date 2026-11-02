@@ -24,6 +24,23 @@ public static class Actions
     /// <summary>A widget was deleted: by the user on this device (true), or by sync because it was deleted elsewhere.</summary>
     public static event Action<Board, bool>? BoardDeleted;
 
+    /// <summary>A list was turned into a widget on this computer, or stopped being one (the app opens or closes it).</summary>
+    public static event Action<Board>? WidgetChanged;
+
+    /// <summary>Shows the list as a widget on this computer, or not. Nothing about the list itself changes.</summary>
+    public static void SetWidget(Board board, bool widget)
+    {
+        if (board.Widget == widget) return;
+        board.Widget = widget;
+        PushUndo(widget ? $"showing {Quote(board.Title)} as a widget" : $"removing {Quote(board.Title)} from the desktop", () =>
+        {
+            board.Widget = !widget;
+            WidgetChanged?.Invoke(board);
+        });
+        Store.MarkDirty();
+        WidgetChanged?.Invoke(board);
+    }
+
     const int MaxUndo = 50;
     static readonly List<(string what, Action undo)> UndoStack = new();
 
