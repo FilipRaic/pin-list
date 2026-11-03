@@ -27,6 +27,19 @@ public abstract class DialogTest : UiTest
 
 public class ConfirmDialogTests : DialogTest
 {
+    [AvaloniaFact]
+    public void Dialogs_use_the_new_surfaces()
+    {
+        Run<int, ConfirmDialog>(() => ConfirmDialog.Choose(null, "Title", "Message", 0, ("OK", DialogButtonKind.Accent)), dlg =>
+        {
+            var surface = Named<Border>(dlg, "Surface");
+            Assert.Equal(((Avalonia.Media.ISolidColorBrush)App.Resources["Raised"]!).Color, ((Avalonia.Media.ISolidColorBrush)surface.Background!).Color);
+            Assert.Equal((Avalonia.CornerRadius)App.FindResource("R.Menu")!, surface.CornerRadius);
+            Assert.Equal((double)App.FindResource("T.Body")!, dlg.FontSize);
+            Click(Buttons(dlg)[0]);
+        });
+    }
+
     static List<Button> Buttons(ConfirmDialog d) => d.ButtonPanel.Children.OfType<Button>().ToList();
 
     [AvaloniaFact]

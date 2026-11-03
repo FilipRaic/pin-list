@@ -1,5 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Media;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
@@ -9,22 +11,22 @@ using Xunit;
 namespace PinList.Tests;
 
 /// <summary>
-/// The "All lists" window: every list as a card (the phone's first screen), each with a Widget switch. A list that
+/// The "All lists" section of the PinList window: every list as a card (the phone's first screen), each with an On desktop switch. A list that
 /// isn't a widget on this computer can still be opened and edited there.
 /// </summary>
-public class ListsWindowTests : UiTest
+public class MainWindowTests : UiTest
 {
-    ListsWindow Lists()
+    MainWindow Lists()
     {
         App.ShowListsWindow();
         Pump();
-        return App.ListsWindow!;
+        return App.MainWindow!;
     }
 
-    static Border Card(ListsWindow w, Board b) =>
-        Find<Border>(w.View, x => x.Classes.Contains("card") && ReferenceEquals(x.Tag, b))!;
+    static Border Card(MainWindow w, Board b) =>
+        Find<Border>(w.Lists, x => x.Classes.Contains("card") && ReferenceEquals(x.Tag, b))!;
 
-    static CheckBox WidgetSwitch(ListsWindow w, Board b) => Find<CheckBox>(Card(w, b))!;
+    static ToggleSwitch WidgetSwitch(MainWindow w, Board b) => Find<ToggleSwitch>(Card(w, b))!;
 
     [AvaloniaFact]
     public void A_list_that_is_not_a_widget_has_no_window_but_is_in_all_lists()
@@ -39,6 +41,7 @@ public class ListsWindowTests : UiTest
         var lists = Lists();
         Assert.True(lists.IsVisible);
         Assert.Equal("PinList", lists.Title);
+        Assert.Equal(MainSection.Lists, lists.Section);
         Assert.NotNull(Card(lists, board));
         Assert.False(WidgetSwitch(lists, board).IsChecked);
     }
@@ -64,7 +67,7 @@ public class ListsWindowTests : UiTest
         Assert.True(board.Widget);
         var back = Assert.Single(App.OpenWindows, x => x.Board == board);
         Assert.Equal((240.0, 180.0), (back.Board.X, back.Board.Y));
-        Assert.False(lists.View.OpenBoard != null); // clicking the switch doesn't open the list
+        Assert.False(lists.Lists.OpenBoard != null); // clicking the switch doesn't open the list
     }
 
     [AvaloniaFact]
@@ -84,9 +87,9 @@ public class ListsWindowTests : UiTest
     {
         var w = OpenNew(("Shopping", new[] { "Milk" }));
         var lists = Lists();
-        lists.View.ShowBoard(w.Board);
+        lists.Lists.ShowBoard(w.Board);
         Pump();
-        var add = Find<TextBox>(lists.View, t => t.Classes.Contains("phoneadd"))!;
+        var add = Find<TextBox>(lists.Lists, t => t.Classes.Contains("phoneadd"))!;
         add.Text = "Bread";
         Press(add, Key.Enter);
         Assert.Equal(new[] { "Milk", "Bread" }, w.Board.Categories[0].Items.Select(i => i.Text));
@@ -103,15 +106,16 @@ public class ListsWindowTests : UiTest
         lists.MouseDown(p, MouseButton.Right);
         lists.MouseUp(p, MouseButton.Right);
         Pump();
-        Assert.True(lists.View.SheetOpen);
-        Assert.Null(lists.View.OpenBoard); // a menu, not the list
+        Assert.True(lists.Lists.SheetOpen);
+        Assert.Null(lists.Lists.OpenBoard); // a menu, not the list
     }
 
     [AvaloniaFact]
-    public void All_lists_has_no_phone_menu()
+    public void All_lists_has_no_bottom_bar_and_no_phone_button()
     {
         var lists = Lists();
-        Assert.False(Find<Button>(lists.View, b => b.Name == "AppMenuButton")!.IsVisible);
+        Assert.False(lists.Lists.BottomBarVisible);
+        Assert.False(lists.Lists.AddBoardButtonVisible);
     }
 
     [AvaloniaFact]
@@ -124,13 +128,13 @@ public class ListsWindowTests : UiTest
         App.OpenAllBoards();
         Pump();
         Assert.Empty(App.OpenWindows);
-        Assert.True(App.ListsWindow?.IsVisible);
+        Assert.True(App.MainWindow?.IsVisible);
         Assert.Equal(count, Store.Data.Boards.Count);
 
-        App.ListsWindow!.Hide();
+        App.MainWindow!.Hide();
         App.ShowAllBoards(); // the tray icon or starting PinList again
         Pump();
-        Assert.True(App.ListsWindow.IsVisible);
+        Assert.True(App.MainWindow.IsVisible);
     }
 
     [AvaloniaFact]
@@ -143,7 +147,7 @@ public class ListsWindowTests : UiTest
         Assert.NotNull(Card(lists, board));
         Store.Data.Boards.Remove(board); // what sync does when the list was deleted on another device
         Pump();
-        Assert.Null(Find<Border>(lists.View, x => x.Classes.Contains("card") && ReferenceEquals(x.Tag, board)));
+        Assert.Null(Find<Border>(lists.Lists, x => x.Classes.Contains("card") && ReferenceEquals(x.Tag, board)));
     }
 
     [AvaloniaFact]
@@ -153,7 +157,7 @@ public class ListsWindowTests : UiTest
         lists.Close();
         Pump();
         Assert.False(lists.IsVisible);
-        Assert.Same(lists, App.ListsWindow);
+        Assert.Same(lists, App.MainWindow);
         App.ShowListsWindow();
         Pump();
         Assert.True(lists.IsVisible);
@@ -164,12 +168,12 @@ public class ListsWindowTests : UiTest
     {
         Assert.Equal("All lists", App.TrayMenuEntries().First(e => e != TrayEntry.Separator && !e.Text.StartsWith("Get ")).Text);
         ChooseFromMenu(App.ShowTrayMenu(), "All lists");
-        Assert.True(App.ListsWindow?.IsVisible);
-        App.ListsWindow!.Hide();
+        Assert.True(App.MainWindow?.IsVisible);
+        App.MainWindow!.Hide();
 
         var w = OpenNew(("A", new[] { "a" }));
         ChooseFromMenu(WidgetMenu(w), "All lists");
-        Assert.True(App.ListsWindow.IsVisible);
+        Assert.True(App.MainWindow.IsVisible);
     }
 
     [AvaloniaFact]
@@ -179,7 +183,7 @@ public class ListsWindowTests : UiTest
         w.Board.Title = "Groceries";
         w.Board.Synced = true;
         Dialogs.ChooseAnswer = _ => 1; // the middle button
-        ChooseFromMenu(WidgetMenu(w), "Delete window");
+        ChooseFromMenu(WidgetMenu(w), "Delete list");
         Assert.True(UiHost.WaitUntil(() => !w.Board.Widget));
         Assert.Contains(w.Board, Store.Data.Boards); // not deleted
         Assert.DoesNotContain(App.OpenWindows, x => x.Board == w.Board);
@@ -190,13 +194,13 @@ public class ListsWindowTests : UiTest
     {
         var w = OpenNew(("A", new[] { "a" }));
         w.Board.Synced = true;
-        ChooseFromMenu(WidgetMenu(w), "Delete window"); // Esc
+        ChooseFromMenu(WidgetMenu(w), "Delete list"); // Esc
         Pump();
         Assert.Contains(w.Board, Store.Data.Boards);
         Assert.True(w.Board.Widget);
 
         Dialogs.ChooseAnswer = _ => 2;
-        ChooseFromMenu(WidgetMenu(w), "Delete window");
+        ChooseFromMenu(WidgetMenu(w), "Delete list");
         Assert.True(UiHost.WaitUntil(() => !Store.Data.Boards.Contains(w.Board)));
     }
 
@@ -244,20 +248,20 @@ public class ListsWindowTests : UiTest
         lists.MouseUp(p, MouseButton.Left);
         Pump();
         Assert.False(w.Board.Widget);
-        Assert.Null(lists.View.OpenBoard);
+        Assert.Null(lists.Lists.OpenBoard);
 
         var card = Card(lists, w.Board); // clicking the card itself opens the list
         var q = card.TranslatePoint(new Point(20, card.Bounds.Height - 12), lists)!.Value;
         lists.MouseDown(q, MouseButton.Left);
         lists.MouseUp(q, MouseButton.Left);
         Pump();
-        Assert.Same(w.Board, lists.View.OpenBoard);
+        Assert.Same(w.Board, lists.Lists.OpenBoard);
     }
 
-    static void ChooseInSheet(ListsWindow lists, string option)
+    static void ChooseInSheet(MainWindow lists, string option)
     {
         Pump();
-        Click(lists.View.SheetPanel!.Children.OfType<Button>().First(b => b.Content as string == option));
+        Click(lists.Lists.SheetPanel!.Children.OfType<Button>().First(b => b.Content as string == option));
         Pump();
     }
 
@@ -267,7 +271,7 @@ public class ListsWindowTests : UiTest
     {
         var w = OpenNew(("A", new[] { "a" }));
         var lists = Lists();
-        lists.View.ShowBoardMenu(w.Board, fromCard: true);
+        lists.Lists.ShowBoardMenu(w.Board, fromCard: true);
         ChooseInSheet(lists, "Delete list");
         ChooseInSheet(lists, "Delete");
         Assert.DoesNotContain(w.Board, Store.Data.Boards);
@@ -287,7 +291,7 @@ public class ListsWindowTests : UiTest
             Pump();
             Assert.False(lists.IsVisible);
             Assert.True(App.ShuttingDown);
-            Assert.Null(App.ListsWindow); // closed for good, so it isn't shown again as a dead window
+            Assert.Null(App.MainWindow); // closed for good, so it isn't shown again as a dead window
         }
         finally { App.ShuttingDown = false; }
     }
@@ -300,11 +304,11 @@ public class ListsWindowTests : UiTest
         Assert.Single(App.OpenWindows);
         ChooseFromMenu(WidgetMenu(w), "Remove from desktop");
         Assert.Empty(App.OpenWindows);
-        Assert.True(App.ListsWindow?.IsVisible);
+        Assert.True(App.MainWindow?.IsVisible);
     }
 
     /// <summary>Press the mouse on a control and hold it longer than a long-press.</summary>
-    static Point Hold(ListsWindow lists, Control c)
+    static Point Hold(MainWindow lists, Control c)
     {
         var p = c.TranslatePoint(new Point(10, c.Bounds.Height / 2), lists)!.Value;
         lists.MouseDown(p, MouseButton.Left);
@@ -319,7 +323,7 @@ public class ListsWindowTests : UiTest
         var lists = Lists();
         Assert.False(SyncService.Current!.IsBusy(w.Board));
         var p = Hold(lists, Card(lists, w.Board));
-        Assert.NotNull(lists.View.HomeDrag.Lifted);
+        Assert.NotNull(lists.Lists.HomeDrag.Lifted);
         Assert.True(SyncService.Current.IsBusy(w.Board));
         lists.MouseUp(p, MouseButton.Left);
         UiHost.Wait(TimeSpan.FromMilliseconds(500));
@@ -332,7 +336,7 @@ public class ListsWindowTests : UiTest
         var w = OpenNew(("A", new[] { "a" }));
         var lists = Lists();
         var p = Hold(lists, WidgetSwitch(lists, w.Board));
-        Assert.Null(lists.View.HomeDrag.Lifted);
+        Assert.Null(lists.Lists.HomeDrag.Lifted);
         lists.MouseUp(p, MouseButton.Left);
         Pump();
     }
@@ -343,12 +347,12 @@ public class ListsWindowTests : UiTest
         var w = OpenNew(("A", new[] { "a" }));
         var lists = Lists();
         var before = ((Avalonia.Media.ISolidColorBrush)Card(lists, w.Board).Background!).Color;
-        lists.View.ShowBoard(w.Board);
+        lists.Lists.ShowBoard(w.Board);
         Pump();
-        ChooseFromMenu(WidgetMenu(w), "Window color", "Light");
+        ChooseSwatch(WidgetMenu(w), "List color", "Light");
         Pump();
-        Assert.Equal(Avalonia.Styling.ThemeVariant.Light, Find<ThemeVariantScope>(lists.View)!.RequestedThemeVariant);
-        lists.View.GoBack();
+        Assert.Equal(Avalonia.Styling.ThemeVariant.Light, Find<ThemeVariantScope>(lists.Lists)!.RequestedThemeVariant);
+        lists.Lists.GoBack();
         Pump();
         Assert.NotEqual(before, ((Avalonia.Media.ISolidColorBrush)Card(lists, w.Board).Background!).Color);
     }
@@ -361,9 +365,9 @@ public class ListsWindowTests : UiTest
         Copying.SetClipboard = (_, _) => throw new System.Runtime.InteropServices.ExternalException("busy");
         try
         {
-            lists.View.ShowBoardMenu(w.Board, fromCard: true);
+            lists.Lists.ShowBoardMenu(w.Board, fromCard: true);
             ChooseInSheet(lists, "Copy all items");
-            Assert.True(UiHost.WaitUntil(() => lists.View.SnackbarMessage == Copying.Failed));
+            Assert.True(UiHost.WaitUntil(() => lists.Lists.SnackbarMessage == Copying.Failed));
             ChooseFromMenu(WidgetMenu(w), "Copy all items");
             Assert.True(UiHost.WaitUntil(() => A11y.LastAnnouncement == Copying.Failed));
         }
@@ -374,5 +378,158 @@ public class ListsWindowTests : UiTest
     {
         Click(Named<Button>(w, "MenuBtn"));
         return w.LastMenu!;
+    }
+
+    // ================= The sections =================
+
+    static Button Nav(MainWindow w, string name) => Named<Button>(w, name);
+
+    [AvaloniaFact]
+    public void Each_entry_point_opens_the_right_section()
+    {
+        App.ShowListsWindow();
+        Pump();
+        var window = App.MainWindow!;
+        Assert.Equal(MainSection.Lists, window.Section);
+        App.ShowArchive();
+        Assert.Same(window, App.MainWindow); // one window for all of them
+        Assert.Equal(MainSection.Archive, window.Section);
+        Assert.True(window.Archive.IsVisible);
+        Assert.False(window.Lists.IsVisible);
+        App.ShowSettings();
+        Assert.Equal(MainSection.Settings, window.Section);
+        Assert.True(window.Settings.IsVisible);
+        Assert.False(window.Archive.IsVisible);
+        App.ShowListsWindow();
+        Assert.Equal(MainSection.Lists, window.Section);
+        Assert.True(window.Lists.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public void Sidebar_switches_sections()
+    {
+        var w = Lists();
+        Assert.Contains("selected", Nav(w, "NavLists").Classes);
+        Click(Nav(w, "NavArchive"));
+        Assert.Equal(MainSection.Archive, w.Section);
+        Assert.Contains("selected", Nav(w, "NavArchive").Classes);
+        Assert.DoesNotContain("selected", Nav(w, "NavLists").Classes);
+        Click(Nav(w, "NavSettings"));
+        Assert.Equal(MainSection.Settings, w.Section);
+        Assert.Contains("selected", Nav(w, "NavSettings").Classes);
+        Click(Nav(w, "NavLists"));
+        Assert.Equal(MainSection.Lists, w.Section);
+        Assert.Equal("All lists", NameOf(Nav(w, "NavLists")));
+        Assert.Equal("Archive", NameOf(Nav(w, "NavArchive")));
+        Assert.Equal("Settings", NameOf(Nav(w, "NavSettings")));
+    }
+
+    [AvaloniaFact]
+    public void The_sidebar_counts_lists_and_archived_items()
+    {
+        var board = MakeBoard(("Work", new[] { "a", "b" }));
+        var w = Lists();
+        Assert.Equal("1", Named<TextBlock>(w, "ListsCount").Text);
+        Assert.Equal("0", Named<TextBlock>(w, "ArchiveCount").Text);
+        Actions.Complete(board.Categories[0].Items[0]);
+        Assert.Equal("1", Named<TextBlock>(w, "ArchiveCount").Text);
+        MakeBoard();
+        Store.Data.Boards.Add(new Board());
+        Assert.Equal("3", Named<TextBlock>(w, "ListsCount").Text);
+    }
+
+    [AvaloniaFact]
+    public void Opening_a_section_again_keeps_the_window_where_it_was()
+    {
+        var first = Lists();
+        first.Width = 777;
+        App.ShowArchive();
+        Assert.Same(first, App.MainWindow);
+        Assert.Equal(777, first.Width);
+        first.WindowState = WindowState.Maximized;
+        App.ShowSettings();
+        Assert.Equal(WindowState.Maximized, first.WindowState); // only a minimized one is restored
+        first.WindowState = WindowState.Minimized;
+        App.ShowArchive();
+        Assert.Equal(WindowState.Normal, first.WindowState);
+    }
+
+    [AvaloniaFact]
+    public void Closing_hides_and_shutdown_closes()
+    {
+        var w = Lists();
+        w.Close();
+        Pump();
+        Assert.False(w.IsVisible);
+        Assert.Same(w, App.MainWindow);
+        App.ShowSettings();
+        Assert.True(w.IsVisible);
+        Assert.Equal(MainSection.Settings, w.Section);
+        App.CloseMainWindow();
+        Assert.Null(App.MainWindow);
+    }
+
+    [AvaloniaFact]
+    public void Settings_section_has_the_settings_page_and_follows_changes()
+    {
+        App.ShowSettings();
+        Pump();
+        var window = App.MainWindow!;
+        var texts = FindAll<TextBlock>(window.Settings).Select(t => t.Text).ToList();
+        Assert.Contains("Settings", texts);
+        Assert.Contains("Appearance", texts);
+        Assert.Contains("Your data", texts);
+        Click(FindAll<ToggleButton>(window.Settings).First(b => b.Classes.Contains("seg") && b.Content as string == "Light"));
+        Assert.Equal("Light", Store.Data.Settings.Theme);
+        Assert.Equal(Avalonia.Styling.ThemeVariant.Light, App.RequestedThemeVariant);
+    }
+
+    [AvaloniaFact]
+    public void The_window_follows_the_theme_and_text_size()
+    {
+        var w = Lists();
+        int version = ChromeLook.GetVersion(w);
+        Assert.Equal("Dark", ChromeLook.GetStyleKey(w));
+        App.SetTheme("Light");
+        Assert.Equal("Light", ChromeLook.GetStyleKey(w));
+        Assert.True(ChromeLook.GetVersion(w) > version);
+        A11y.TextScaleSource = () => 1.5;
+        App.RefreshAllWindows();
+        Assert.Equal(1.5, ((ScaleTransform)Named<LayoutTransformControl>(w, "Scaler").LayoutTransform!).ScaleX);
+        A11y.TextScaleSource = () => 1.0;
+        App.RefreshAllWindows();
+        Assert.Null(Named<LayoutTransformControl>(w, "Scaler").LayoutTransform);
+        App.CloseMainWindow();
+        App.SetTheme("Dark"); // a closed window no longer listens
+    }
+
+    [AvaloniaFact]
+    public void The_new_list_card_starts_a_list()
+    {
+        var w = Lists();
+        int boards = Store.Data.Boards.Count;
+        var card = Named<Button>(w.Lists, "NewListCard");
+        Assert.True(card.IsVisible);
+        Assert.Equal("New list", NameOf(card));
+        Assert.False(w.Lists.AddBoardButtonVisible); // the desktop has the card, not the phone's button
+        Click(card);
+        Assert.Equal(boards + 1, Store.Data.Boards.Count);
+        Assert.NotNull(w.Lists.OpenBoard);
+        Assert.False(w.Lists.AddBoardButtonVisible);
+        w.Lists.GoBack();
+        Assert.False(w.Lists.AddBoardButtonVisible);
+    }
+
+    [AvaloniaFact]
+    public void An_import_that_replaces_everything_refreshes_the_window()
+    {
+        var w = Lists();
+        MakeBoard(("Old", new[] { "a" }));
+        w.Reload();
+        Assert.Equal("1", Named<TextBlock>(w, "ListsCount").Text);
+        Store.ReplaceAll(new AppData());
+        w.Reload();
+        Assert.Equal("0", Named<TextBlock>(w, "ListsCount").Text);
+        Assert.Empty(w.Archive.Shown);
     }
 }

@@ -3,7 +3,7 @@
              x:Class="PinList.App"
              Name="PinList"
              RequestedThemeVariant="Dark">
-    <!-- Colors (BoardBg, MenuBg, ArcBg, ...) are set from code in Themes (PinList.UI) -->
+    <!-- Colors (BoardBg, Raised, Bg, ...) are set from code in Themes (PinList.UI) -->
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://PinList.UI/Styles/Common.axaml"/>

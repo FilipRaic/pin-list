@@ -113,13 +113,13 @@ public class ThemeTests : UiTest
     {
         var r = new ResourceDictionary();
         Themes.ApplyChrome(r, dark);
-        Assert.True(Contrast(C(r, "MenuText"), C(r, "MenuBg")) >= 4.5);
-        Assert.True(Contrast(C(r, "MenuTextMuted"), C(r, "MenuBg")) >= 4.5);
-        Assert.True(Contrast(C(r, "ArcText"), C(r, "ArcSurface")) >= 4.5);
-        Assert.True(Contrast(C(r, "ArcMuted"), C(r, "ArcBg")) >= 4.5);
-        Assert.True(Contrast(C(r, "AccentText"), C(r, "AccentFill")) >= 4.5);
-        Assert.True(Contrast(C(r, "DangerText"), C(r, "DangerFill")) >= 4.5);
-        Assert.Equal(C(r, "MenuBg"), C(r, "ToolTipBackground")); // tooltips match the menus
+        Assert.True(Contrast(C(r, "Text1"), C(r, "Raised")) >= 4.5);
+        Assert.True(Contrast(C(r, "Text3"), C(r, "Raised")) >= 4.5);
+        Assert.True(Contrast(C(r, "Text1"), C(r, "Surface")) >= 4.5);
+        Assert.True(Contrast(C(r, "Text3"), C(r, "Bg")) >= 4.5);
+        Assert.True(Contrast(C(r, "AccentText"), C(r, "Accent")) >= 4.5);
+        Assert.True(Contrast(C(r, "DangerText"), C(r, "Danger")) >= 4.5);
+        Assert.Equal(C(r, "Raised"), C(r, "ToolTipBackground")); // tooltips match the menus
     }
 
     [AvaloniaFact]
@@ -144,9 +144,9 @@ public class ThemeTests : UiTest
 
         var chrome = new ResourceDictionary();
         Themes.ApplyChrome(chrome, dark: false);
-        Assert.Equal(Colors.Cyan, C(chrome, "MenuHover"));
-        Assert.Equal(Colors.Navy, C(chrome, "MenuHoverText"));
-        Assert.Equal(Colors.Navy, C(chrome, "ArcSelectedText"));
+        Assert.Equal(Colors.Cyan, C(chrome, "ItemHover"));
+        Assert.Equal(Colors.Navy, C(chrome, "ItemHoverText"));
+        Assert.Equal(Colors.Navy, C(chrome, "SelectedText"));
     }
 
     [AvaloniaFact]

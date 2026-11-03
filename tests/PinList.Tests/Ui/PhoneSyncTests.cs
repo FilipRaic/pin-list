@@ -23,14 +23,24 @@ public partial class PhoneTests
         return _view;
     }
 
-    void OpenAppMenu() => Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
+    /// <summary>Opens the Settings tab and gives its page.</summary>
+    SettingsView OpenSettings()
+    {
+        _view.ShowSection(PhoneSection.Settings);
+        Pump();
+        return _view.SettingsPage!;
+    }
+
+    Button SettingsButton(string text) => FindAll<Button>(OpenSettings()).First(b => b.Content as string == text);
+
+    static IEnumerable<string> PageTexts(Control page) => FindAll<TextBlock>(page).Select(t => t.Text ?? "");
 
     void PhoneSignIn()
     {
-        OpenAppMenu();
-        Choose("Google sync");
-        Choose("Sign in with Google");
-        Assert.NotNull(_view.Sync!.Account);
+        Click(SettingsButton("Sign in with Google"));
+        Assert.True(UiHost.WaitUntil(() => _view.Sync!.Account != null));
+        _view.ShowSection(PhoneSection.Lists);
+        Pump();
     }
 
     PathIcon CardSyncIcon(Board b) => Find<PathIcon>(Card(b), p => p.Classes.Contains("sync"))!;
@@ -43,53 +53,40 @@ public partial class PhoneTests
     {
         var b = MakeBoard(("A", new[] { "a" }));
         Show();
-        OpenAppMenu();
-        Assert.DoesNotContain("Google sync", Options());
-        Assert.True(_view.GoBack()); // closes the menu
+        Assert.DoesNotContain("Google Drive sync", PageTexts(OpenSettings()));
+        Assert.True(_view.GoBack()); // back to the lists
         LongPress(Card(b));
         Assert.DoesNotContain(Options(), o => o.EndsWith("Sync this list"));
         Assert.False(CardSyncIcon(b).IsVisible);
     }
 
     [AvaloniaFact]
-    public void Sheet_offers_sign_in_then_shows_account()
+    public void Settings_offer_sign_in_then_show_account()
     {
         MakeBoard(("A", new[] { "a" }));
         ShowWithSync();
-        OpenAppMenu();
-        Assert.Equal(new[] { "Archive", "App theme", "Google sync", "Export", "Import" }, Options());
-        Choose("Google sync");
-        Assert.Equal("Google sync", _view.SheetTitleText);
-        Assert.Equal(new[] { "Sign in with Google" }, Options());
-        Choose("Sign in with Google");
-        Assert.Equal("me@example.com", _view.Sync!.Account!.Email);
+        Assert.Contains("Google Drive sync", PageTexts(OpenSettings()));
+        PhoneSignIn();
+        var page = OpenSettings();
+        Assert.Contains("me@example.com", PageTexts(page));
+        Assert.Contains(PageTexts(page), t => t.StartsWith("Synced "));
 
-        OpenAppMenu();
-        Choose("Google sync");
-        Assert.Equal("Signed in as me@example.com · Last synced: just now", _view.SheetTitleText);
-        Assert.Equal(new[] { "Sync now", "Sign out", "Sign out and delete cloud data" }, Options());
         int calls = _phoneCloud.Calls;
-        Choose("Sync now");
-        Assert.True(_phoneCloud.Calls > calls);
+        Click(SettingsButton("Sync now"));
+        Assert.True(UiHost.WaitUntil(() => _phoneCloud.Calls > calls));
 
-        OpenAppMenu();
-        Choose("Google sync");
-        Choose("Sign out and delete cloud data");
+        Click(SettingsButton("Sign out and delete cloud data"));
         Assert.Equal("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", _view.SheetTitleText);
         Choose("Cancel");
-        Assert.NotNull(_view.Sync.Account);
-        OpenAppMenu();
-        Choose("Google sync");
-        Choose("Sign out and delete cloud data");
+        Assert.NotNull(_view.Sync!.Account);
+        Click(SettingsButton("Sign out and delete cloud data"));
         Choose("Delete");
-        Assert.Null(_view.Sync.Account);
+        Assert.True(UiHost.WaitUntil(() => _view.Sync.Account == null));
         Assert.Equal(new[] { "reset.json" }, _phoneCloud.Names);
 
         PhoneSignIn();
-        OpenAppMenu();
-        Choose("Google sync");
-        Choose("Sign out");
-        Assert.Null(_view.Sync.Account);
+        Click(SettingsButton("Sign out"));
+        Assert.True(UiHost.WaitUntil(() => _view.Sync.Account == null));
     }
 
     [AvaloniaFact]
@@ -97,11 +94,7 @@ public partial class PhoneTests
     {
         _phoneAuth.IsAvailable = false;
         ShowWithSync();
-        OpenAppMenu();
-        Choose("Google sync");
-        Assert.Equal("Sync isn't available on this phone.", _view.SheetTitleText);
-        Assert.Equal(new[] { "OK" }, Options());
-        Choose("OK");
+        Assert.Contains("Sync isn't available on this phone.", PageTexts(OpenSettings()));
     }
 
     [AvaloniaFact]
@@ -117,7 +110,8 @@ public partial class PhoneTests
         Assert.Equal("Not synced", AutomationProperties.GetName(CardSyncIcon(b)));
 
         LongPress(Card(b));
-        Assert.Equal(new[] { "Open", "Color", "Sync this list", "Copy all items", "Delete list" }, Options());
+        Assert.Equal(new[] { "Sync this list", "Copy all items", "Open", "Delete list" }, Options());
+        Assert.Contains(FindAll<Button>(_view.SheetPanel!), x => x.Classes.Contains("swatch")); // the list color row
         Choose("Sync this list");
         Assert.True(b.Synced);
         Assert.Contains(_phoneCloud.Names, n => n.StartsWith($"w-{b.Id}."));
@@ -129,8 +123,8 @@ public partial class PhoneTests
         Assert.True(Is(HeaderSyncBtn(), "Icon.CloudCheck"));
         Assert.Equal("Synced · just now", AutomationProperties.GetName(HeaderSyncBtn()));
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Assert.Contains("✓ Sync this list", Options());
-        Choose("✓ Sync this list");
+        Assert.True(Assert.IsType<SheetRow>(_view.SheetPanel!.Children.OfType<Button>().First(x => x.Content as string == "Sync this list")).SwitchOn);
+        Choose("Sync this list");
         Assert.False(b.Synced);
         Assert.True(Is(HeaderSyncBtn(), "Icon.CloudOff"));
     }

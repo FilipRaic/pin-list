@@ -35,7 +35,7 @@ public static class UiHost
     static App? _app;
 
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<App>().UseHeadless(new AvaloniaHeadlessPlatformOptions()).WithInterFont();
 
     /// <summary>
     /// Runs before any test: App reads PINLIST_DATA_DIR once, when the class is first used,

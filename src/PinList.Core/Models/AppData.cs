@@ -110,9 +110,11 @@ public class TodoItem : Observable
     public override string ToString() => AccessibleName;
 
     // UI state only, not saved
-    bool _isEditing, _isCompleting, _isActive;
+    bool _isEditing, _isCompleting, _isLeaving, _isActive;
     [JsonIgnore] public bool IsEditing { get => _isEditing; set => Set(ref _isEditing, value); }
     [JsonIgnore] public bool IsCompleting { get => _isCompleting; set => Set(ref _isCompleting, value); }
+    /// <summary>The completed row is sliding out (it can't be cancelled any more). See CompleteFlow.</summary>
+    [JsonIgnore] public bool IsLeaving { get => _isLeaving; set => Set(ref _isLeaving, value); }
     [JsonIgnore] public bool IsActive { get => _isActive; set => Set(ref _isActive, value); }
 }
 
@@ -250,9 +252,24 @@ public class ArchivedItem
     public string BoardId { get; set; } = "";
     public string BoardTitle { get; set; } = "";
 
+    /// <summary>The line under an archive row: "14:32 · Work · This week · added 28 Oct" (no list part when the title is empty).</summary>
+    [JsonIgnore] public string MetaText => MetaBefore + CategoryName + MetaAfter;
+
+    /// <summary>The part of <see cref="MetaText"/> before the category name (the row colors the name itself).</summary>
+    [JsonIgnore]
+    public string MetaBefore =>
+        CompletedAt.ToString("HH:mm", CultureInfo.CurrentCulture) + " · "
+        + (string.IsNullOrWhiteSpace(BoardTitle) ? "" : BoardTitle + " · ");
+
+    /// <summary>The part of <see cref="MetaText"/> after the category name.</summary>
+    [JsonIgnore] public string MetaAfter => " · added " + ArchiveGroups.ShortDate(CreatedAt, DateTime.Now);
+
     /// <summary>What a screen reader says for the archive row.</summary>
-    public override string ToString() =>
-        $"{Text.Replace("\n", ", ")}, completed {CompletedAt:g}, category {CategoryName}";
+    public override string ToString()
+    {
+        var list = string.IsNullOrWhiteSpace(BoardTitle) ? "" : $", list {BoardTitle}";
+        return $"{Text.Replace("\n", ", ")}, completed {CompletedAt:g}{list}, category {CategoryName}, added {ArchiveGroups.ShortDate(CreatedAt, DateTime.Now)}";
+    }
 }
 
 public class Settings

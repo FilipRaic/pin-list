@@ -1,18 +1,17 @@
 using System;
-using Avalonia;
+using System.Linq;
 using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Media;
+using PinList.Sync;
 
 namespace PinList;
 
-/// <summary>The ⋯ menu and the right-click menus of categories and items.</summary>
+/// <summary>The ⋯ menu and the right-click menus of categories and items. No menu has a submenu.</summary>
 public partial class BoardWindow
 {
-    static MenuItem Item(string header, Action action, string? gesture = null) =>
-        App.CreateMenuItem(header, action, gesture);
+    static MenuItem Item(string header, Action action, string? gesture = null, string? icon = null, bool danger = false) =>
+        App.CreateMenuItem(header, action, gesture, icon, danger);
 
     /// <summary>The last menu opened (tests look at it).</summary>
     internal ContextMenu? LastMenu { get; private set; }
@@ -30,57 +29,31 @@ public partial class BoardWindow
     void Menu_Click(object? sender, RoutedEventArgs e)
     {
         var menu = NewMenu(MenuBtn, PlacementMode.Bottom);
-        var colors = new MenuItem { Header = "Window color" };
-        foreach (var style in Themes.BoardStyles)
-        {
-            var mi = Item(style.Name, () => SetStyle(style.Key));
-            mi.Icon = Swatch(style.Background, true);
-            mi.ToggleType = MenuItemToggleType.Radio;
-            mi.IsChecked = style.Key == CurrentStyle.Key;
-            colors.Items.Add(mi);
-        }
-        menu.Items.Add(colors);
 
-        var transparent = Item("Transparent background", ToggleTransparency);
-        transparent.ToggleType = MenuItemToggleType.CheckBox;
-        transparent.IsChecked = Board.Transparent;
-        menu.Items.Add(transparent);
-        menu.Items.Add(App.Instance.ThemeMenu());
-        AddSyncMenuItem(menu);
+        // list color: one row of swatches, the current one ringed
+        var styles = Themes.BoardStyles.Select(s => (s.Name, s.Background)).ToList();
+        menu.Items.Add(new SwatchMenuItem("List color", styles, CurrentStyle.Background,
+            hex => SetStyle(Themes.BoardStyles.First(s => s.Background == hex).Key)));
+        menu.Items.Add(App.CreateSwitch("Transparent", Board.Transparent, ToggleTransparency, "Line.Transparent"));
+        if (SyncService.Current?.IsAvailable == true)
+            menu.Items.Add(App.CreateSwitch("Sync this list", Board.Synced, () => _ = App.Instance.SetBoardSynced(Board, !Board.Synced, this), "Line.Sync"));
         menu.Items.Add(new Separator());
 
-        menu.Items.Add(Item("All lists", App.Instance.ShowListsWindow));
-        menu.Items.Add(Item("New window", () => Actions.NewBoard(CurrentWorkArea().ToWorkArea(), Board)));
-        menu.Items.Add(Item("Archive", App.Instance.ShowArchive));
-        var copyAll = Item("Copy all items", () => Copying.Board(this, Board));
+        var copyAll = Item("Copy all items", () => Copying.Board(this, Board), icon: "Line.Copy");
         copyAll.IsEnabled = CopyText.Count(Board) > 0;
         menu.Items.Add(copyAll);
-        menu.Items.Add(Item("Export", () => _ = App.Instance.ExportData(this)));
-        menu.Items.Add(Item("Import", () => _ = App.Instance.ImportData(this)));
-        var app = new MenuItem { Header = "PinList" };
-        foreach (var item in App.Instance.AppSettingsItems()) app.Items.Add(item);
-        menu.Items.Add(app);
+        menu.Items.Add(Item("New list", () => Actions.NewBoard(CurrentWorkArea().ToWorkArea(), Board), icon: "Line.Add"));
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Remove from desktop", RemoveFromDesktop));
-        menu.Items.Add(Item("Delete window", DeleteThisBoard));
+
+        menu.Items.Add(Item("All lists", App.Instance.ShowListsWindow, icon: "Line.Grid"));
+        menu.Items.Add(Item("Archive", App.Instance.ShowArchive, icon: "Line.Archive"));
+        menu.Items.Add(Item("Settings", App.Instance.ShowSettings, icon: "Line.Settings"));
+        menu.Items.Add(new Separator());
+
+        menu.Items.Add(Item("Remove from desktop", RemoveFromDesktop, icon: "Line.RemoveFromDesktop"));
+        menu.Items.Add(Item("Delete list", DeleteThisBoard, icon: "Line.Delete", danger: true));
         Open(menu, MenuBtn);
     }
-
-    static Ellipse Swatch(string hex, bool outlined) => new()
-    {
-        Width = 12,
-        Height = 12,
-        Fill = Themes.Brush(hex),
-        Stroke = outlined ? Themes.Brush("#40808080") : null,
-        StrokeThickness = outlined ? 1 : 0,
-    };
-
-    PathIcon Glyph(string key) => new()
-    {
-        Data = (Geometry)this.FindResource(key)!,
-        Width = 13,
-        Height = 13,
-    };
 
     void Cat_ContextRequested(object? sender, ContextRequestedEventArgs e)
     {
@@ -95,27 +68,19 @@ public partial class BoardWindow
     {
         SetActive(cat);
         var menu = NewMenu(target, placement);
-        menu.Items.Add(Item("Rename", () => cat.IsEditing = true, "Double-click"));
+        menu.Items.Add(Item("Rename", () => cat.IsEditing = true, "Double-click", "Line.Rename"));
 
-        var colors = new MenuItem { Header = "Color" };
-        for (int i = 0; i < Actions.Palette.Length; i++)
-        {
-            string hex = Actions.Palette[i];
-            var mi = Item(Actions.PaletteNames[i], () => Actions.SetCategoryColor(cat, hex));
-            mi.Icon = Swatch(hex, false);
-            mi.ToggleType = MenuItemToggleType.Radio;
-            mi.IsChecked = string.Equals(cat.Color, hex, StringComparison.OrdinalIgnoreCase);
-            colors.Items.Add(mi);
-        }
-        menu.Items.Add(colors);
-        menu.Items.Add(Item(cat.Collapsed ? "Expand" : "Collapse", () => ToggleCollapsed(cat), "Enter"));
-        menu.Items.Add(Item("Move up", () => MoveCategoryBy(cat, -1), "Alt+Up"));
-        menu.Items.Add(Item("Move down", () => MoveCategoryBy(cat, +1), "Alt+Down"));
-        var copy = Item("Copy items", () => Copying.Category(this, cat), OsText.CopyGesture);
+        var palette = Actions.Palette.Select((hex, i) => (Actions.PaletteNames[i], hex)).ToList();
+        menu.Items.Add(new SwatchMenuItem("Color", palette, cat.Color, hex => Actions.SetCategoryColor(cat, hex)));
+        menu.Items.Add(Item(cat.Collapsed ? "Expand" : "Collapse", () => ToggleCollapsed(cat), OsText.Enter,
+            cat.Collapsed ? "Line.ChevronDown" : "Line.ChevronUp"));
+        menu.Items.Add(Item("Move up", () => MoveCategoryBy(cat, -1), OsText.Alt("Up"), "Line.ArrowUp"));
+        menu.Items.Add(Item("Move down", () => MoveCategoryBy(cat, +1), OsText.Alt("Down"), "Line.ArrowDown"));
+        var copy = Item("Copy items", () => Copying.Category(this, cat), OsText.CopyGesture, "Line.Copy");
         copy.IsEnabled = cat.Items.Count > 0;
         menu.Items.Add(copy);
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Delete category", () => DeleteWithFocus(cat), "Del"));
+        menu.Items.Add(Item("Delete category", () => DeleteWithFocus(cat), OsText.Delete, "Line.Delete", danger: true));
         Open(menu, target);
     }
 
@@ -131,27 +96,23 @@ public partial class BoardWindow
     {
         SetActive(item);
         var menu = NewMenu(target, placement);
-        menu.Items.Add(Item("Edit", () => item.IsEditing = true, "Enter"));
-        menu.Items.Add(Item("Complete", () => CompleteNow(item), "Space"));
-        menu.Items.Add(Item("Move up", () => MoveItemBy(item, -1), "Alt+Up"));
-        menu.Items.Add(Item("Move down", () => MoveItemBy(item, +1), "Alt+Down"));
-        menu.Items.Add(Item("Copy", () => Copying.Item(this, item), OsText.CopyGesture));
+        menu.Items.Add(Item("Edit", () => item.IsEditing = true, OsText.Enter, "Line.Rename"));
+        menu.Items.Add(Item("Complete", () => { if (!item.IsCompleting) ToggleCompleting(item); }, "Space", "Line.Check"));
+        menu.Items.Add(Item("Move up", () => MoveItemBy(item, -1), OsText.Alt("Up"), "Line.ArrowUp"));
+        menu.Items.Add(Item("Move down", () => MoveItemBy(item, +1), OsText.Alt("Down"), "Line.ArrowDown"));
+        menu.Items.Add(Item("Copy", () => Copying.Item(this, item), OsText.CopyGesture, "Line.Copy"));
         menu.Items.Add(new Separator());
 
-        var due = Item(item.HasDue ? "Change due date" : "Add due date", () => EditDueDate(item));
-        due.Icon = Glyph("Icon.Calendar");
-        menu.Items.Add(due);
+        menu.Items.Add(Item(item.HasDue ? "Change due date" : "Add due date", () => EditDueDate(item), icon: "Line.Calendar"));
         if (item.HasDue)
-            menu.Items.Add(Item("Remove due date", () => { Actions.SetDueDate(item, null); A11y.Announce(this, "Due date removed"); FocusRow(item); }));
+            menu.Items.Add(Item("Remove due date", () => { Actions.SetDueDate(item, null); A11y.Announce(this, "Due date removed"); FocusRow(item); }, icon: "Line.Calendar"));
 
-        var reminder = Item(item.HasPendingReminder ? "Change reminder" : "Add reminder", () => EditReminder(item));
-        reminder.Icon = Glyph("Icon.Bell");
-        menu.Items.Add(reminder);
+        menu.Items.Add(Item(item.HasPendingReminder ? "Change reminder" : "Add reminder", () => EditReminder(item), icon: "Line.Bell"));
         if (item.HasPendingReminder)
-            menu.Items.Add(Item("Remove reminder", () => { Actions.SetReminder(item, null); A11y.Announce(this, "Reminder removed"); FocusRow(item); }));
+            menu.Items.Add(Item("Remove reminder", () => { Actions.SetReminder(item, null); A11y.Announce(this, "Reminder removed"); FocusRow(item); }, icon: "Line.Bell"));
 
         menu.Items.Add(new Separator());
-        menu.Items.Add(Item("Delete", () => DeleteWithFocus(item), "Del"));
+        menu.Items.Add(Item("Delete", () => DeleteWithFocus(item), OsText.Delete, "Line.Delete", danger: true));
         Open(menu, target);
     }
 

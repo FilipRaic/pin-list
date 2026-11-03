@@ -93,19 +93,19 @@ public class UpdateUiTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Check_for_updates_in_the_tray_menu_turns_it_on_and_off()
+    public void Check_for_updates_in_settings_turns_it_on_and_off()
     {
         var updates = UseUpdates();
-        var item = App.ShowTrayMenu().Items.OfType<MenuItem>().Single(m => (string)m.Header! == "Check for updates");
-        Assert.False(item.IsChecked);
-        Assert.False(Tray.Menu.Single(e => e.Text == "Check for updates").Checked);
+        App.ShowSettings();
+        Pump();
+        var toggle = FindAll<ToggleSwitch>(App.MainWindow!.Settings).Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Check for updates");
+        Assert.False(toggle.IsChecked);
 
-        ChooseFromMenu(App.ShowTrayMenu(), "Check for updates");
+        toggle.IsChecked = true;
         Assert.True(updates.Enabled);
-        Assert.True(App.ShowTrayMenu().Items.OfType<MenuItem>().Single(m => (string)m.Header! == "Check for updates").IsChecked);
-        Assert.True(Tray.Menu.Single(e => e.Text == "Check for updates").Checked);
+        Assert.True(UiHost.WaitUntil(() => FindAll<ToggleSwitch>(App.MainWindow!.Settings).Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Check for updates").IsChecked == true));
 
-        Tray.Menu.Single(e => e.Text == "Check for updates").Action!(); // from the menu bar menu
+        FindAll<ToggleSwitch>(App.MainWindow!.Settings).Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Check for updates").IsChecked = false;
         Assert.False(updates.Enabled);
         Assert.DoesNotContain("Get PinList", string.Join(",", Headers(App.ShowTrayMenu())));
     }
@@ -182,34 +182,33 @@ public class PhoneUpdateTests : UiTest
     }
 
     [AvaloniaFact]
-    public void No_asks_again_never_and_the_menu_can_turn_it_on()
+    public void No_asks_again_never_and_settings_can_turn_it_on()
     {
         var updates = Show();
         Choose("Don't check");
         Assert.False(updates.Enabled);
         Assert.False(_view.SnackbarShown);
 
-        OpenMenu();
-        Assert.Equal(new[] { "Archive", "App theme", "Updates", "Export", "Import" }, Options());
-        Choose("Updates");
-        Assert.Equal(new[] { "Check about once a day", "✓ Don't check" }, Options());
-        Choose("Check about once a day");
+        _view.ShowSection(PhoneSection.Settings);
+        Pump();
+        var toggle = FindAll<ToggleSwitch>(_view.SettingsPage!).Single(t => Avalonia.Automation.AutomationProperties.GetName(t) == "Check for updates");
+        Assert.False(toggle.IsChecked);
+        toggle.IsChecked = true;
         Assert.True(updates.Enabled);
 
-        // the new version is first in the menu, and gets the release page without an APK
-        OpenMenu();
-        Assert.Equal("Get PinList 2.3.0", Options()[0]);
-        Choose("Updates");
-        Assert.Equal(new[] { "✓ Check about once a day", "Don't check" }, Options());
-        Choose("✓ Check about once a day");
-
+        // the new version is a row at the top of Settings, and gets the release page without an APK
+        Assert.True(UiHost.WaitUntil(() => Named<Button>(_view, "UpdateRow").IsVisible));
+        Assert.Equal("Get PinList 2.3.0", Named<Button>(_view, "UpdateRow").Content);
         _latest = _latest! with { ApkUrl = null };
         Store.Data.Settings.CheckForUpdates = false;
         updates.Enabled = true;
         Pump();
-        OpenMenu();
-        Choose("Get PinList 2.3.0");
+        Click(Named<Button>(_view, "UpdateRow"));
         Assert.Equal(new[] { Page }, _opened);
+
+        updates.Enabled = false;
+        _view.UpdateCheck = null; // no check in this build: no row
+        Assert.False(Named<Button>(_view, "UpdateRow").IsVisible);
     }
 
     [AvaloniaFact]

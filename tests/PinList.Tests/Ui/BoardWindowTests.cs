@@ -448,13 +448,16 @@ public class BoardWindowTests : UiTest
 
         Click(button);
         Assert.True(cat.Collapsed);
-        Assert.Contains("collapsed", button.Classes); // the arrow points right
+        Assert.Contains("collapsed", button.Classes); // the arrow turns to point right
+        Assert.Equal("A collapsed", A11y.LastAnnouncement);
+        UiHost.Wait(TimeSpan.FromMilliseconds(400)); // the items close up, then hide
         Assert.False(Row(w, cat.Items[0]).IsEffectivelyVisible);
         Assert.True(Row(w, cat).IsEffectivelyVisible); // header stays
-        Assert.Equal("A collapsed", A11y.LastAnnouncement);
 
         Click(button);
         Assert.False(cat.Collapsed);
+        UiHost.Wait(TimeSpan.FromMilliseconds(100));
+        Assert.True(Row(w, cat.Items[0]).IsEffectivelyVisible); // they show as soon as they start to open
     }
 
     // ================= Adding items =================
@@ -523,18 +526,23 @@ public class BoardWindowTests : UiTest
     [AvaloniaFact]
     public void The_circle_completes_after_a_moment_and_a_second_click_cancels()
     {
-        BoardWindow.CompleteDelay = TimeSpan.FromMilliseconds(100);
+        CompleteIn(TimeSpan.FromMilliseconds(100));
         var w = OpenNew(("A", new[] { "a", "b" }));
         var cat = w.Board.Categories[0];
         var a = cat.Items[0];
         var check = CheckButton(w, a);
         Assert.Equal("Complete a", NameOf(check));
 
+        Border Strike() => Find<Border>(Row(w, a), b => b.Classes.Contains("strike"))!;
+        Assert.False(Strike().IsVisible); // items are not crossed out until they are completing
+
         Click(check);
         Assert.True(a.IsCompleting);
         Assert.Contains("completing", Row(w, a).Classes); // crossed out, the circle filled
+        Assert.True(Strike().IsVisible);
         Click(check);
         Assert.False(a.IsCompleting);
+        Assert.False(Strike().IsVisible);
         Assert.Equal("Cancelled", A11y.LastAnnouncement);
         UiHost.Wait(TimeSpan.FromMilliseconds(300));
         Assert.Contains(a, cat.Items); // cancelled
@@ -650,7 +658,7 @@ public class BoardWindowTests : UiTest
         w.Board.IsEditingTitle = true;
         Pump();
         var box = EditBox(w, w.Board);
-        Assert.Equal("Window title", NameOf(box));
+        Assert.Equal("List title", NameOf(box));
         box.Text = "  ";
         Press(box, Key.Enter);
         Assert.Equal("", w.Board.Title); // allowed: a widget without a title
@@ -686,13 +694,13 @@ public class BoardWindowTests : UiTest
         var w = OpenNew(("A", new[] { "a", "b" }), ("B", new string[0]));
         w.Board.Title = "Work";
         Click(Named<Button>(w, "MenuBtn"));
-        ChooseFromMenu(w.LastMenu!, "Delete window"); // Esc
+        ChooseFromMenu(w.LastMenu!, "Delete list"); // Esc
         Assert.Contains("Delete \"Work\"?: This deletes the list with 2 categories and 2 items. Items are not moved to the archive.", Dialogs.Shown);
         Assert.True(w.IsVisible);
 
         Dialogs.ChooseAnswer = _ => 1;
         Click(Named<Button>(w, "MenuBtn"));
-        ChooseFromMenu(w.LastMenu!, "Delete window");
+        ChooseFromMenu(w.LastMenu!, "Delete list");
         Assert.False(w.IsVisible);
         Assert.DoesNotContain(w.Board, Store.Data.Boards);
         UiHost.Wait(TimeSpan.FromMilliseconds(300));
@@ -706,7 +714,7 @@ public class BoardWindowTests : UiTest
         board.Title = "";
         var w = Open(board);
         Click(Named<Button>(w, "MenuBtn"));
-        ChooseFromMenu(w.LastMenu!, "Delete window");
-        Assert.Contains("Delete this window?: This deletes the list.", Dialogs.Shown);
+        ChooseFromMenu(w.LastMenu!, "Delete list");
+        Assert.Contains("Delete this list?: This deletes the list.", Dialogs.Shown);
     }
 }

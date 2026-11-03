@@ -49,6 +49,19 @@ public static class Actions
     {
         UndoStack.Add((what, undo));
         if (UndoStack.Count > MaxUndo) UndoStack.RemoveAt(0);
+        UndoHistoryChanged();
+    }
+
+    /// <summary>Goes up whenever the undo history changes, so an Undo button can tell whether it still undoes its own change.</summary>
+    public static int UndoVersion { get; private set; }
+
+    /// <summary>The undo history changed (a new change, an undo, or it was cleared).</summary>
+    public static event Action? UndoChanged;
+
+    static void UndoHistoryChanged()
+    {
+        UndoVersion++;
+        UndoChanged?.Invoke();
     }
 
     /// <summary>Text in quotes, shortened to its first line and 60 characters.</summary>
@@ -73,11 +86,16 @@ public static class Actions
         entry.undo();
         what = entry.what;
         Store.MarkDirty();
+        UndoHistoryChanged();
         return true;
     }
 
     /// <summary>Forgets the undo history (after all data was replaced by an import).</summary>
-    public static void ClearUndo() => UndoStack.Clear();
+    public static void ClearUndo()
+    {
+        UndoStack.Clear();
+        UndoHistoryChanged();
+    }
 
     // ================= Items =================
 
@@ -88,6 +106,7 @@ public static class Actions
         if (cat == null) return;
         Store.Locate(item)?.category.Items.Remove(item);
         item.IsCompleting = false;
+        item.IsLeaving = false;
         item.IsEditing = false;
         cat.Items.Insert(Math.Clamp(index, 0, cat.Items.Count), item);
         ChangeTracker.Touch(item.Sync); // a new change, so sync doesn't remove it again
@@ -139,6 +158,7 @@ public static class Actions
         int index = cat.Items.IndexOf(item);
         cat.Items.RemoveAt(index);
         item.IsCompleting = false;
+        item.IsLeaving = false;
         item.IsActive = false;
 
         var archived = new ArchivedItem
@@ -358,7 +378,7 @@ public static class Actions
         var old = board.Title;
         if (old == title) return;
         board.Title = title;
-        PushUndo("renaming the window", () => board.Title = old);
+        PushUndo("renaming the list", () => board.Title = old);
         Store.MarkDirty();
     }
 
@@ -409,7 +429,7 @@ public static class Actions
         index = Math.Clamp(index, 0, boards.Count - 1);
         if (index == from) return;
         boards.Move(from, index);
-        PushUndo($"moving the window {Quote(board.Title)}", () =>
+        PushUndo($"moving the list {Quote(board.Title)}", () =>
         {
             int now = boards.IndexOf(board);
             if (now >= 0) boards.Move(now, Math.Min(from, boards.Count - 1));

@@ -7,6 +7,7 @@
     <Styles.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://PinList.UI/Styles/Tokens.axaml"/>
                 <ResourceInclude Source="avares://PinList.UI/Styles/Icons.axaml"/>
             </ResourceDictionary.MergedDictionaries>
 
@@ -19,6 +20,8 @@
             </FocusAdornerTemplate>
         </ResourceDictionary>
     </Styles.Resources>
+
+    <StyleInclude Source="avares://PinList.UI/Styles/ArchiveRow.axaml"/>
 
     <!-- ================= Icons ================= -->
 
@@ -34,10 +37,10 @@
         <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="28"/>
-        <Setter Property="Height" Value="26"/>
+        <Setter Property="Width" Value="{StaticResource S.IconButton}"/>
+        <Setter Property="Height" Value="{StaticResource S.IconButton}"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.Row}"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -58,29 +61,34 @@
         <Setter Property="Width" Value="12"/>
         <Setter Property="Height" Value="12"/>
     </Style>
+    <Style Selector="Button.icon local|LineIcon">
+        <Setter Property="Width" Value="{StaticResource S.Icon}"/>
+        <Setter Property="Height" Value="{StaticResource S.Icon}"/>
+    </Style>
 
     <!-- Buttons of dialogs and the archive window -->
     <Style Selector="Button.dialog">
-        <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
-        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="5"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
+        <Setter Property="FontSize" Value="{StaticResource T.Body}"/>
         <Setter Property="Padding" Value="16,6"/>
         <Setter Property="MinWidth" Value="80"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="FocusAdorner" Value="{StaticResource FocusRing}"/>
     </Style>
     <Style Selector="Button.dialog.accent">
-        <Setter Property="Background" Value="{DynamicResource AccentFill}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}"/>
+        <Setter Property="Background" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
         <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
     </Style>
     <Style Selector="Button.dialog.danger">
-        <Setter Property="Background" Value="{DynamicResource DangerFill}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource DangerFill}"/>
+        <Setter Property="Background" Value="{DynamicResource Danger}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Danger}"/>
         <Setter Property="Foreground" Value="{DynamicResource DangerText}"/>
     </Style>
     <!-- Keep the button's own colors on hover/press (Fluent would replace them); only dim it a little -->
@@ -97,8 +105,88 @@
         <Setter Property="Opacity" Value="0.7"/>
     </Style>
     <Style Selector="Button.dialog:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
-        <Setter Property="BorderBrush" Value="{DynamicResource AccentFill}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
     </Style>
+
+    <!-- ================= Completing and leaving rows (desktop and phone) ================= -->
+
+        <Style Selector="Border.strike">
+            <Setter Property="Height" Value="1.5"/>
+            <Setter Property="VerticalAlignment" Value="Top"/>
+            <Setter Property="Margin" Value="0,9,0,0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Background" Value="{DynamicResource TextMuted}"/>
+            <Setter Property="RenderTransformOrigin" Value="0%,50%"/>
+            <!-- Hidden until the item is completing. A zero scale alone is not enough, the renderer can skip it. -->
+            <Setter Property="IsVisible" Value="False"/>
+        </Style>
+        <Style Selector="local|AccessibleRow.completing Border.strike">
+            <Setter Property="IsVisible" Value="True"/>
+            <Setter Property="RenderTransform" Value="scaleX(1)"/>
+            <Style.Animations>
+                <Animation Duration="0:0:0.32" Easing="CubicEaseOut" FillMode="Backward">
+                    <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="0"/></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1"/></KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="TextBlock.itemtext">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.3"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="local|AccessibleRow.completing TextBlock.itemtext">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+        </Style>
+
+        <!-- Leaving: the row slides 14 px to the right and fades out while its height closes, so the rows below glide up -->
+        <Style Selector="local|Collapser">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="{x:Static local:Collapser.RevealProperty}" Duration="0:0:0.28" Easing="CubicEaseInOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="local|Collapser.leaving">
+            <Setter Property="Reveal" Value="0"/>
+        </Style>
+        <!-- A collapsed category: its items close up (and fade a little) -->
+        <Style Selector="local|Collapser.section">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="{x:Static local:Collapser.RevealProperty}" Duration="0:0:0.24" Easing="CubicEaseInOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="local|Collapser.section.closed">
+            <Setter Property="Reveal" Value="0"/>
+            <Setter Property="Opacity" Value="0.4"/>
+        </Style>
+        <!-- The chevron of a category turns instead of jumping when it collapses -->
+        <Style Selector="PathIcon.turns">
+            <Setter Property="RenderTransform" Value="rotate(0deg)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.24" Easing="CubicEaseInOut"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="PathIcon.turns.collapsed">
+            <Setter Property="RenderTransform" Value="rotate(-90deg)"/>
+        </Style>
+        <Style Selector="local|Collapser.leaving > local|AccessibleRow">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="RenderTransform" Value="translateX(14px)"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.28" Easing="CubicEaseIn"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.28"/>
+                </Transitions>
+            </Setter>
+        </Style>
 
     <!-- ================= Text boxes ================= -->
 
@@ -139,31 +227,180 @@
 
     <!-- Search box in the archive window -->
     <Style Selector="TextBox.search">
-        <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
-        <Setter Property="CaretBrush" Value="{DynamicResource ArcText}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Text1}"/>
         <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
-        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="5"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
+        <Setter Property="FontSize" Value="{StaticResource T.Body}"/>
         <Setter Property="Padding" Value="8,6"/>
         <Setter Property="MinHeight" Value="0"/>
     </Style>
     <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
     </Style>
     <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
-        <Setter Property="Background" Value="{DynamicResource ControlBg}"/>
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
         <Setter Property="BorderThickness" Value="1"/>
     </Style>
+    <!-- The phone search field: taller, rounder, room for the magnifier, a quiet border when focused -->
+    <Style Selector="TextBox.search.phone">
+        <Setter Property="FontSize" Value="{StaticResource T.PhoneBody}"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Padding" Value="42,11,14,11"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="TextBox.search.phone:focus /template/ Border#PART_BorderElement">
+        <Setter Property="BorderBrush" Value="{DynamicResource Text3}"/>
+    </Style>
     <Style Selector="TextBox.search:pointerover, TextBox.search:focus">
-        <Setter Property="Foreground" Value="{DynamicResource ArcText}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
     </Style>
     <Style Selector="TextBox.search /template/ TextBlock#PART_Placeholder">
-        <Setter Property="Foreground" Value="{DynamicResource ArcMuted}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+    </Style>
+
+    <!-- ================= Settings page ================= -->
+
+    <!-- A group of settings: a titled box of rows with a line between them -->
+    <Style Selector="Border.group">
+        <Setter Property="Background" Value="{DynamicResource Surface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.Menu}"/>
+        <Setter Property="ClipToBounds" Value="True"/>
+    </Style>
+    <Style Selector="Border.divider">
+        <Setter Property="Background" Value="{DynamicResource Line}"/>
+    </Style>
+
+    <!-- The sync status dot next to the account -->
+    <Style Selector="Ellipse.synced">
+        <Setter Property="Fill" Value="{DynamicResource Done}"/>
+    </Style>
+    <Style Selector="Ellipse.syncing">
+        <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Ellipse.notsynced">
+        <Setter Property="Fill" Value="{DynamicResource Text3}"/>
+    </Style>
+
+    <!-- Small buttons on the right side of a desktop settings row -->
+    <Style Selector="Button.dialog.small">
+        <Setter Property="Background" Value="{DynamicResource ItemHover}"/>
+        <Setter Property="FontSize" Value="12.5"/>
+        <Setter Property="Padding" Value="12,5"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
+    </Style>
+    <Style Selector="Button.dialog.small.accent">
+        <Setter Property="Background" Value="{DynamicResource Accent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <!-- Dangerous, but quiet: red text on the usual small button -->
+    <Style Selector="Button.dialog.small.danger">
+        <Setter Property="Background" Value="{DynamicResource ItemHover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+    </Style>
+    <Style Selector="Button.dialog:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{TemplateBinding Background}"/>
+        <Setter Property="BorderBrush" Value="{TemplateBinding BorderBrush}"/>
+        <Setter Property="Foreground" Value="{TemplateBinding Foreground}"/>
+    </Style>
+    <Style Selector="Button.dialog:disabled">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+
+    <!-- A settings row you tap on the phone: the text, and a chevron on the right -->
+    <Style Selector="Button.setrow">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="16,13"/>
+        <Setter Property="MinHeight" Value="52"/>
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="Back" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <ContentPresenter Name="Text" Content="{TemplateBinding Content}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        <local:LineIcon Name="Chevron" Grid.Column="1" Data="{DynamicResource Line.ChevronRight}"
+                                        Width="16" Height="16" VerticalAlignment="Center"
+                                        TextElement.Foreground="{DynamicResource Text3}"/>
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="Button.setrow:pressed /template/ Border#Back">
+        <Setter Property="Background" Value="{DynamicResource ItemHover}"/>
+    </Style>
+    <Style Selector="Button.setrow.accent">
+        <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style Selector="Button.setrow.danger">
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+    </Style>
+    <Style Selector="Button.setrow.danger /template/ local|LineIcon#Chevron">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Button.setrow:disabled">
+        <Setter Property="Opacity" Value="0.45"/>
+    </Style>
+    <Style Selector="TextBlock.grouptitle">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+        <Setter Property="Margin" Value="4,0,0,6"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="TextBlock.problem">
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Segmented control (System / Light / Dark) -->
+    <Style Selector="Border.segments">
+        <Setter Property="Background" Value="{DynamicResource Hover}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.Menu}"/>
+        <Setter Property="Padding" Value="3"/>
+    </Style>
+    <Style Selector="ToggleButton.seg">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="Padding" Value="12,7"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="ToggleButton.seg:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource Selected}"/>
+        <Setter Property="Foreground" Value="{DynamicResource SelectedText}"/>
+    </Style>
+    <Style Selector="ToggleButton.seg:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource ItemHover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource ItemHoverText}"/>
+    </Style>
+    <Style Selector="ToggleButton.seg:checked:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource Selected}"/>
+        <Setter Property="Foreground" Value="{DynamicResource SelectedText}"/>
     </Style>
 
     <!-- ================= Slim scrollbar ================= -->
@@ -195,27 +432,76 @@
     <!-- ================= Menus and tooltips (colors: Themes.MapFluent) ================= -->
 
     <Style Selector="MenuFlyoutPresenter, ContextMenu">
-        <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="0,4"/>
-        <Setter Property="MinWidth" Value="200"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.Menu}"/>
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="MinWidth" Value="220"/>
+        <Setter Property="FontSize" Value="{StaticResource T.Body}"/>
+        <Setter Property="RenderTransformOrigin" Value="0%,0%"/>
+        <Setter Property="RenderTransform" Value="scale(1)"/>
+        <!-- opens with a short fade and a scale from 98 % -->
+        <Style.Animations>
+            <Animation Duration="0:0:0.12" Easing="CubicEaseOut">
+                <KeyFrame Cue="0%">
+                    <Setter Property="Opacity" Value="0"/>
+                    <Setter Property="ScaleTransform.ScaleX" Value="0.98"/>
+                    <Setter Property="ScaleTransform.ScaleY" Value="0.98"/>
+                </KeyFrame>
+                <KeyFrame Cue="100%">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="ScaleTransform.ScaleX" Value="1"/>
+                    <Setter Property="ScaleTransform.ScaleY" Value="1"/>
+                </KeyFrame>
+            </Animation>
+        </Style.Animations>
     </Style>
     <Style Selector="MenuItem">
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="Margin" Value="4,1"/>
-        <Setter Property="Padding" Value="10,6"/>
-        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="FontSize" Value="{StaticResource T.Body}"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
     </Style>
     <Style Selector="MenuItem:disabled">
         <Setter Property="Opacity" Value="0.45"/>
     </Style>
+    <Style Selector="MenuItem local|LineIcon">
+        <Setter Property="Width" Value="{StaticResource S.Icon}"/>
+        <Setter Property="Height" Value="{StaticResource S.Icon}"/>
+    </Style>
+    <!-- Delete entries are red, also while hovered -->
+    <Style Selector="MenuItem.danger">
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+    </Style>
+    <Style Selector="MenuItem.danger:pointerover /template/ ContentPresenter#PART_HeaderPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+    </Style>
+    <!-- Switch entries draw their own switch, the swatch row has no check mark -->
+    <Style Selector="MenuItem.switch /template/ ContentControl#PART_ToggleIconPresenter, MenuItem.swatches /template/ ContentControl#PART_ToggleIconPresenter">
+        <Setter Property="IsVisible" Value="False"/>
+    </Style>
+    <Style Selector="Border.switchtrack">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Text3}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+    </Style>
+    <Style Selector="Border.switchtrack Ellipse">
+        <Setter Property="Fill" Value="{DynamicResource Text3}"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="Border.switchtrack.on">
+        <Setter Property="Background" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style Selector="Border.switchtrack.on Ellipse">
+        <Setter Property="Fill" Value="{DynamicResource AccentText}"/>
+        <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
     <Style Selector="ContextMenu Separator, MenuItem Separator">
         <Setter Property="Margin" Value="12,4"/>
-        <Setter Property="Background" Value="{DynamicResource MenuBorder}"/>
+        <Setter Property="Background" Value="{DynamicResource Line}"/>
     </Style>
     <Style Selector="ToolTip">
         <Setter Property="FontSize" Value="12"/>
-        <Setter Property="CornerRadius" Value="5"/>
+        <Setter Property="CornerRadius" Value="{StaticResource R.MenuItem}"/>
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="MaxWidth" Value="420"/>
     </Style>

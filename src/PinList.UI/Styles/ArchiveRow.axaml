@@ -1,0 +1,108 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList">
+
+    <!-- One archive row and one day heading, shared by the PinList window and the phone.
+         The row shows a filled check circle in the shade of the category, the first line of the item, and under it
+         "time · list · category · added 28 Oct" with the category name in its color. -->
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <DataTemplate x:Key="ArchiveItemTemplate" x:DataType="local:ArchivedItem">
+                <Grid ColumnDefinitions="Auto,*,Auto" Background="Transparent" Margin="6,2">
+                    <Panel Width="18" Height="18" Margin="0,2,12,0" VerticalAlignment="Top">
+                        <Ellipse>
+                            <Ellipse.Fill>
+                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Fill">
+                                    <Binding Path="CategoryColor"/>
+                                    <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                    <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                </MultiBinding>
+                            </Ellipse.Fill>
+                        </Ellipse>
+                        <PathIcon Data="{DynamicResource Icon.Checkmark}" Width="10" Height="10">
+                            <PathIcon.Foreground>
+                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Tick">
+                                    <Binding Path="CategoryColor"/>
+                                    <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                    <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                </MultiBinding>
+                            </PathIcon.Foreground>
+                        </PathIcon>
+                    </Panel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Text, Converter={x:Static local:Converters.FirstLine}}" TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding Text}"/>
+                        <TextBlock Classes="meta" TextTrimming="CharacterEllipsis">
+                            <Run Text="{Binding MetaBefore, Mode=OneWay}"/><Run Text="{Binding CategoryName, Mode=OneWay}" FontWeight="SemiBold">
+                                <Run.Foreground>
+                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
+                                        <Binding Path="CategoryColor"/>
+                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                    </MultiBinding>
+                                </Run.Foreground>
+                            </Run><Run Text="{Binding MetaAfter, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- Restore and delete: shown on the hovered row and on the selected rows (see the ListBox.withactions styles) -->
+                    <StackPanel Grid.Column="2" Classes="rowactions" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center" IsVisible="False">
+                        <Button Classes="icon restore" ToolTip.Tip="Restore" AutomationProperties.Name="Restore">
+                            <local:LineIcon Data="{DynamicResource Line.Restore}"/>
+                        </Button>
+                        <Button Classes="icon deleteforever" ToolTip.Tip="Delete permanently" AutomationProperties.Name="Delete permanently">
+                            <local:LineIcon Data="{DynamicResource Line.Delete}"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </DataTemplate>
+
+            <DataTemplate x:Key="ArchiveDayTemplate" x:DataType="local:ArchiveDayHeader">
+                <TextBlock Classes="dayheader" Text="{Binding Title}" Margin="6,12,0,2"/>
+            </DataTemplate>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <Style Selector="TextBlock.meta">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+    </Style>
+    <Style Selector="TextBlock.dayheader">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+    </Style>
+
+    <!-- The list: rounded rows, hover and selection in the chrome colors -->
+    <Style Selector="ListBox.archive">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="ListBox.archive ListBoxItem">
+        <Setter Property="Padding" Value="6,6"/>
+        <Setter Property="Margin" Value="0,1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource R.Row}"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="FocusAdorner" Value="{DynamicResource InnerFocusRing}"/>
+    </Style>
+    <Style Selector="ListBox.archive ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource R.Row}"/>
+    </Style>
+    <Style Selector="ListBox.archive ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource Hover}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+    </Style>
+    <Style Selector="ListBox.archive ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter,
+                     ListBox.archive ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter,
+                     ListBox.archive ListBoxItem:selected:focus /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource Selected}"/>
+        <Setter Property="Foreground" Value="{DynamicResource SelectedText}"/>
+    </Style>
+    <Style Selector="ListBox.archive.withactions ListBoxItem:pointerover StackPanel.rowactions,
+                     ListBox.archive.withactions ListBoxItem:selected StackPanel.rowactions">
+        <Setter Property="IsVisible" Value="True"/>
+    </Style>
+</Styles>

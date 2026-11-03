@@ -114,36 +114,90 @@ public partial class BoardWindow
         FocusRow(cat);
     }
 
-    /// <summary>How long a completed item stays (crossed out) before it goes to the archive; tests shorten it.</summary>
-    internal static TimeSpan CompleteDelay { get; set; } = TimeSpan.FromMilliseconds(900);
+    CompleteFlow? _completeFlow;
 
-    /// <summary>Starts completing (with ~1 s to cancel), or cancels if it's already completing. Same as clicking the circle.</summary>
+    /// <summary>The steps of completing: crossed out, sliding away, archived (see CompleteFlow).</summary>
+    CompleteFlow Flow => _completeFlow ??= new CompleteFlow(CompleteNow);
+
+    /// <summary>Starts completing, or cancels if the item is already completing. Same as clicking the circle.</summary>
     void ToggleCompleting(TodoItem item)
     {
-        if (item.IsCompleting)
-        {
-            item.IsCompleting = false;
-            A11y.Announce(this, "Cancelled");
-            return;
-        }
-
-        item.IsCompleting = true;
-        var timer = new DispatcherTimer { Interval = CompleteDelay };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            if (item.IsCompleting) CompleteNow(item);
-        };
-        timer.Start();
+        if (Flow.Toggle(item) == CompleteResult.Cancelled) A11y.Announce(this, "Cancelled");
     }
 
+    /// <summary>Archives the item once its row has left (also at once when the delay is zero).</summary>
     void CompleteNow(TodoItem item)
     {
         bool hadFocus = IsRowFocused(item);
         var next = NeighborAfterRemoval(item);
+        var category = Store.Locate(item)?.category;
         Actions.Complete(item);
-        A11y.Announce(this, $"Completed {item.Text.Split('\n')[0]}. Ctrl+Z undoes.");
+        A11y.Announce(this, $"Completed {item.Text.Split('\n')[0]}. {OsText.Undo} undoes.");
+        ShowUndoPill(item.Text);
+        if (category != null) Bump(category);
         if (hadFocus) FocusRowOrContent(next);
+    }
+
+    /// <summary>The category's count does a small bump when an item leaves it.</summary>
+    void Bump(Category category)
+    {
+        if (FindTagged(category) is not { } header) return;
+        if (header.GetVisualDescendants().OfType<Border>().FirstOrDefault(b => b.Classes.Contains("countpill")) is not { } pill) return;
+        pill.Classes.Add("bump");
+        DispatcherTimer.RunOnce(() => pill.Classes.Remove("bump"), TimeSpan.FromMilliseconds(300));
+    }
+
+    // ================= Undo pill =================
+
+    /// <summary>How long the Undo pill stays after an item was completed; tests shorten it.</summary>
+    internal static TimeSpan UndoPillDuration { get; set; } = TimeSpan.FromSeconds(4);
+
+    DispatcherTimer? _pillTimer;
+
+    /// <summary>The undo history as it was right after the completion the pill offers to undo.</summary>
+    int _pillUndoVersion;
+
+    /// <summary>Shows "Completed ..." with an Undo button at the bottom of the widget for a few seconds.</summary>
+    internal void ShowUndoPill(string itemText)
+    {
+        UndoText.Text = $"Completed {Quote(itemText)}";
+        UndoPill.IsVisible = true;
+        _pillUndoVersion = Actions.UndoVersion;
+        if (_pillTimer == null)
+        {
+            _pillTimer = new DispatcherTimer();
+            _pillTimer.Tick += (_, _) => HideUndoPill();
+        }
+        _pillTimer.Stop();
+        _pillTimer.Interval = UndoPillDuration;
+        _pillTimer.Start();
+    }
+
+    /// <summary>Any other change or undo, also in another widget: the pill's Undo would undo something else now.</summary>
+    void OnUndoChanged()
+    {
+        // the history can change off this window's thread (background work, tests): check the pill on its own thread
+        if (!CheckAccess())
+        {
+            this.Dispatcher.Post(OnUndoChanged);
+            return;
+        }
+        if (UndoPill.IsVisible && Actions.UndoVersion != _pillUndoVersion) HideUndoPill();
+    }
+
+    void HideUndoPill()
+    {
+        _pillTimer?.Stop();
+        UndoPill.IsVisible = false;
+    }
+
+    void Undo_Click(object? sender, RoutedEventArgs e) => UndoLast();
+
+    /// <summary>Ctrl+Z and the Undo button.</summary>
+    void UndoLast()
+    {
+        HideUndoPill();
+        A11y.Announce(this, Actions.Undo(out var what) ? "Undone: " + what : "Nothing to undo");
     }
 
     /// <summary>
@@ -158,11 +212,11 @@ public partial class BoardWindow
         {
             case TodoItem item:
                 Actions.Delete(item);
-                A11y.Announce(this, $"Deleted {item.Text.Split('\n')[0]}. Ctrl+Z undoes.");
+                A11y.Announce(this, $"Deleted {item.Text.Split('\n')[0]}. {OsText.Undo} undoes.");
                 break;
             case Category cat:
                 Actions.DeleteCategory(cat);
-                A11y.Announce(this, $"Deleted category {cat.Name}. Ctrl+Z undoes.");
+                A11y.Announce(this, $"Deleted category {cat.Name}. {OsText.Undo} undoes.");
                 break;
         }
         SetActive(null);
@@ -175,9 +229,9 @@ public partial class BoardWindow
 
     static string DeleteDetails(Observable element) => element switch
     {
-        Category { Items.Count: 1 } => "Its 1 item is deleted too. Ctrl+Z brings it back.",
-        Category { Items.Count: > 1 } c => $"Its {c.Items.Count} items are deleted too. Ctrl+Z brings them back.",
-        _ => "Ctrl+Z brings it back.",
+        Category { Items.Count: 1 } => $"Its 1 item is deleted too. {OsText.Undo} brings it back.",
+        Category { Items.Count: > 1 } c => $"Its {c.Items.Count} items are deleted too. {OsText.Undo} brings them back.",
+        _ => $"{OsText.Undo} brings it back.",
     };
 
     void MoveItemBy(TodoItem item, int delta)
@@ -285,16 +339,18 @@ public partial class BoardWindow
 
     // ================= Moving and resizing the widget =================
 
-    /// <summary>Ctrl+Arrows move the widget, Ctrl+Shift+Arrows resize it. Returns true if handled.</summary>
+    /// <summary>Ctrl+Arrows move the widget, Ctrl+Shift+Arrows resize it (⌘ on a Mac). Returns true if handled.</summary>
     bool HandleWindowKeys(KeyEventArgs e)
     {
         var mods = e.KeyModifiers;
+        // on a Mac, Ctrl+Arrows switch desktops, so ⌘ does it there
+        if (OsText.IsCommand(mods & ~KeyModifiers.Shift)) mods = (mods & KeyModifiers.Shift) | KeyModifiers.Control;
         if (mods != KeyModifiers.Control && mods != (KeyModifiers.Control | KeyModifiers.Shift)) return false;
         if (e.Key is not (Key.Left or Key.Right or Key.Up or Key.Down)) return false;
         if (!ShortcutsAllowed()) return false;
         if (Board.Locked)
         {
-            A11y.Announce(this, "The window is locked. Unlock it to move or resize.");
+            A11y.Announce(this, "The list is locked. Unlock it to move or resize.");
             return true;
         }
 

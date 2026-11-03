@@ -29,7 +29,7 @@ public sealed class SyncService
     const string ResetFile = "reset.json";
     const string Unreachable = "Can't reach Google Drive.";
     const string SignedOut = "Google signed you out.";
-    const string NewerFormat = "Update PinList to keep syncing this window.";
+    const string NewerFormat = "Update PinList to keep syncing this list.";
 
     readonly IGoogleAuth _auth;
     readonly Func<ICloudStore> _cloudFactory;

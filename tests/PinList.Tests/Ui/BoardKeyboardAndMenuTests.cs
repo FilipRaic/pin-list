@@ -63,7 +63,7 @@ public class BoardKeyboardTests : UiTest
     [AvaloniaFact]
     public void Space_completes_and_focus_moves_to_the_next_item()
     {
-        BoardWindow.CompleteDelay = TimeSpan.FromMilliseconds(100);
+        CompleteIn(TimeSpan.FromMilliseconds(100));
         var w = OpenNew(("A", new[] { "a", "b" }));
         var cat = w.Board.Categories[0];
         var a = cat.Items[0];
@@ -99,6 +99,7 @@ public class BoardKeyboardTests : UiTest
     public void Delete_moves_focus_to_the_next_then_previous_then_the_category()
     {
         Dialogs.ChooseAnswer = _ => 1; // "Delete" in the confirmation
+        CompleteIn(TimeSpan.FromMilliseconds(100));
         var w = OpenNew(("A", new[] { "a", "b", "c" }));
         var cat = w.Board.Categories[0];
         FocusOn(Row(w, cat.Items[1]));
@@ -349,7 +350,7 @@ public class BoardKeyboardTests : UiTest
         w.Board.Locked = true;
         Press(w, Key.Right, KeyModifiers.Control);
         Assert.Equal(left, w.Left, 0); // locked: "unlock it first"
-        Assert.Equal("The window is locked. Unlock it to move or resize.", A11y.LastAnnouncement);
+        Assert.Equal("The list is locked. Unlock it to move or resize.", A11y.LastAnnouncement);
 
         w.Board.Locked = false;
         var box = AddBox(w, w.Board.Categories[0]);
@@ -363,26 +364,18 @@ public class BoardKeyboardTests : UiTest
 /// <summary>The widget's ⋯ menu and the right-click menus of categories and items.</summary>
 public class BoardMenuTests : UiTest
 {
-    /// <summary>The app's settings (Google sync, updates, start at login, Exit) are in every widget's menu too.</summary>
+    /// <summary>The widget menu has no submenus: colors are a row of swatches, Transparent and Sync are switches.</summary>
     [AvaloniaFact]
-    public void Widget_menu_has_the_app_settings()
+    public void Widget_menu_has_no_submenus()
     {
         var w = OpenNew(("A", new string[0]));
         var menu = WidgetMenu(w);
-        var app = MenuItem(menu, "PinList");
-        Assert.Equal(new object?[] { "Google sync", null, "Start with Windows", "Check for updates", "Open data folder", null, "Exit" },
-            app.Items.Select(i => i is MenuItem m ? (object?)Header(m) : null).ToArray());
+        Assert.Equal(new object?[] { "List color", "Transparent", null, "Copy all items", "New list", null, "All lists", "Archive", "Settings", null, "Remove from desktop", "Delete list" },
+            Entries(menu));
+        Assert.All(menu.Items.OfType<Avalonia.Controls.MenuItem>(), m => Assert.Empty(m.Items));
+        Assert.All(menu.Items.OfType<Avalonia.Controls.MenuItem>(), m => Assert.NotNull(m.Icon ?? (m is SwatchMenuItem ? new object() : null)));
+        Assert.Contains("danger", MenuItem(menu, "Delete list").Classes);
         menu.Close();
-    }
-
-    [AvaloniaFact]
-    public void Exit_in_the_widget_menu_exits()
-    {
-        var w = OpenNew(("A", new string[0]));
-        int before = UiHost.ShutdownRequests;
-        ChooseFromMenu(WidgetMenu(w), "PinList", "Exit");
-        Assert.True(UiHost.WaitUntil(() => UiHost.ShutdownRequests == before + 1));
-        App.ShuttingDown = false;
     }
 
     [AvaloniaFact]
@@ -505,46 +498,43 @@ public class BoardMenuTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Widget_menu_changes_color_transparency_and_theme()
+    public void Widget_menu_changes_color_and_transparency()
     {
         var w = OpenNew(("A", new string[0]));
         var menu = WidgetMenu(w);
-        Assert.True(MenuItem(menu, "Window color", "Dark").IsChecked);
-        Assert.IsType<Avalonia.Controls.Shapes.Ellipse>(MenuItem(menu, "Window color", "Yellow").Icon);
-        ChooseFromMenu(menu, "Window color", "Yellow");
+        Assert.Equal("List color, Dark, 1 of 9", AutomationProperties.GetName(Swatches(menu, "List color")));
+        Assert.Equal(Themes.Get("Dark").Background, Swatches(menu, "List color").HighlightedHex); // the current color is marked
+        ChooseSwatch(menu, "List color", "Yellow");
         Assert.Equal("Yellow", w.Board.Style);
         Assert.Equal(Avalonia.Styling.ThemeVariant.Light, w.RequestedThemeVariant);
 
         menu = WidgetMenu(w);
-        Assert.False(MenuItem(menu, "Transparent background").IsChecked);
-        ChooseFromMenu(menu, "Transparent background");
-        Assert.True(w.Board.Transparent);
-
-        Store.Data.Settings.Theme = "System";
+        w.Board.Transparent = false;
         menu = WidgetMenu(w);
-        Assert.True(MenuItem(menu, "App theme", "Use Windows setting").IsChecked); // the default for new data
-        ChooseFromMenu(menu, "App theme", "Light");
-        Assert.Equal("Light", Store.Data.Settings.Theme);
-        Assert.Equal(Avalonia.Styling.ThemeVariant.Light, App.RequestedThemeVariant);
+        Assert.False(MenuItem(menu, "Transparent").IsChecked);
+        ChooseFromMenu(menu, "Transparent");
+        Assert.True(w.Board.Transparent);
+        Assert.True(MenuItem(WidgetMenu(w), "Transparent").IsChecked); // the switch shows the state
+        Assert.Equal(Avalonia.Styling.ThemeVariant.Light, w.RequestedThemeVariant);
     }
 
     [AvaloniaFact]
-    public void Widget_menu_opens_windows_and_export_import()
+    public void Widget_menu_opens_lists_the_archive_and_settings()
     {
         var w = OpenNew(("A", new string[0]));
         w.Board.Style = "Pink";
-        ChooseFromMenu(WidgetMenu(w), "New window");
+        ChooseFromMenu(WidgetMenu(w), "New list");
         var added = Store.Data.Boards.Last();
         Assert.Equal("Pink", added.Style); // like the widget it came from
         Assert.Contains(App.OpenWindows, x => x.Board == added);
 
         ChooseFromMenu(WidgetMenu(w), "Archive");
-        Assert.NotNull(App.Archive);
+        Assert.Equal(MainSection.Archive, App.MainWindow!.Section);
 
-        ChooseFromMenu(WidgetMenu(w), "Export");
-        ChooseFromMenu(WidgetMenu(w), "Import");
-        Assert.Contains("open", Dialogs.Shown);
-        Assert.Contains(Dialogs.Shown, s => s.StartsWith("save: PinList-"));
+        ChooseFromMenu(WidgetMenu(w), "Settings");
+        Assert.Equal(MainSection.Settings, App.MainWindow!.Section);
+        ChooseFromMenu(WidgetMenu(w), "All lists");
+        Assert.Equal(MainSection.Lists, App.MainWindow!.Section);
     }
 
     [AvaloniaFact]
@@ -558,13 +548,16 @@ public class BoardMenuTests : UiTest
         Assert.True(a.IsActive);
         Assert.Equal(PlacementMode.Pointer, menu.Placement); // at the mouse
         Assert.Equal("Double-click", AutomationProperties.GetAcceleratorKey(MenuItem(menu, "Rename")));
+        Assert.Equal(new object?[] { "Rename", "Color", "Collapse", "Move up", "Move down", "Copy items", null, "Delete category" }, Entries(menu));
+        Assert.All(menu.Items.OfType<Avalonia.Controls.MenuItem>(), m => Assert.Empty(m.Items)); // no submenus
+        Assert.Contains("danger", MenuItem(menu, "Delete category").Classes);
         ChooseFromMenu(menu, "Rename");
         Assert.True(a.IsEditing);
         a.IsEditing = false;
 
         menu = CategoryMenu(w, a);
-        Assert.True(MenuItem(menu, "Color", "Blue").IsChecked);
-        ChooseFromMenu(menu, "Color", "Red");
+        Assert.Equal("Color, Blue, 1 of 8", AutomationProperties.GetName(Swatches(menu, "Color")));
+        ChooseSwatch(menu, "Color", "Red");
         Assert.Equal("#F1707A", a.Color);
 
         ChooseFromMenu(CategoryMenu(w, a), "Collapse");
@@ -598,8 +591,9 @@ public class BoardMenuTests : UiTest
         ChooseFromMenu(ItemMenu(w, a), "Move up");
         Assert.Same(a, cat.Items[0]);
 
-        ChooseFromMenu(ItemMenu(w, a), "Complete");
-        Assert.DoesNotContain(a, cat.Items);
+        ChooseFromMenu(ItemMenu(w, a), "Complete"); // like Space: crossed out first, archived when the row has left
+        Assert.True(a.IsCompleting);
+        Assert.True(UiHost.WaitUntil(() => !cat.Items.Contains(a)));
         Assert.Equal("a", Store.Data.Archive[0].Text);
 
         ChooseFromMenu(ItemMenu(w, c), "Delete");
@@ -613,7 +607,7 @@ public class BoardMenuTests : UiTest
         var a = w.Board.Categories[0].Items[0];
 
         var menu = ItemMenu(w, a);
-        Assert.IsType<PathIcon>(MenuItem(menu, "Add due date").Icon);
+        Assert.IsType<LineIcon>(MenuItem(menu, "Add due date").Icon);
         Assert.Throws<InvalidOperationException>(() => MenuItem(menu, "Remove due date"));
         ChooseFromMenu(menu, "Add due date"); // cancelled
         Assert.Null(a.DueDate);

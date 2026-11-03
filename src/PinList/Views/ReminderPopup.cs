@@ -20,14 +20,14 @@ static class ReminderPopup
 
         var border = new Border
         {
-            CornerRadius = new CornerRadius(10),
+            CornerRadius = (CornerRadius)Application.Current!.FindResource("R.Menu")!,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(16, 12),
             Child = body,
         };
-        border.Bind(Border.BackgroundProperty, border.GetResourceObservable("MenuBg"));
-        border.Bind(Border.BorderBrushProperty, border.GetResourceObservable("MenuBorder"));
-        body.Bind(TextBlock.ForegroundProperty, body.GetResourceObservable("MenuText"));
+        border.Bind(Border.BackgroundProperty, border.GetResourceObservable("Raised"));
+        border.Bind(Border.BorderBrushProperty, border.GetResourceObservable("Line"));
+        body.Bind(TextBlock.ForegroundProperty, body.GetResourceObservable("Text1"));
 
         var w = new Window
         {
