@@ -66,16 +66,16 @@ public class DeleteConfirmTests : UiTest
         var cat = MakeBoard(("A", new[] { "a", "b", "c" })).Categories[0];
         foreach (var i in cat.Items.ToList()) Actions.Complete(i);
         App.ShowArchive();
-        var a = App.Archive!;
+        var a = App.MainWindow!.Archive;
         Pump();
-        var list = Find<ListBox>(a)!;
+        var list = a.Items;
         list.SelectAll();
         Press(list, Key.Delete);
         Assert.Contains("Delete 3 items permanently?: Ctrl+Z brings them back while PinList is running.", Dialogs.Shown);
         Assert.Equal(3, Store.Data.Archive.Count);
 
         Dialogs.ChooseAnswer = _ => 1;
-        list.SelectedIndex = 0;
+        list.SelectedItem = a.Shown[0];
         Press(list, Key.Delete);
         Assert.Contains("Delete 1 item permanently?: Ctrl+Z brings it back while PinList is running.", Dialogs.Shown);
         Assert.Equal(2, Store.Data.Archive.Count);
@@ -110,7 +110,7 @@ public class DeleteConfirmTests : UiTest
         w.Board.Title = "Groceries";
         w.Board.Synced = true;
         Click(Named<Button>(w, "MenuBtn"));
-        ChooseFromMenu(w.LastMenu!, "Delete window");
+        ChooseFromMenu(w.LastMenu!, "Delete list");
         Assert.Contains(Dialogs.Shown, d => d.StartsWith("Delete \"Groceries\"?: ") && d.EndsWith(" It will also be deleted from your other devices."));
     }
 

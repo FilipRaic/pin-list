@@ -98,7 +98,6 @@ public partial class App : Application
     SingleInstance? _instance;
     ITrayIcon? _tray;
     Window? _menuHost;
-    ArchiveWindow? _archive;
     readonly List<BoardWindow> _windows = new();
     readonly Reminders _reminders = new();
     IReadOnlyList<TodoItem> _lastReminders = Array.Empty<TodoItem>();
@@ -108,7 +107,6 @@ public partial class App : Application
 
     internal IReadOnlyList<BoardWindow> OpenWindows => _windows;
     internal Updates? UpdateCheck => _updates;
-    internal ArchiveWindow? Archive => _archive;
     internal Reminders ReminderService => _reminders;
     internal ITrayIcon? Tray => _tray;
 
@@ -295,7 +293,7 @@ public partial class App : Application
         {
             service.WorkArea = () => Displays.Primary.ToWorkArea();
             // remote changes wait while something is dragged, in a widget or in "All lists" (spec 4.6)
-            service.IsBusy = o => BoardWindow.IsDragging || _lists?.View.IsDragging == true || SyncService.IsEditing(o);
+            service.IsBusy = o => BoardWindow.IsDragging || _main?.Lists.IsDragging == true || SyncService.IsEditing(o);
             service.Changed += OnSyncChanged;
             service.Message += OnSyncMessage;
             service.Start();
@@ -324,7 +322,7 @@ public partial class App : Application
     /// <summary>Signs in, with the "waiting for your browser" dialog. True when signed in.</summary>
     internal Task<bool> SignIn(Window? owner) => Dialogs.Current.WaitForSignIn(owner, SyncService.Current!.SignIn);
 
-    /// <summary>"Sync this window": turning it on signs in first when needed (spec 4.3).</summary>
+    /// <summary>"Sync this list": turning it on signs in first when needed (spec 4.3).</summary>
     internal async Task SetBoardSynced(Board board, bool on, Window owner)
     {
         var sync = SyncService.Current!;
@@ -332,7 +330,7 @@ public partial class App : Application
         await sync.SetSynced(board, on);
     }
 
-    async Task SignOutAndDeleteCloudData(Window? owner)
+    internal async Task SignOutAndDeleteCloudData(Window? owner)
     {
         if (await Dialogs.Ask(owner, "Delete PinList's cloud data?",
                 "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", "Delete"))
@@ -353,22 +351,6 @@ public partial class App : Application
         await Dialogs.Info(owner, "Sync problem", problem == "Can't reach Google Drive."
             ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this device until it works again."
             : problem);
-    }
-
-    /// <summary>The tray menu's "Google sync" entries (spec 4.2).</summary>
-    internal IReadOnlyList<TrayEntry> SyncEntries()
-    {
-        if (SyncService.Current is not { } sync) return Array.Empty<TrayEntry>(); // the app is stopping
-        if (!sync.IsAvailable) return new[] { new TrayEntry(sync.UnavailableText, null, false) };
-        if (sync.Account is not { } account) return new[] { new TrayEntry("Sign in with Google", () => _ = SignIn(null)) };
-        return new[]
-        {
-            new TrayEntry($"Signed in as {account.Email}", null, false),
-            new TrayEntry($"Last synced: {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}", null, false),
-            new TrayEntry("Sync now", () => _ = sync.SyncNow()),
-            new TrayEntry("Sign out", () => _ = sync.SignOut(false)),
-            new TrayEntry("Sign out and delete cloud data", () => _ = SignOutAndDeleteCloudData(null)),
-        };
     }
 
     // ================= Updates =================
@@ -409,16 +391,13 @@ public partial class App : Application
     internal async Task AskAboutUpdates()
     {
         if (_updates is not { Enabled: null } updates) return;
-        var menu = OsText.AppMenu;
         int choice = await Dialogs.Current.Choose(null, "Check for updates?",
             "PinList can look for a new version about once a day and tell you when there is one. " +
             "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent.\n\n" +
-            $"You can change this later with Check for updates in the {menu}.", 1,
+            "You can change this later with Check for updates in Settings.", 1,
             ("No", DialogButtonKind.Normal), ("Yes", DialogButtonKind.Accent));
         if (choice >= 0) updates.Enabled = choice == 1; // closed without answering: asked again on the next start
     }
-
-    void ToggleUpdates() => _updates!.Enabled = _updates.Enabled != true;
 
     /// <summary>"Get PinList x.y.z" at the top of the tray menu, while a newer version is available.</summary>
     IEnumerable<TrayEntry> UpdateEntries() => _updates?.Available is { } u
@@ -479,7 +458,7 @@ public partial class App : Application
         A11y.RefreshTextScale();
         ApplyTheme();
         foreach (var w in _windows) w.RefreshAppearance();
-        _archive?.RefreshAppearance();
+        _main?.RefreshAppearance();
     }
 
     public void SetTheme(string key)
@@ -497,20 +476,6 @@ public partial class App : Application
     internal void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e) =>
         Dispatcher.UIThread.Post(RefreshAllWindows, DispatcherPriority.Background);
 #endif
-
-    /// <summary>"App theme" submenu, used in the tray menu and in each widget's ⋯ menu.</summary>
-    public MenuItem ThemeMenu()
-    {
-        var menu = new MenuItem { Header = "App theme" };
-        foreach (var (key, name) in Themes.AppThemes)
-        {
-            var mi = CreateMenuItem(name, () => SetTheme(key));
-            mi.ToggleType = MenuItemToggleType.Radio;
-            mi.IsChecked = Store.Data.Settings.Theme == key;
-            menu.Items.Add(mi);
-        }
-        return menu;
-    }
 
     // ================= Windows =================
 
@@ -562,7 +527,7 @@ public partial class App : Application
     {
         foreach (var board in Store.Data.Boards.Where(b => b.Widget).ToList())
             OpenBoard(board);
-        _lists?.View.Reload();
+        _main?.Reload();
         if (_windows.Count == 0) ShowListsWindow();
     }
 
@@ -578,34 +543,44 @@ public partial class App : Application
         }
     }
 
-    ListsWindow? _lists;
+    MainWindow? _main;
 
-    /// <summary>The "All lists" window, once it was opened (it's hidden, not closed, when the user closes it).</summary>
-    internal ListsWindow? ListsWindow => _lists;
+    /// <summary>The PinList window (All lists, Archive, Settings), once it was opened. It is hidden, not closed, when the user closes it.</summary>
+    internal MainWindow? MainWindow => _main;
 
-    /// <summary>Shows "All lists" (opens it the first time, brings it to the front after that).</summary>
-    internal void ShowListsWindow()
+    /// <summary>Shows the PinList window on a section (opens it the first time, brings it to the front after that).</summary>
+    internal void ShowMain(MainSection section)
     {
-        if (_lists == null)
+        if (_main == null)
         {
-            _lists = new ListsWindow();
-            var created = _lists;
-            created.Closed += (_, _) => { if (_lists == created) _lists = null; };
+            _main = new MainWindow();
+            var created = _main;
+            created.Closed += (_, _) => { if (_main == created) _main = null; };
         }
-        if (!_lists.IsVisible) _lists.Show();
-        if (_lists.WindowState == WindowState.Minimized) _lists.WindowState = WindowState.Normal;
-        _lists.Activate();
+        if (!_main.IsVisible) _main.Show();
+        _main.ShowSection(section);
+        if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
+        _main.Activate();
     }
 
-    /// <summary>Closes "All lists" for good (tests use it, the app closes it on exit through ShuttingDown).</summary>
-    internal void CloseListsWindow()
+    /// <summary>Shows "All lists".</summary>
+    internal void ShowListsWindow() => ShowMain(MainSection.Lists);
+
+    /// <summary>Shows the archive.</summary>
+    public void ShowArchive() => ShowMain(MainSection.Archive);
+
+    /// <summary>Shows Settings.</summary>
+    internal void ShowSettings() => ShowMain(MainSection.Settings);
+
+    /// <summary>Closes the PinList window for good (tests use it, the app closes it on exit through ShuttingDown).</summary>
+    internal void CloseMainWindow()
     {
-        var lists = _lists;
-        _lists = null;
-        if (lists == null) return;
+        var main = _main;
+        _main = null;
+        if (main == null) return;
         bool wasShuttingDown = ShuttingDown;
         ShuttingDown = true; // so it closes instead of hiding
-        lists.Close();
+        main.Close();
         ShuttingDown = wasShuttingDown;
     }
 
@@ -655,24 +630,9 @@ public partial class App : Application
         if (last.FocusManager?.GetFocusedElement() is not Visual v || !last.IsVisualAncestorOf(v)) last.FocusContent();
     }
 
-    public void ShowArchive()
-    {
-        if (_archive == null)
-        {
-            _archive = new ArchiveWindow();
-            _archive.Closed += (_, _) => _archive = null;
-            _archive.Show();
-        }
-        else
-        {
-            if (_archive.WindowState == WindowState.Minimized) _archive.WindowState = WindowState.Normal;
-            _archive.Activate();
-        }
-    }
-
     /// <summary>Any open PinList window (dialogs and file pickers need one to belong to).</summary>
     internal Window AnyWindow() =>
-        (Window?)_windows.FirstOrDefault(w => w.IsVisible) ?? _archive ?? MenuHost();
+        (Window?)_windows.FirstOrDefault(w => w.IsVisible) ?? _main ?? MenuHost();
 
     /// <summary>New widget on the monitor under the mouse (tray menu).</summary>
     internal void NewBoardAtCursor() => Actions.NewBoard(Displays.WorkAreaAtCursor().ToWorkArea(), _windows.LastOrDefault()?.Board);
@@ -742,15 +702,15 @@ public partial class App : Application
             return;
         }
 
-        int windows = imported.Boards.Count;
+        int lists = imported.Boards.Count;
         int items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
         int archived = imported.Archive.Count;
         string message =
-            $"{Plural(windows, "window")} with {Plural(items, "item")}, and {Plural(archived, "completed item")} in the archive.\n\n" +
-            "Add them next to your current windows, or replace everything you have now? " +
+            $"{Plural(lists, "list")} with {Plural(items, "item")}, and {Plural(archived, "completed item")} in the archive.\n\n" +
+            "Add them next to your current lists, or replace everything you have now? " +
             "Replacing keeps a copy of your current lists in the backups folder.";
         if (Store.HasSyncedBoards)
-            message += "\n\nSynced windows aren't replaced.";
+            message += "\n\nSynced lists aren't replaced.";
         if (fileVersion > AppData.CurrentVersion)
             message += "\n\nThe file is from a newer version of PinList, so some details may be lost.";
 
@@ -767,7 +727,6 @@ public partial class App : Application
             }
             else if (choice == 1)
             {
-                _archive?.Close();
                 foreach (var w in _windows.ToList()) w.CloseForReload();
                 Store.ReplaceAll(imported);
                 Actions.ClearUndo();
@@ -804,19 +763,11 @@ public partial class App : Application
     internal IReadOnlyList<TrayEntry> TrayMenuEntries() => UpdateEntries().Concat(new[]
     {
         new TrayEntry("All lists", ShowListsWindow),
-        new TrayEntry("New window", NewBoardAtCursor),
+        new TrayEntry("New list", NewBoardAtCursor),
         new TrayEntry("Archive", ShowArchive),
-        new TrayEntry("Show all windows", ShowAllBoards),
+        new TrayEntry("Show all widgets", ShowAllBoards),
         TrayEntry.Separator,
-        new TrayEntry("Export", () => _ = ExportData(null)),
-        new TrayEntry("Import", () => _ = ImportData(null)),
-        TrayEntry.Separator,
-    }).Concat(SyncEntries()).Concat(new[]
-    {
-        TrayEntry.Separator,
-        new TrayEntry("Check for updates", ToggleUpdates, Checked: _updates?.Enabled == true),
-        new TrayEntry("Open data folder", () => OpenFolder(Store.Dir)),
-        TrayEntry.Separator,
+        new TrayEntry("Settings", ShowSettings),
         new TrayEntry(OsText.Exit, ExitApp),
     }).ToList();
 
@@ -858,57 +809,26 @@ public partial class App : Application
         var menu = new ContextMenu { Placement = PlacementMode.TopEdgeAlignedLeft };
         if (_updates?.Available is { } update)
         {
-            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", OpenUpdatePage));
+            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", OpenUpdatePage, icon: "Line.Download"));
             menu.Items.Add(new Separator());
         }
-        menu.Items.Add(CreateMenuItem("All lists", ShowListsWindow));
-        menu.Items.Add(CreateMenuItem("New window", NewBoardAtCursor));
-        menu.Items.Add(CreateMenuItem("Archive", ShowArchive));
-        menu.Items.Add(CreateMenuItem("Show all windows", ShowAllBoards));
+        menu.Items.Add(CreateMenuItem("All lists", ShowListsWindow, icon: "Line.Grid"));
+        menu.Items.Add(CreateMenuItem("New list", NewBoardAtCursor, icon: "Line.Add"));
+        menu.Items.Add(CreateMenuItem("Archive", ShowArchive, icon: "Line.Archive"));
+        menu.Items.Add(CreateMenuItem("Show all widgets", ShowAllBoards, icon: "Line.RemoveFromDesktop"));
         menu.Items.Add(new Separator());
-        menu.Items.Add(ThemeMenu());
-        menu.Items.Add(CreateMenuItem("Export", () => _ = ExportData(null)));
-        menu.Items.Add(CreateMenuItem("Import", () => _ = ImportData(null)));
-        foreach (var item in AppSettingsItems()) menu.Items.Add(item);
+        menu.Items.Add(CreateMenuItem("Settings", ShowSettings, icon: "Line.Settings"));
+        menu.Items.Add(CreateMenuItem(OsText.Exit, ExitApp, icon: "Line.Exit"));
         menu.Open(host);
         LastTrayMenu = menu;
         return menu;
     }
 
     /// <summary>
-    /// The settings of the whole app, at the end of the tray menu and in every widget's ⋯ menu (under "PinList"),
-    /// so they can be found also when the tray or menu bar icon is hidden.
+    /// A menu entry; <paramref name="gesture"/> is shown on the right in muted text (e.g. "Del"), <paramref name="icon"/> is
+    /// a Line.* resource key. A <paramref name="danger"/> entry (delete) is red.
     /// </summary>
-    internal List<Control> AppSettingsItems()
-    {
-        var sync = new MenuItem { Header = "Google sync" };
-        foreach (var e in SyncEntries())
-        {
-            var mi = CreateMenuItem(e.Text, e.Action ?? (() => { }));
-            mi.IsEnabled = e.Enabled;
-            sync.Items.Add(mi);
-        }
-        var auto = CreateMenuItem(OsText.Autostart, () => Autostart.Set(!Autostart.IsEnabled()));
-        auto.ToggleType = MenuItemToggleType.CheckBox;
-        auto.IsChecked = Autostart.IsEnabled();
-        auto.IsEnabled = ManageAutostart;
-        var updates = CreateMenuItem("Check for updates", ToggleUpdates);
-        updates.ToggleType = MenuItemToggleType.CheckBox;
-        updates.IsChecked = _updates?.Enabled == true;
-        return new List<Control>
-        {
-            sync,
-            new Separator(),
-            auto,
-            updates,
-            CreateMenuItem("Open data folder", () => OpenFolder(Store.Dir)),
-            new Separator(),
-            CreateMenuItem(OsText.Exit, ExitApp),
-        };
-    }
-
-    /// <summary>A menu entry; <paramref name="gesture"/> is shown on the right in muted text (e.g. "Del").</summary>
-    public static MenuItem CreateMenuItem(string header, Action action, string? gesture = null)
+    public static MenuItem CreateMenuItem(string header, Action action, string? gesture = null, string? icon = null, bool danger = false)
     {
         var mi = new MenuItem { Header = header };
         if (gesture != null)
@@ -920,7 +840,7 @@ public partial class App : Application
                 Margin = new Thickness(28, 0, 0, 0),
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             };
-            g.Bind(TextBlock.ForegroundProperty, g.GetResourceObservable("MenuTextMuted"));
+            g.Bind(TextBlock.ForegroundProperty, g.GetResourceObservable("Text3"));
             var panel = new DockPanel();
             DockPanel.SetDock(g, Dock.Right);
             panel.Children.Add(g);
@@ -929,8 +849,43 @@ public partial class App : Application
             Avalonia.Automation.AutomationProperties.SetName(mi, header);
             Avalonia.Automation.AutomationProperties.SetAcceleratorKey(mi, gesture);
         }
+        if (icon != null) mi.Icon = MenuIcon(icon);
+        if (danger) mi.Classes.Add("danger");
         // deferred so the menu closes before the action runs (e.g. before a TextBox takes focus)
         mi.Click += (_, _) => Dispatcher.UIThread.Post(action, DispatcherPriority.Background);
+        return mi;
+    }
+
+    /// <summary>A line icon for a menu entry (<paramref name="key"/> is a Line.* resource).</summary>
+    static LineIcon MenuIcon(string key) => new() { Data = (Geometry)Current!.FindResource(key)!, Width = 15, Height = 15 };
+
+    /// <summary>
+    /// A menu entry with a switch on the right (Transparent, Sync this list). Clicking it flips the switch and runs
+    /// <paramref name="toggle"/>. <c>IsChecked</c> tells the state, and screen readers hear a checkable entry.
+    /// </summary>
+    public static MenuItem CreateSwitch(string header, bool isOn, Action toggle, string? icon = null)
+    {
+        var knob = new Avalonia.Controls.Shapes.Ellipse { Width = 12, Height = 12 };
+        var track = new Border { Width = 30, Height = 18, CornerRadius = new CornerRadius(9), Padding = new Thickness(2), Child = knob };
+        track.Classes.Add("switchtrack");
+        track.Margin = new Thickness(28, 0, 0, 0);
+        DockPanel.SetDock(track, Dock.Right);
+        var text = new TextBlock { Text = header, VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        var mi = new MenuItem
+        {
+            Header = new DockPanel { Children = { track, text } },
+            ToggleType = MenuItemToggleType.CheckBox,
+            IsChecked = isOn,
+        };
+        mi.Classes.Add("switch");
+        Avalonia.Automation.AutomationProperties.SetName(mi, header);
+        track.Classes.Set("on", isOn);
+        mi.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == MenuItem.IsCheckedProperty) track.Classes.Set("on", mi.IsChecked);
+        };
+        if (icon != null) mi.Icon = MenuIcon(icon);
+        mi.Click += (_, _) => Dispatcher.UIThread.Post(toggle, DispatcherPriority.Background);
         return mi;
     }
 

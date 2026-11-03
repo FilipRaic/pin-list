@@ -39,6 +39,8 @@ public partial class BoardWindow : Window
         WindowStartupLocation = WindowStartupLocation.Manual;
         Displays.Anchor = this; // (macOS asks a window for the screens)
         Closed += (_, _) => { if (Displays.Anchor == this) Displays.Anchor = App.Instance.OpenWindows.FirstOrDefault(w => w != this); };
+        Actions.UndoChanged += OnUndoChanged;
+        Closed += (_, _) => Actions.UndoChanged -= OnUndoChanged;
         EnsureOnScreen();
 
         ApplyLock();
@@ -190,7 +192,7 @@ public partial class BoardWindow : Window
     void ApplyLock()
     {
         Grips.IsVisible = !Board.Locked;
-        LockIcon.Data = (Geometry)this.FindResource(Board.Locked ? "Icon.Lock" : "Icon.Unlock")!;
+        LockIcon.Data = (Geometry)this.FindResource(Board.Locked ? "Line.Lock" : "Line.Unlock")!;
         var tip = Board.Locked ? "Unlock position and size" : "Lock position and size";
         ToolTip.SetTip(LockBtn, tip);
         Avalonia.Automation.AutomationProperties.SetName(LockBtn, tip);
@@ -281,9 +283,23 @@ public partial class BoardWindow : Window
 
     BoardStyle CurrentStyle => Themes.Get(Board.Style);
 
+    /// <summary>
+    /// Counts how often the colors were applied. The category colors bind to it, so they are calculated again
+    /// when the system's contrast theme changes while the widget is open.
+    /// </summary>
+    public static readonly StyledProperty<int> AppearanceVersionProperty =
+        AvaloniaProperty.Register<BoardWindow, int>(nameof(AppearanceVersion));
+
+    public int AppearanceVersion
+    {
+        get => GetValue(AppearanceVersionProperty);
+        private set => SetValue(AppearanceVersionProperty, value);
+    }
+
     void ApplyAppearance()
     {
         Themes.ApplyBoard(Resources, CurrentStyle, Board.Transparent);
+        AppearanceVersion++;
         // text boxes, scrollbars and the like follow the widget color, not the app theme
         RequestedThemeVariant = CurrentStyle.IsDark ? ThemeVariant.Dark : ThemeVariant.Light;
     }
@@ -405,9 +421,9 @@ public partial class BoardWindow : Window
 
     void OnPreviewKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Z && e.KeyModifiers == KeyModifiers.Control && ShortcutsAllowed())
+        if (e.Key == Key.Z && OsText.IsCommand(e.KeyModifiers) && ShortcutsAllowed())
         {
-            A11y.Announce(this, Actions.Undo(out var what) ? "Undone: " + what : "Nothing to undo");
+            UndoLast();
             e.Handled = true;
         }
         else if (HandleWindowKeys(e))
@@ -425,7 +441,9 @@ public partial class BoardWindow : Window
             MoveFocus(from, e.KeyModifiers == KeyModifiers.Shift ? NavigationDirection.Previous : NavigationDirection.Next);
             e.Handled = true;
         }
-        else if (e.Key == Key.Delete && e.KeyModifiers == KeyModifiers.None && ShortcutsAllowed() && _active != null)
+        // on a Mac the delete key is Backspace, which only deletes when no text box has the keyboard
+        else if (OsText.IsDeleteKey(e.Key) && e.KeyModifiers == KeyModifiers.None && ShortcutsAllowed() && _active != null
+                 && (e.Key == Key.Delete || FocusManager?.GetFocusedElement() is not TextBox))
         {
             DeleteActive();
             e.Handled = true;
@@ -463,7 +481,7 @@ public partial class BoardWindow : Window
             ? $"This deletes the list with {Board.Categories.Count} categories and {items} items. Items are not moved to the archive."
             : "This deletes the list.";
         if (Board.Synced) msg += " It will also be deleted from your other devices.";
-        string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this window?" : $"Delete \"{Board.Title}\"?";
+        string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this list?" : $"Delete \"{Board.Title}\"?";
         if (Board.Synced)
         {
             // deleting a synced list deletes it everywhere, which often isn't what's meant: offer to only remove the widget
@@ -484,12 +502,12 @@ public partial class BoardWindow : Window
     void RemoveFromDesktop()
     {
         Actions.SetWidget(Board, false);
-        A11y.Announce(this, "Removed from the desktop. Open it again from All lists. Ctrl+Z undoes.");
+        A11y.Announce(this, $"Removed from the desktop. Open it again from All lists. {OsText.Undo} undoes.");
     }
 
     // ================= Items =================
 
-    /// <summary>Clicking the circle completes after ~1 s; a second click in that time cancels.</summary>
+    /// <summary>Clicking the circle completes (the row leaves after a moment); a second click before that cancels.</summary>
     void Check_Click(object? sender, RoutedEventArgs e) =>
         ToggleCompleting((TodoItem)((Control)sender!).Tag!); // the circle of an item
 
@@ -605,7 +623,7 @@ public partial class BoardWindow : Window
     /// <summary>All text was removed: that deletes the item, after asking (Cancel keeps the old text).</summary>
     async void DeleteEmptied(TodoItem item)
     {
-        if (await Dialogs.Ask(this, $"Delete {Quote(item.Text)}?", "Its text is empty. Ctrl+Z brings it back.", "Delete"))
+        if (await Dialogs.Ask(this, $"Delete {Quote(item.Text)}?", $"Its text is empty. {OsText.Undo} brings it back.", "Delete"))
             Actions.Delete(item);
     }
 

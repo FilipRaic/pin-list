@@ -178,6 +178,6 @@ public class ModelTests
     {
         var a = new ArchivedItem { Text = "a\nb", CategoryName = "Work", CompletedAt = new DateTime(2026, 1, 2, 3, 4, 0) };
         Assert.StartsWith("a, b, completed ", a.ToString());
-        Assert.EndsWith("category Work", a.ToString());
+        Assert.Contains(", category Work, added ", a.ToString());
     }
 }

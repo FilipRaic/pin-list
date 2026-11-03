@@ -3,6 +3,33 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.4.0] - 2026-11-03
+
+One look on Windows, macOS and Android: the Inter font, the same colors and icons, menus without submenus, one PinList window on the desktop and a bottom bar on the phone.
+
+### Added
+- **Settings** page with Appearance (System, Light or Dark), Google Drive sync, start at login, check for updates, export, import and the data folder. On the desktop it is a section of the PinList window (**⋯ → Settings** or the tray / menu bar menu), on the phone the **Settings** tab. Each group is a box of rows: the Google account with a sync status dot, and buttons on the right of each row on the desktop or rows you tap on the phone
+- One **PinList window** on Windows and macOS with a sidebar: **All lists**, **Archive** and **Settings**. It replaces the separate All lists and Archive windows
+- An **Undo** pill at the bottom of a widget for a few seconds after completing an item (Ctrl+Z still works)
+- A **bottom bar** on the phone with **Lists**, **Archive** and **Settings**, and a labeled **New list** button. Lists, menus and screens slide and fade in
+
+### Changed
+- The **Inter** font is bundled and used on all three platforms
+- A new look for widgets and lists: a header with a line under it, each category with a dot, its name and an item count in its own color, a guide line down the items, outlined check circles and pill-shaped due date and reminder chips. Category colors get a readable shade on every list color (the colors in `data.json` don't change)
+- A new complete animation: the circle fills and pops, the tick draws itself, the text is crossed out, then the row slides away and the rows below glide up
+- Collapsing or expanding a category opens and closes its items smoothly, and the arrow turns
+- **+ Add item** on the phone has a plus under the check circles, like on the desktop. The archive search on the phone has a magnifier and rounder corners
+- Switches and accent buttons use the PinList accent color instead of the system color, and the reminder bell icon is cleaner
+- Menus have no submenus. **⋯** has a row of list colors, **Transparent** and **Sync this list** switches, and every entry has an icon. The category menu has a row of colors too. The tray / menu bar menu is shorter: **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit
+- "Window" is now "list" everywhere you see it (**New list**, **Delete list**, **Sync this list**). **Show all windows** is **Show all widgets**
+- The **Widget** switch on cards is now **On desktop**, and All lists has a **+ New list** card
+- The archive is grouped by day, shows the list and the added date under each item, and has restore and delete buttons on the row under the mouse (desktop) or in a sheet (phone). On the desktop there are also **Restore** and **Delete** buttons under the list for the selected items, showing their shortcuts (Enter and Del). The shortcuts work wherever the keyboard is in the archive, except in the search box
+- On a Mac, shortcuts are shown with the Mac keys (⌘Z, ⌘C, ↩, ⌫, ⌥↑) in menus, the archive and messages. ⌘ works where Windows uses Ctrl (undo, search, moving and resizing a widget), and the delete key deletes a selected item, category or archived item
+- On the phone, the list menu has a row of colors and a **Sync this list** switch, and sheets have a grab handle, icons and close when swiped down. The ⋮ menu of the first screen is gone, its entries are in **Settings**
+
+### Fixed
+- The font on Android looked wrong because no font was set
+
 ## [2.3.0] - 2026-11-02
 
 Choose which lists are widgets on each computer, copy items as text, and fixes for shutting down Windows and for the Mac app.

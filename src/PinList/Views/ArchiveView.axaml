@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="using:PinList"
+             x:Class="PinList.ArchiveView"
+             FontSize="{DynamicResource T.Body}">
+
+    <UserControl.Styles>
+        <Style Selector="Button.archiveaction">
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="MinWidth" Value="0"/>
+        </Style>
+        <!-- Nothing selected: the buttons stay in place but look inactive (Fluent would gray out the whole surface) -->
+        <Style Selector="Button.archiveaction:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Surface}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        </Style>
+        <Style Selector="Button.archiveaction:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <!-- The shortcut shown inside a button, like a small key -->
+        <Style Selector="Border.keycap">
+            <Setter Property="Background" Value="{DynamicResource ChipBg}"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="5,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Border.keycap TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text3}"/>
+        </Style>
+    </UserControl.Styles>
+
+    <!-- The archive section of the PinList window: completed items grouped by day -->
+    <DockPanel x:Name="Root" Margin="28,20,28,16">
+
+        <!-- Title + search -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,14" ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="Archive" FontSize="{DynamicResource T.ScreenTitle}" FontWeight="Bold"
+                           AutomationProperties.Name="Completed items"/>
+                <TextBlock x:Name="CountText" Foreground="{DynamicResource Text3}" Margin="12,0,0,4" VerticalAlignment="Bottom"/>
+            </StackPanel>
+            <Panel Grid.Column="1" Width="260" VerticalAlignment="Center">
+                <TextBox x:Name="SearchBox" Classes="search" PlaceholderText="Search"
+                         Padding="30,6,8,6"
+                         AutomationProperties.Name="Search completed items" AutomationProperties.HelpText="{x:Static local:OsText.Find}"/>
+                <local:LineIcon Data="{DynamicResource Line.Search}" Width="13" Height="13" Margin="10,0,0,0"
+                                HorizontalAlignment="Left" TextElement.Foreground="{DynamicResource Text3}" IsHitTestVisible="False"/>
+            </Panel>
+        </Grid>
+
+        <!-- Keyboard hint (or the message after restoring), and the Restore and Delete buttons for the selected items -->
+        <Grid DockPanel.Dock="Bottom" Margin="0,12,0,0" ColumnDefinitions="*,Auto">
+            <!-- The text is set in code, with this system's keys (Ctrl or ⌘) -->
+            <TextBlock x:Name="HintText"
+                       Foreground="{DynamicResource Text3}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+            <!-- Shown for a few seconds after restoring, e.g. when the category of an item no longer exists -->
+            <TextBlock x:Name="StatusText" Foreground="{DynamicResource Text1}" FontSize="12" VerticalAlignment="Center"
+                       TextWrapping="Wrap" IsVisible="False"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="12,0,0,0">
+                <Button x:Name="RestoreButton" Classes="dialog archiveaction" IsEnabled="False" Click="RestoreButton_Click"
+                        AutomationProperties.Name="Restore selected" AutomationProperties.AcceleratorKey="{x:Static local:OsText.EnterName}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <local:LineIcon Data="{DynamicResource Line.Restore}" Width="14" Height="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="Restore" VerticalAlignment="Center"/>
+                        <Border Classes="keycap">
+                            <TextBlock Text="{x:Static local:OsText.Enter}"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+                <Button x:Name="DeleteButton" Classes="dialog archiveaction" IsEnabled="False" Click="DeleteButton_Click"
+                        AutomationProperties.Name="Delete selected permanently" AutomationProperties.AcceleratorKey="{x:Static local:OsText.DeleteName}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <local:LineIcon Data="{DynamicResource Line.Delete}" Width="14" Height="14" VerticalAlignment="Center"/>
+                        <TextBlock Text="Delete" VerticalAlignment="Center"/>
+                        <Border Classes="keycap">
+                            <TextBlock Text="{x:Static local:OsText.Delete}"/>
+                        </Border>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Border x:Name="TableBorder" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}"
+                BorderThickness="1" CornerRadius="{DynamicResource R.Menu}" Padding="8">
+            <Panel>
+                <ListBox x:Name="List" Classes="archive withactions slim" SelectionMode="Multiple"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         AutomationProperties.Name="Completed items"
+                         DoubleTapped="List_DoubleTapped"/>
+                <TextBlock x:Name="EmptyText" Text="Nothing here yet. Completed items show up here with the date and time."
+                           Foreground="{DynamicResource Text3}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                           TextWrapping="Wrap" TextAlignment="Center" Margin="20" IsHitTestVisible="False"/>
+            </Panel>
+        </Border>
+    </DockPanel>
+</UserControl>

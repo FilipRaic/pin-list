@@ -47,6 +47,17 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
+    public void Inter_is_the_default_font()
+    {
+        var text = new TextBlock { Text = "Hello" };
+        var window = new Window { Content = text };
+        window.Show();
+        Pump();
+        Assert.Contains("Inter", text.FontFamily.Name);
+        window.Close();
+    }
+
+    [AvaloniaFact]
     public void Started_with_its_own_data_tray_and_autostart_entry()
     {
         Assert.StartsWith("PinList.", App.InstanceName); // its own single-instance name for the test folder
@@ -160,21 +171,21 @@ public class AppTests : UiTest
     // ================= Theme and system settings =================
 
     [AvaloniaFact]
-    public void Theme_menu_and_following_Windows()
+    public void Theme_choices_and_following_Windows()
     {
-        var menu = App.ThemeMenu();
-        Assert.Equal(new object[] { "Use Windows setting", "Light", "Dark" }, menu.Items.OfType<MenuItem>().Select(m => m.Header!));
+        Assert.Equal(new[] { "System", "Light", "Dark" }, Themes.AppThemes.Select(t => t.Key));
+        Assert.Equal("Use Windows setting", Themes.AppThemes[0].Name);
 
         App.SetTheme("System");
         Themes.SystemDarkSource = () => false;
         App.OnUserPreferenceChanged(null, new UserPreferenceChangedEventArgs(UserPreferenceCategory.General));
         Pump();
-        Assert.Equal(Color.Parse("#F9F9F9"), Brush("MenuBg"));
-        Assert.Equal(Brush("MenuBg"), Brush("MenuFlyoutPresenterBackground")); // menus use the app's colors
+        Assert.Equal(Color.Parse("#FFFFFF"), Brush("Raised"));
+        Assert.Equal(Brush("Raised"), Brush("MenuFlyoutPresenterBackground")); // menus use the app's colors
         Assert.Equal(Avalonia.Styling.ThemeVariant.Light, App.RequestedThemeVariant);
 
         App.SetTheme("Dark");
-        Assert.Equal(Color.Parse("#2C2C2C"), Brush("MenuBg"));
+        Assert.Equal(Color.Parse("#2C2C2F"), Brush("Raised"));
         Assert.True(Saver.Requests > 0); // the choice is saved
     }
 
@@ -188,13 +199,13 @@ public class AppTests : UiTest
         Themes.ContrastSource = () => contrast;
         App.RefreshAllWindows();
         Assert.Equal(Colors.Black, ((ImmutableSolidColorBrush)w.Resources["BoardBg"]!).Color);
-        Assert.Equal(Colors.Cyan, Brush("AccentFill"));
-        Assert.Equal(Colors.Cyan, Brush("MenuHover"));
+        Assert.Equal(Colors.Cyan, Brush("Accent"));
+        Assert.Equal(Colors.Cyan, Brush("ItemHover"));
 
         A11y.TextScaleSource = () => 2.0;
         App.RefreshAllWindows();
         Assert.Equal(2.0, ((ScaleTransform)Named<LayoutTransformControl>(w, "Scaler").LayoutTransform!).ScaleX);
-        Assert.Equal(2.0, ((ScaleTransform)Named<LayoutTransformControl>(App.Archive!, "Scaler").LayoutTransform!).ScaleX);
+        Assert.Equal(2.0, ((ScaleTransform)Named<LayoutTransformControl>(App.MainWindow!, "Scaler").LayoutTransform!).ScaleX);
     }
 
     [AvaloniaFact]
@@ -363,21 +374,19 @@ public class AppTests : UiTest
         w.Board.Style = "Green";
         Tray.ClickRight();
         var menu = App.LastTrayMenu!;
-        Assert.Equal(new object[] { "All lists", "New window", "Archive", "Show all windows", "App theme", "Export", "Import", "Google sync", "Start with Windows", "Check for updates", "Open data folder", "Exit" },
+        Assert.Equal(new object[] { "All lists", "New list", "Archive", "Show all widgets", "Settings", "Exit" },
             menu.Items.OfType<MenuItem>().Select(m => m.Header!));
+        Assert.All(menu.Items.OfType<MenuItem>(), m => Assert.NotNull(m.Icon)); // every entry has an icon
+        Assert.DoesNotContain(menu.Items.OfType<MenuItem>(), m => m.Items.Count > 0); // no submenus
 
-        ChooseFromMenu(menu, "New window");
+        ChooseFromMenu(menu, "New list");
         Assert.Equal("Green", Store.Data.Boards.Last().Style); // like the last widget
 
         ChooseFromMenu(App.ShowTrayMenu(), "Archive");
-        Assert.NotNull(App.Archive);
-        ChooseFromMenu(App.ShowTrayMenu(), "Show all windows");
-        ChooseFromMenu(App.ShowTrayMenu(), "App theme", "Light");
-        Assert.Equal("Light", Store.Data.Settings.Theme);
-        ChooseFromMenu(App.ShowTrayMenu(), "Export");
-        ChooseFromMenu(App.ShowTrayMenu(), "Import");
-        ChooseFromMenu(App.ShowTrayMenu(), "Open data folder");
-        Assert.Equal(new[] { Store.Dir }, UiHost.OpenedFolders);
+        Assert.Equal(MainSection.Archive, App.MainWindow!.Section);
+        ChooseFromMenu(App.ShowTrayMenu(), "Show all widgets");
+        ChooseFromMenu(App.ShowTrayMenu(), "Settings");
+        Assert.Equal(MainSection.Settings, App.MainWindow!.Section);
         ChooseFromMenu(App.ShowTrayMenu(), "Exit");
         Assert.Equal(1, UiHost.ShutdownRequests);
         App.ShuttingDown = false;
@@ -388,60 +397,29 @@ public class AppTests : UiTest
     {
         // macOS shows these entries in its menu bar menu (Windows shows the menu above on right click)
         var entries = Tray.Menu;
-        Assert.Equal(new[] { "All lists", "New window", "Archive", "Show all windows", "-", "Export", "Import", "-",
-                "Sync isn't available in this build.", "-", "Check for updates", "Open data folder", "-", "Exit" },
+        Assert.Equal(new[] { "All lists", "New list", "Archive", "Show all widgets", "-", "Settings", "Exit" },
             entries.Select(e => e.Text));
-        Assert.False(entries.Single(e => e.Text.StartsWith("Sync isn't")).Enabled);
         OpenNew(("A", new string[0]));
-        entries.Single(e => e.Text == "New window").Action!();
+        entries.Single(e => e.Text == "New list").Action!();
         Assert.Equal(2, App.OpenWindows.Count);
         entries.Single(e => e.Text == "Archive").Action!();
-        Assert.NotNull(App.Archive);
-        entries.Single(e => e.Text == "Show all windows").Action!();
-        entries.Single(e => e.Text == "Export").Action!();
-        entries.Single(e => e.Text == "Import").Action!();
-        Pump();
-        entries.Single(e => e.Text == "Open data folder").Action!();
-        Assert.Equal(new[] { Store.Dir }, UiHost.OpenedFolders);
+        Assert.Equal(MainSection.Archive, App.MainWindow!.Section);
+        entries.Single(e => e.Text == "Show all widgets").Action!();
+        entries.Single(e => e.Text == "Settings").Action!();
+        Assert.Equal(MainSection.Settings, App.MainWindow!.Section);
         entries.Single(e => e.Text == "Exit").Action!();
         Assert.Equal(1, UiHost.ShutdownRequests);
         App.ShuttingDown = false;
     }
 
     [AvaloniaFact]
-    public void New_window_from_the_tray_with_no_widgets_open_uses_the_default_look()
+    public void New_list_from_the_tray_with_no_widgets_open_uses_the_default_look()
     {
         Assert.Empty(App.OpenWindows);
-        ChooseFromMenu(App.ShowTrayMenu(), "New window");
+        ChooseFromMenu(App.ShowTrayMenu(), "New list");
         var b = Store.Data.Boards.Last();
         Assert.Equal(("Dark", true), (b.Style, b.Transparent));
         Assert.Single(App.OpenWindows, x => x.Board == b);
-    }
-
-    [AvaloniaFact]
-    public void Tray_menu_turns_start_with_Windows_on_and_off()
-    {
-        Autostart.RunKey = @"Software\PinListTests\TrayAutostart";
-        try
-        {
-            Autostart.Set(false);
-            var item = MenuItem(App.ShowTrayMenu(), "Start with Windows");
-            Assert.False(item.IsChecked);
-            Assert.True(item.IsEnabled);
-            ChooseFromMenu(App.LastTrayMenu!, "Start with Windows");
-            Assert.True(Autostart.IsEnabled());
-            ChooseFromMenu(App.ShowTrayMenu(), "Start with Windows");
-            Assert.False(Autostart.IsEnabled());
-
-            App.ManageAutostart = false; // a development copy can't change it
-            Assert.False(MenuItem(App.ShowTrayMenu(), "Start with Windows").IsEnabled);
-        }
-        finally
-        {
-            App.ManageAutostart = true;
-            Registry.CurrentUser.DeleteSubKeyTree(@"Software\PinListTests\TrayAutostart", false);
-            Autostart.RunKey = UiHost.TestRunKey;
-        }
     }
 
     [AvaloniaFact]
@@ -520,7 +498,7 @@ public class AppTests : UiTest
 
         Dialogs.OpenFileAnswer = WriteFile(Dir, "good.json", ImportJson);
         Await(App.ImportData(null)); // the question is answered with Esc
-        Assert.Contains(Dialogs.Shown, s => s.StartsWith("Import good.json?: 1 window with 1 item, and 1 completed item in the archive."));
+        Assert.Contains(Dialogs.Shown, s => s.StartsWith("Import good.json?: 1 list with 1 item, and 1 completed item in the archive."));
         Assert.Empty(Store.Data.Boards);
     }
 
@@ -549,7 +527,7 @@ public class AppTests : UiTest
         Assert.Contains(Dialogs.Shown, s => s.Contains("from a newer version of PinList"));
         Assert.Equal(new[] { "Imported" }, Store.Data.Boards.Select(b => b.Title));
         Assert.False(mine.IsVisible);
-        Assert.Null(App.Archive); // it showed the old archive
+        Assert.Equal(new[] { "done" }, App.MainWindow!.Archive.Shown.Select(a => a.Text)); // the open archive shows the imported one
         Assert.Single(App.OpenWindows);
         Assert.False(Actions.CanUndo); // the old undo history doesn't fit the new data
         Assert.Single(Directory.GetFiles(Path.Combine(Dir, "backups"), "before-import-*.json"));
@@ -564,7 +542,7 @@ public class AppTests : UiTest
         Dialogs.ChooseAnswer = _ => 1; // Replace everything
         Await(App.ImportData(null));
         Pump();
-        Assert.Contains(Dialogs.Shown, s => s.Contains("Synced windows aren't replaced."));
+        Assert.Contains(Dialogs.Shown, s => s.Contains("Synced lists aren't replaced."));
         Assert.Equal(new[] { "Test", "Imported" }, Store.Data.Boards.Select(b => b.Title));
     }
 
@@ -613,6 +591,6 @@ public class AppTests : UiTest
         Assert.Same(w, App.AnyWindow()); // a widget is better
         App.ShowArchive();
         w.Hide();
-        Assert.Same(App.Archive, App.AnyWindow());
+        Assert.Same(App.MainWindow, App.AnyWindow());
     }
 }

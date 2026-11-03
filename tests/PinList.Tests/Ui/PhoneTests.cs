@@ -18,7 +18,8 @@ public partial class PhoneTests : UiTest
     public PhoneTests()
     {
         PhoneDrag.HoldTime = TimeSpan.FromMilliseconds(80);
-        PhoneView.CompleteDelay = TimeSpan.FromMilliseconds(50);
+        PhoneView.MotionEnabled = false;
+        CompleteIn(TimeSpan.FromMilliseconds(50));
         PhoneView.Clock = () => new DateTime(2030, 6, 12, 10, 15, 0);
     }
 
@@ -26,7 +27,7 @@ public partial class PhoneTests : UiTest
     {
         _window?.Close();
         PhoneDrag.HoldTime = TimeSpan.FromMilliseconds(450);
-        PhoneView.CompleteDelay = TimeSpan.FromMilliseconds(900);
+        PhoneView.MotionEnabled = true;
         PhoneView.Clock = () => DateTime.Now;
         base.Dispose();
     }
@@ -206,6 +207,13 @@ public partial class PhoneTests : UiTest
         Click(b);
     }
 
+    /// <summary>Picks a list color in the swatch row of the list sheet.</summary>
+    void ChooseColor(string name)
+    {
+        Pump();
+        Click(FindAll<Button>(_view.SheetPanel!).First(b => b.Classes.Contains("swatch") && NameOf(b) == name));
+    }
+
     string[] Options() => _view.SheetPanel!.Children.OfType<Button>().Select(x => (string)x.Content!).ToArray();
 
     // ================= Cards =================
@@ -377,11 +385,10 @@ public partial class PhoneTests : UiTest
         Show();
         LongPress(Card(a));
         Assert.Equal("Work", _view.SheetTitleText);
-        Assert.Equal(new[] { "Open", "Color", "Copy all items", "Delete list" }, Options());
+        Assert.Equal(new[] { "Copy all items", "Open", "Delete list" }, Options());
         Assert.DoesNotContain("lifted", Card(a).Classes);
 
-        Choose("Color");
-        Choose("Green");
+        ChooseColor("Green");
         Assert.Equal("Green", a.Style);
 
         LongPress(Card(a));
@@ -661,9 +668,8 @@ public partial class PhoneTests : UiTest
 
         _view.ShowBoard(b);
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Assert.Equal(new[] { "Rename", "Color", "Copy all items", "Delete list" }, Options());
-        Choose("Color");
-        Choose("Dark");
+        Assert.Equal(new[] { "Copy all items", "Rename", "Delete list" }, Options());
+        ChooseColor("Dark");
         Assert.Equal(Avalonia.Styling.ThemeVariant.Dark, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
         Choose("Rename");
@@ -698,7 +704,7 @@ public partial class PhoneTests : UiTest
         Assert.Equal("Restored", _view.SnackbarMessage);
         Assert.Single(Store.Data.Archive);
 
-        Tap(Find<ListBoxItem>(_view)!);
+        Tap(Find<ListBoxItem>(_view, i => i.DataContext is ArchivedItem)!);
         Choose("Delete permanently");
         Assert.Empty(Store.Data.Archive);
         Assert.True(Named<TextBlock>(_view, "ArchiveEmpty").IsVisible);
@@ -732,7 +738,7 @@ public partial class PhoneTests : UiTest
 
             Assert.Equal(completed, Store.Data.Archive[0].CompletedAt);
             Assert.Contains(FindAll<TextBlock>(_view).SelectMany(t => t.Inlines ?? new()).OfType<Avalonia.Controls.Documents.Run>(),
-                r => r.Text == "01.11.2026 22:05");
+                r => r.Text!.StartsWith("22:05 · "));
         }
         finally
         {
@@ -754,7 +760,7 @@ public partial class PhoneTests : UiTest
     }
 
     [AvaloniaFact]
-    public void The_app_menu_switches_the_theme_and_opens_the_archive()
+    public void The_settings_tab_switches_the_theme()
     {
         string? theme = null;
         var real = PhoneView.SetTheme;
@@ -762,14 +768,11 @@ public partial class PhoneTests : UiTest
         try
         {
             Show();
-            Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
-            Assert.Equal(new[] { "Archive", "App theme", "Export", "Import" }, Options());
-            Choose("App theme");
-            Choose("Light");
+            Click(Find<Button>(_view, x => NameOf(x) == "Settings")!);
+            Assert.Equal(PhoneSection.Settings, _view.Section);
+            var light = FindAll<Avalonia.Controls.Primitives.ToggleButton>(_view.SettingsPage!).First(x => x.Content as string == "Light");
+            Click(light);
             Assert.Equal("Light", theme);
-            Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
-            Choose("Archive");
-            Assert.True(Named<DockPanel>(_view, "ArchiveScreen").IsVisible);
         }
         finally { PhoneView.SetTheme = real; }
     }
@@ -895,9 +898,9 @@ public partial class PhoneTests : UiTest
         var b = MakeBoard(("A", new[] { "a" }));
         b.Title = "Mine";
         Show();
-        Click(Find<Button>(_view, x => NameOf(x) == "Archive")!);
+        Click(Named<Button>(_view, "TabArchive"));
         Assert.True(Named<DockPanel>(_view, "ArchiveScreen").IsVisible);
-        Click(Find<Button>(Named<DockPanel>(_view, "ArchiveScreen"), x => NameOf(x) == "Back")!);
+        Click(Named<Button>(_view, "TabLists"));
         Assert.True(Named<DockPanel>(_view, "HomeScreen").IsVisible);
 
         Click(Named<Button>(_view, "UndoButton")); // nothing done yet
@@ -929,9 +932,11 @@ public partial class PhoneTests : UiTest
         PhoneView.PickExportFile = _ => { exported = true; return Task.FromResult<Stream?>(null); };
         try
         {
-            Click(Find<Button>(_view, x => NameOf(x) == "Menu")!);
-            Choose("Export");
+            _view.ShowSection(PhoneSection.Settings);
+            Pump();
+            Click(FindAll<Button>(_view.SettingsPage!).First(x => x.Content as string == "Export"));
             Assert.True(UiHost.WaitUntil(() => exported));
+            _view.ShowSection(PhoneSection.Lists);
         }
         finally { PhoneView.PickExportFile = real; }
 
@@ -1006,7 +1011,7 @@ public partial class PhoneTests : UiTest
         Pump();
 
         // holding the check button doesn't lift the row (it's a tap on the button: the item starts completing)
-        PhoneView.CompleteDelay = TimeSpan.FromSeconds(30);
+        CompleteIn(TimeSpan.FromSeconds(30));
         var check = Find<Button>(PhoneRow(cat.Items[0]), x => x.Classes.Contains("check"))!;
         LongPress(check);
         Assert.False(_view.SheetOpen);
@@ -1112,8 +1117,7 @@ public partial class PhoneTests : UiTest
         Assert.Single(untitled.Categories[0].Items);
 
         Click(Find<Button>(_view, x => NameOf(x) == "List menu")!);
-        Choose("Color");
-        Choose("Light");
+        ChooseColor("Light");
         Assert.Equal(Avalonia.Styling.ThemeVariant.Light, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);
         _view.App_ThemeOrDataChanged(); // the app theme changed while a board is open: it keeps its colors
         Assert.Equal(Avalonia.Styling.ThemeVariant.Light, Find<ThemeVariantScope>(_view)!.RequestedThemeVariant);

@@ -50,6 +50,35 @@ public class ActionsTests : StoreTestBase
     }
 
     [Fact]
+    public void The_undo_history_says_when_it_changes()
+    {
+        var board = Store.Data.Boards.Count > 0 ? Store.Data.Boards[0] : Actions.NewBoard(new WorkArea(0, 0, 800, 600), null);
+        Actions.ClearUndo();
+        int changes = 0;
+        void Count() => changes++;
+        Actions.UndoChanged += Count;
+        try
+        {
+            int before = Actions.UndoVersion;
+            Actions.RenameBoard(board, "One");
+            Assert.Equal(1, changes);
+            Assert.NotEqual(before, Actions.UndoVersion);
+
+            int afterPush = Actions.UndoVersion;
+            Actions.Undo();
+            Assert.Equal(2, changes);
+            Assert.NotEqual(afterPush, Actions.UndoVersion);
+
+            Actions.ClearUndo();
+            Assert.Equal(3, changes);
+        }
+        finally
+        {
+            Actions.UndoChanged -= Count;
+        }
+    }
+
+    [Fact]
     public void Complete_moves_to_archive_and_undo_puts_it_back_in_place()
     {
         var cat = MakeBoard(("A", new[] { "a", "b", "c" })).Categories[0];

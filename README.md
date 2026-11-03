@@ -13,16 +13,16 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 ## Features
 
 - **Desktop widgets** (Windows and macOS). Each list is a borderless widget that stays on the desktop. On Windows it survives **Win+D / Show desktop** and stays out of the taskbar and Alt+Tab; on macOS it's on every Space and out of the Dock and Cmd+Tab.
-- **Phone app** (Android). The first screen shows a card for every list with its color, item count, overdue items and a short preview; tap one to open it full screen.
+- **Phone app** (Android). A bottom bar with **Lists**, **Archive** and **Settings**. Lists shows a card for every list with its color, item count, overdue items and a short preview. Tap one to open it full screen.
 - **As many lists as you want.** Every widget remembers its position and size, and can be locked in place.
-- **All lists in one window** (Windows and macOS). **All lists** shows every list as a card, like the phone. Each card has a **Widget** switch, so a list can be a widget on one computer and not on another, and still be opened and edited there.
+- **One PinList window** (Windows and macOS). A sidebar with **All lists**, **Archive** and **Settings**. All lists shows every list as a card, like the phone. Each card has an **On desktop** switch, so a list can be a widget on one computer and not on another, and still be opened and edited there.
 - **Copy items.** Copy one item, a category or a whole list as text, to paste it into a message or another app.
 - **Categories.** Colored, collapsible and reorderable by drag-and-drop, also between widgets.
 - **Fast editing.** Type and press Enter to add, double-click (tap on the phone) to edit, Shift+Enter for multi-line items.
 - **Due dates and reminders.** A due date is a day: it shows on the item and turns red when it's overdue. A reminder is a day and time: it shows up once as a system notification (on the phone also when the app is closed) and is then removed.
-- **Archive.** Completed items are kept with the date and time they were completed; search, restore or delete them.
+- **Archive.** Completed items are kept with the date and time they were completed, grouped by day. Search, restore or delete them.
 - **Undo.** On the desktop, Ctrl+Z undoes almost anything: deleting, completing, editing, renaming, moving, restoring. On the phone, the bar that appears after a change has an *Undo* button.
-- **Dark, light or pastel lists**, optional transparency, menus that follow the system light/dark setting.
+- **One look everywhere.** The Inter font and the same colors, corners and icons on Windows, macOS and Android. Dark, light or pastel lists, optional transparency, menus that follow the system light/dark setting. Each category has its own color, shown as a readable shade on every list color.
 - **Optional Google Drive sync.** Sign in with Google and choose which lists sync between your PCs, Macs and phone. Changes are merged item by item, also after days offline, and nothing you deleted comes back. Your lists go only to a hidden folder in **your own** Google Drive – see [Sync](#sync).
 - **Update notices (optional).** On first start PinList asks whether it may check for new versions. If you say yes, it looks about once a day and tells you when one is out – see [Updating](#updating).
 - **Your data is safe.** Every change is saved right away to a local JSON file, with atomic writes and daily backups. Export and import your lists at any time – also to move them between a PC, a Mac and a phone.
@@ -41,7 +41,7 @@ Get the files from the [website](https://filipraic.github.io/pin-list/#download)
 
 ### Windows – `PinList.exe`
 
-PinList is a single exe – put it anywhere (e.g. `%LOCALAPPDATA%\Programs\PinList`) and run it. On first start it creates one widget and adds itself to *Start with Windows* (you can turn that off in the tray menu). Starting it again while it's running brings the widgets to the front.
+PinList is a single exe – put it anywhere (e.g. `%LOCALAPPDATA%\Programs\PinList`) and run it. On first start it creates one widget and adds itself to *Start with Windows* (you can turn that off in **Settings**). Starting it again while it's running brings the widgets to the front.
 
 > The exe isn't code-signed, so Windows SmartScreen may show *"Windows protected your PC"*. Click **More info → Run anyway**, or build it yourself from source.
 
@@ -57,7 +57,7 @@ Get-FileHash .\PinList.exe -Algorithm SHA256   # compare with PinList.exe.sha256
    xattr -dr com.apple.quarantine /Applications/PinList.app
    ```
    Then open PinList normally. (Alternatively: try to open it once, then **System Settings → Privacy & Security → Open Anyway**.)
-3. PinList lives in the **menu bar** (no Dock icon). On first start it creates one widget and adds itself to the login items; you can turn that off in the menu bar menu.
+3. PinList lives in the **menu bar** (no Dock icon). On first start it creates one widget and adds itself to the login items. You can turn that off in **Settings**.
 
 If macOS says the app *"is damaged"*, sign it for your Mac and try again:
 
@@ -82,9 +82,9 @@ Updates install over the old version and keep your lists.
 On first start PinList asks whether it may check for updates. If you say yes, it asks GitHub about once a day for the number of the latest release (nothing about you or your lists is sent, see the [privacy policy](https://filipraic.github.io/pin-list/privacy)). When a new version is out:
 
 - **Windows and macOS:** a notification says so, and the tray / menu bar menu gets **Get PinList x.y.z** at the top. Both open the release page. Download the new file and replace the old one.
-- **Android:** a bar with **Get it** appears, and the **⋮** menu gets **Get PinList x.y.z**. Both download the new APK in your browser. Open it to install it over the old version.
+- **Android:** a bar with **Get it** appears, and **Settings** gets **Get PinList x.y.z** at the top. Both download the new APK in your browser. Open it to install it over the old version.
 
-Change your answer at any time with **Check for updates** in the tray / menu bar menu, or **⋮ → Updates** on the phone.
+Change your answer at any time with **Check for updates** in **Settings** (on the desktop and on the phone).
 
 ## Usage
 
@@ -103,43 +103,44 @@ Change your answer at any time with **Check for updates** in the tray / menu bar
 | New category | The folder button in the widget header. |
 | Category options | Right-click a category header: rename, color, collapse, copy items, delete. |
 | Copy | Right-click an item → **Copy**, a category → **Copy items**, or **⋯ → Copy all items** for the whole list. One item per line with "- " in front, ready to paste anywhere. |
-| All lists | **⋯ → All lists** or the tray / menu bar menu. Every list as a card. Click one to open and edit it, right-click for its menu. The **Widget** switch on each card shows or hides that list's widget on this computer. Lists still sync, whatever the switch says. |
+| All lists | **⋯ → All lists** or the tray / menu bar menu opens the PinList window on every list as a card. Click one to open and edit it, right-click for its menu. The **On desktop** switch on each card shows or hides that list's widget on this computer. Lists still sync, whatever the switch says. **+ New list** at the end adds a list. |
 | Remove a widget from the desktop | **⋯ → Remove from desktop**. The list stays in **All lists** and on your other devices. Ctrl+Z brings the widget back. |
 | Rename a widget | Double-click its header. The title is optional – leave it empty for no title. |
-| Widget color | **⋯ → Window color** and **⋯ → Transparent background**. |
-| App theme | **⋯ → App theme** or the tray / menu bar menu: follow the system (default), *Light* or *Dark*. Applies to menus, dialogs and the archive. |
+| List color | **⋯ → List color** is a row of colors (use the arrow keys and Enter). **⋯ → Transparent** is a switch. |
+| App theme | **Settings → Appearance**: *System* (default), *Light* or *Dark*. Applies to menus, dialogs and the PinList window. |
 | Move / resize | Drag the header / drag the edges. The 🔒 button locks position and size. |
-| Archive | **⋯ → Archive** or the tray / menu bar menu. Enter or double-click restores, Delete removes permanently (after asking), Ctrl+Z undoes, Ctrl+F searches. |
-| Sync a widget | **⋯ → Sync this window** (signs in with Google first if needed). See [Sync](#sync). |
-| Export / import | **⋯ → Export** saves all lists and the archive to a file. **⋯ → Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
-| Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has all lists, new window, archive, theme, export/import, **Google sync**, start at login, **Check for updates**, data folder and exit (*Quit PinList* on a Mac). |
-| App settings | Also in every widget: **⋯ → PinList** has Google sync, start at login, check for updates, the data folder and exit. Handy on a Mac when the menu bar icon is hidden. |
+| Archive | **⋯ → Archive** or the tray / menu bar menu. Items are grouped by day. Enter or double-click restores, Delete removes permanently (after asking), Ctrl+Z undoes, Ctrl+F searches. The **Restore** and **Delete** buttons under the list act on the selected items, and the same buttons show on the row under the mouse. |
+| Sync a list | **⋯ → Sync this list** (signs in with Google first if needed). See [Sync](#sync). |
+| Export / import | **Settings → Your data → Export** saves all lists and the archive to a file. **Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
+| Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit (*Quit PinList* on a Mac). |
+| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import and the data folder. Handy on a Mac when the menu bar icon is hidden. |
 | Updates | When a new version is out, the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
-Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete window** to delete the list. Shutting down or restarting the computer closes PinList without asking.
+Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete list** to delete the list. Shutting down or restarting the computer closes PinList without asking.
 
 ### Phone (Android)
 
 | Action | How |
 |---|---|
-| Open a list | Tap its card. **Back** returns to the cards. |
-| New list | The **+** button on the cards screen. |
+| Open a list | Tap its card. **Back** returns to the cards. The bottom bar has **Lists**, **Archive** and **Settings**. |
+| New list | The **New list** button on the Lists screen. |
 | Add an item | Type in **Add item** and press Enter on the keyboard; the keyboard stays open for the next one. |
 | Complete an item | Tap the circle (tap again quickly to cancel). |
 | Edit | Tap the text of an item, or the list's title. |
-| Menus | **Press and hold** a card, a category or an item: due date, reminder, move to another list, copy, color, rename, delete. |
+| Menus | **Press and hold** a card, a category or an item: due date, reminder, move to another list, copy, color, rename, delete. A list's menu has a row of list colors and a **Sync this list** switch. Swipe a menu down to close it. |
 | Reorder | Press and hold, then drag – cards on the first screen, items and categories in a list. Hold near the top or bottom edge to scroll. |
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
-| Archive, theme, export / import | The **archive** and **⋮** buttons on the cards screen. |
-| Google sync | **⋮ → Google sync** to sign in; **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
-| Updates | **⋮ → Updates** turns the update check on or off. When a new version is out, **⋮ → Get PinList x.y.z** downloads it. |
+| Archive | The **Archive** tab. Completed items are grouped by day. Tap one to restore or delete it. |
+| Theme, export / import | The **Settings** tab. |
+| Google sync | **Settings → Google Drive sync** to sign in, then **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
+| Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, **Settings → Get PinList x.y.z** downloads it. |
 
 ## Sync
 
 Sync is optional and off until you turn it on. It works between any mix of Windows PCs, Macs and Android phones signed in with the same Google account.
 
-1. **Sign in.** Desktop: tray / menu bar icon → **Google sync → Sign in with Google** (your browser opens Google's sign-in page). Phone: **⋮ → Google sync → Sign in with Google**. Signing in doesn't sync anything yet.
-2. **Choose lists.** Desktop: **⋯ → Sync this window**. Phone: press and hold a card → **Sync this list**. The list then appears on your other signed-in devices. Turning it off on any device turns it off everywhere; every device keeps its copy as a normal local list.
+1. **Sign in.** Desktop and phone: **Settings → Google Drive sync → Sign in with Google** (your browser opens Google's sign-in page). Signing in doesn't sync anything yet.
+2. **Choose lists.** Desktop: **⋯ → Sync this list**. Phone: press and hold a card → **Sync this list**. The list then appears on your other signed-in devices. Turning it off on any device turns it off everywhere, and every device keeps its copy as a normal local list.
 3. **The icon** in a synced list's header shows how it's doing: a cloud with a check (up to date), turning arrows (syncing), a cloud with an arrow (offline – changes sync later), a red cloud (a problem – click or tap it for what to do). A crossed-out cloud means the list isn't synced. Signed out, there's no icon at all.
 
 How it behaves:
@@ -148,13 +149,13 @@ How it behaves:
 - Edits made on different devices, also offline, are merged item by item. If the same item was changed on two devices, the newer change wins. An item deleted on one device is deleted everywhere – unless it was edited on another device after that, then it stays.
 - Deleting a synced list deletes it on all devices (PinList asks first and says so).
 - **Sign out** keeps all lists on this device and pauses their sync. **Sign out and delete cloud data** also removes PinList's data from your Google Drive; your lists stay on every device as local lists.
-- Window positions and sizes, the lock, the app theme and "start with Windows" are per device and never synced.
+- Widget positions and sizes, the lock, the app theme and "start with Windows" are per device and never synced.
 
 Privacy: PinList can only see its own hidden folder in your Drive, never your other files, and there is no PinList server. The full policy is on the [privacy page](https://filipraic.github.io/pin-list/privacy). Building your own release with sync needs your own Google project – see [Releasing a new version](#releasing-a-new-version).
 
 ## Keyboard and accessibility
 
-Everything on the desktop works without a mouse. On Windows, press **Win+B** to get to the tray, select the PinList icon, press **Enter** to open its menu and choose **Show all windows** – or simply start PinList again. Keyboard focus lands on the first category.
+Everything on the desktop works without a mouse. On Windows, press **Win+B** to get to the tray, select the PinList icon, press **Enter** to open its menu and choose **Show all widgets** – or simply start PinList again. Keyboard focus lands on the first category.
 
 | Key | In a widget |
 |---|---|
@@ -164,9 +165,11 @@ Everything on the desktop works without a mouse. On Windows, press **Win+B** to 
 | **Delete** | Delete the item or category, after asking (focus moves to the next one) |
 | **Alt+↑** / **Alt+↓** | Move the item or category up or down (items move into the next category at the edges) |
 | **Context menu key** or **Shift+F10** | Open the item's or category's menu (due date, reminder, color, …) |
-| **Ctrl+C** / **Ctrl+Shift+C** | Copy the focused item / its whole category (Cmd+C on a Mac). On a category, Ctrl+C copies its items |
+| **Ctrl+C** / **Ctrl+Shift+C** | Copy the focused item / its whole category. On a category, Ctrl+C copies its items |
 | **Ctrl+Z** | Undo |
 | **Ctrl+Arrows** / **Ctrl+Shift+Arrows** | Move / resize the widget (when it isn't locked) |
+
+On a Mac, use **⌘** (Cmd) where the table says Ctrl (⌘Z, ⌘C, ⌘F), **Return** for Enter, **Option** for Alt and the **delete** key (⌫) to delete. Menus and the archive show the shortcuts with the Mac key symbols.
 
 - **Screen readers** (tested with Narrator, NVDA and JAWS on Windows): every button and field has a name, items are read with their due date and reminder (*"Renew passport, overdue, was due Sat 17 Oct"*), categories with their item count and whether they're collapsed, and dialogs with their title. Completing, deleting, moving, undoing and restoring are announced.
 - **Contrast**: small grey text has at least 4.5:1 contrast (WCAG AA) on every list color. With a Windows **contrast theme** turned on, PinList uses its colors everywhere.
@@ -252,14 +255,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.3.0
-   git push origin master v2.3.0
+   git tag v2.4.0
+   git push origin master v2.4.0
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.3.0
-   git push -f origin v2.3.0
+   git tag -f v2.4.0
+   git push -f origin v2.4.0
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):

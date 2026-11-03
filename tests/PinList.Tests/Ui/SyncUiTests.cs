@@ -8,7 +8,7 @@ using Xunit;
 
 namespace PinList.Tests;
 
-/// <summary>Google sync in the desktop app: tray submenu, the widget's menu item and header icon.</summary>
+/// <summary>Google sync in the desktop app: the Settings page, the widget's menu switch and header icon.</summary>
 public class SyncUiTests : UiTest
 {
     readonly FakeAuth _auth = new();
@@ -31,10 +31,23 @@ public class SyncUiTests : UiTest
             .FirstOrDefault(k => ReferenceEquals(w.FindResource(k), data));
     }
 
-    static IEnumerable<MenuItem> SyncSubmenu()
+    DesktopSettingsHost? _settings;
+
+    /// <summary>What the Settings page shows (and does) for Google sync.</summary>
+    DesktopSettingsHost Settings => _settings ??= new DesktopSettingsHost(App);
+
+    void SettingsAction(string text)
     {
-        Tray.ClickRight();
-        return MenuItem(App.LastTrayMenu!, "Google sync").Items.OfType<MenuItem>();
+        Settings.Sync!.Actions.Single(a => a.Text == text).Run();
+        Pump();
+    }
+
+    /// <summary>"Sync now" on the Settings page, and waits until the pass is over.</summary>
+    void SyncNowFromSettings()
+    {
+        SettingsAction("Sync now");
+        Assert.True(UiHost.WaitUntil(() => !SyncService.Current!.IsSyncing));
+        Pump();
     }
 
     ContextMenu WindowMenu(BoardWindow w)
@@ -45,18 +58,19 @@ public class SyncUiTests : UiTest
 
     void SignIn()
     {
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sign in with Google");
-        Assert.NotNull(SyncService.Current!.Account);
+        SettingsAction("Sign in with Google");
+        Assert.True(UiHost.WaitUntil(() => SyncService.Current!.Account != null));
+        Pump();
     }
 
     [AvaloniaFact]
-    public void Fresh_install_has_no_sync_icon_and_tray_offers_sign_in()
+    public void Fresh_install_has_no_sync_icon_and_settings_offer_sign_in()
     {
         var s = UseFakeSync();
         var w = OpenNew(("A", new[] { "a" }));
         Assert.False(SyncBtn(w).IsVisible);
-        Assert.Equal(new[] { "Sign in with Google" }, SyncSubmenu().Select(Header));
-        App.LastTrayMenu!.Close();
+        Assert.Null(Settings.Sync!.Account);
+        Assert.Equal(new[] { "Sign in with Google" }, Settings.Sync!.Actions.Select(a => a.Text));
 
         SignIn();
         Assert.Contains("waiting for sign-in", Dialogs.Shown);
@@ -69,84 +83,81 @@ public class SyncUiTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Unavailable_build_shows_the_disabled_entry()
+    public void Unavailable_build_shows_the_explanation_and_no_sync_switch()
     {
         var w = OpenNew(("A", new[] { "a" })); // the test build has no Google client
-        var only = SyncSubmenu().Single();
-        Assert.Equal("Sync isn't available in this build.", Header(only));
-        Assert.False(only.IsEnabled);
-        Assert.DoesNotContain(WindowMenu(w).Items.OfType<MenuItem>(), m => Header(m) == "Sync this window");
+        Assert.Null(Settings.Sync);
+        Assert.Equal("Sync isn't available in this build.", Settings.UnavailableSyncText);
+        Assert.DoesNotContain(WindowMenu(w).Items.OfType<MenuItem>(), m => Header(m) == "Sync this list");
         Assert.False(SyncBtn(w).IsVisible);
+        w.LastMenu!.Close();
     }
 
     [AvaloniaFact]
-    public void Signed_in_tray_shows_account_last_sync_and_actions()
+    public void Signed_in_settings_show_account_last_sync_and_actions()
     {
         var s = UseFakeSync();
         SignIn();
-        var items = SyncSubmenu().ToList();
-        Assert.Equal(new[] { "Signed in as me@example.com", "Last synced: just now", "Sync now", "Sign out", "Sign out and delete cloud data" },
-            items.Select(Header));
-        Assert.False(items[0].IsEnabled);
-        Assert.False(items[1].IsEnabled);
-        Assert.Contains(Tray.Menu, e => e.Text == "Signed in as me@example.com" && !e.Enabled); // macOS menu bar too
-        App.LastTrayMenu!.Close();
+        var summary = Settings.Sync!;
+        Assert.Equal("me@example.com", summary.Account);
+        Assert.Equal("Synced just now", summary.Status);
+        Assert.Equal(new[] { "Sync now", "Sign out", "Sign out and delete cloud data" }, summary.Actions.Select(a => a.Text));
 
         int calls = _cloud.Calls;
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         Assert.True(_cloud.Calls > calls);
 
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sign out and delete cloud data"); // Esc
-        Assert.Contains(Dialogs.Shown, d => d.Contains("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device."));
+        SettingsAction("Sign out and delete cloud data"); // Esc
+        Assert.True(UiHost.WaitUntil(() => Dialogs.Shown.Any(d => d.Contains("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device."))));
         Assert.NotNull(s.Account);
         Dialogs.ChooseAnswer = _ => 1;
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sign out and delete cloud data");
-        Assert.Null(s.Account);
+        SettingsAction("Sign out and delete cloud data");
+        Assert.True(UiHost.WaitUntil(() => s.Account == null));
         Assert.Equal(new[] { "reset.json" }, _cloud.Names);
 
         SignIn();
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sign out");
-        Assert.Null(s.Account);
+        SettingsAction("Sign out");
+        Assert.True(UiHost.WaitUntil(() => s.Account == null));
         Assert.Equal(2, _auth.SignOuts);
     }
 
     [AvaloniaFact]
-    public void Sync_this_window_turns_sync_on_and_shows_the_check_icon()
+    public void Sync_this_list_turns_sync_on_and_shows_the_check_icon()
     {
         UseFakeSync();
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
-        var item = MenuItem(WindowMenu(w), "Sync this window");
+        var item = MenuItem(WindowMenu(w), "Sync this list");
         Assert.Equal(MenuItemToggleType.CheckBox, item.ToggleType);
         Assert.False(item.IsChecked);
-        ChooseFromMenu(w.LastMenu!, "Sync this window");
+        ChooseFromMenu(w.LastMenu!, "Sync this list");
 
         Assert.True(w.Board.Synced);
         Assert.Contains(_cloud.Names, n => n.StartsWith($"w-{w.Board.Id}."));
         Assert.Equal("Icon.CloudCheck", IconKeyOf(w));
         Assert.Equal("Synced · just now", ToolTip.GetTip(SyncBtn(w)));
 
-        Assert.True(MenuItem(WindowMenu(w), "Sync this window").IsChecked);
-        ChooseFromMenu(w.LastMenu!, "Sync this window");
+        Assert.True(MenuItem(WindowMenu(w), "Sync this list").IsChecked);
+        ChooseFromMenu(w.LastMenu!, "Sync this list");
         Assert.False(w.Board.Synced);
         Assert.Equal("Icon.CloudOff", IconKeyOf(w));
     }
 
     [AvaloniaFact]
-    public void Sync_this_window_when_signed_out_signs_in_first()
+    public void Sync_this_list_when_signed_out_signs_in_first()
     {
         var s = UseFakeSync();
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WindowMenu(w), "Sync this window");
+        ChooseFromMenu(WindowMenu(w), "Sync this list");
         Assert.Contains("waiting for sign-in", Dialogs.Shown);
         Assert.NotNull(s.Account);
         Assert.True(w.Board.Synced);
 
         // the user cancels the sign-in: nothing changes
         var other = OpenNew(("B", new string[0]));
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sign out");
+        SettingsAction("Sign out");
         _auth.NextAccount = null;
-        ChooseFromMenu(WindowMenu(other), "Sync this window");
+        ChooseFromMenu(WindowMenu(other), "Sync this list");
         Assert.False(other.Board.Synced);
     }
 
@@ -157,7 +168,7 @@ public class SyncUiTests : UiTest
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
         Click(SyncBtn(w));
-        ChooseFromMenu(w.LastMenu!, "Turn on sync for this window");
+        ChooseFromMenu(w.LastMenu!, "Turn on sync for this list");
         Assert.True(w.Board.Synced);
 
         Click(SyncBtn(w)); // synced: the menu offers a sync now
@@ -172,7 +183,7 @@ public class SyncUiTests : UiTest
         var s = UseFakeSync();
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WindowMenu(w), "Sync this window");
+        ChooseFromMenu(WindowMenu(w), "Sync this list");
         Assert.Equal("Icon.CloudCheck", IconKeyOf(w));
 
         _cloud.Gate = new TaskCompletionSource();
@@ -188,7 +199,7 @@ public class SyncUiTests : UiTest
         Pump();
 
         _cloud.Offline = true;
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         Assert.Equal("Icon.CloudWaiting", IconKeyOf(w));
         Assert.Equal("Offline · changes will sync later", ToolTip.GetTip(SyncBtn(w)));
         Assert.DoesNotContain("danger", SyncBtn(w).Classes);
@@ -201,10 +212,10 @@ public class SyncUiTests : UiTest
         UseFakeSync();
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WindowMenu(w), "Sync this window");
+        ChooseFromMenu(WindowMenu(w), "Sync this list");
 
         _auth.TokenValid = false;
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         Assert.Equal("Icon.CloudProblem", IconKeyOf(w));
         Assert.Contains("danger", SyncBtn(w).Classes);
         Assert.Equal("Google signed you out.", AutomationProperties.GetName(SyncBtn(w)));
@@ -218,7 +229,7 @@ public class SyncUiTests : UiTest
         Assert.Equal("Icon.CloudCheck", IconKeyOf(w));
 
         _cloud.Offline = true;
-        for (int i = 0; i < 5; i++) ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        for (int i = 0; i < 5; i++) SyncNowFromSettings();
         Assert.Equal("Icon.CloudProblem", IconKeyOf(w));
         Dialogs.Shown.Clear();
         Click(SyncBtn(w));
@@ -228,7 +239,7 @@ public class SyncUiTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Lists_from_other_devices_open_and_close_their_windows()
+    public void Lists_from_other_devices_open_and_close_their_widgets()
     {
         var s = UseFakeSync();
         SignIn();
@@ -241,14 +252,14 @@ public class SyncUiTests : UiTest
         var copy = ListCopy.From(b, other.Archive, other.SyncInfo, "Mac");
         _cloud.Put($"w-{b.Id}.other.json", ListCopy.ToJson(copy));
 
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         var w = App.OpenWindows.Single(x => x.Board.Id == b.Id);
         Assert.True(w.IsVisible);
         Assert.Equal("Icon.CloudCheck", IconKeyOf(w));
 
         // and deletes it there
         _cloud.Put($"w-{b.Id}.other.json", ListCopy.ToJson(copy.ToDeletedMarker(other.SyncInfo, DateTime.UtcNow)));
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         Assert.DoesNotContain(App.OpenWindows, x => x.Board.Id == b.Id);
         UiHost.Wait(TimeSpan.FromMilliseconds(300));
         Assert.DoesNotContain(App.OpenWindows, x => x.Board.Id == b.Id); // not reopened
@@ -260,9 +271,9 @@ public class SyncUiTests : UiTest
         UseFakeSync();
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WindowMenu(w), "Sync this window");
+        ChooseFromMenu(WindowMenu(w), "Sync this list");
         _cloud.Put("reset.json", """{ "device": "other" }""");
-        ChooseFromMenu(App.ShowTrayMenu(), "Google sync", "Sync now");
+        SyncNowFromSettings();
         Assert.Contains("PinList: Sync was turned off because the cloud data was deleted from another device.", Dialogs.Shown);
         Assert.False(w.Board.Synced);
     }
@@ -273,7 +284,7 @@ public class SyncUiTests : UiTest
         UseFakeSync();
         SignIn();
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WindowMenu(w), "Sync this window");
+        ChooseFromMenu(WindowMenu(w), "Sync this list");
         w.Board.Categories[0].Items[0].Text = "at exit";
         App.ExitApp();
         Assert.True(UiHost.WaitUntil(() => UiHost.ShutdownRequests == 1));

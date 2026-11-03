@@ -6,6 +6,9 @@ using Avalonia.Media.Immutable;
 
 namespace PinList;
 
+/// <summary>The parts of a category that are colored with its shade (see <see cref="Themes.CategoryColor"/>).</summary>
+public enum CategoryPart { Text, Ring, Line, Pill, Fill, Tick }
+
 /// <summary>A widget color option (the key is what gets stored in data.json).</summary>
 public record BoardStyle(string Key, string Name, string Background, bool IsDark);
 
@@ -14,7 +17,7 @@ public record ContrastColors(Color Window, Color WindowText, Color Highlight, Co
 
 /// <summary>
 /// All colors used by the app. Each widget gets its own brushes in its own resources (so every window can have a
-/// different color); menus, tooltips, dialogs and the archive use the app theme (light or dark) from the
+/// different color); menus, tooltips, dialogs and the PinList window use the app theme (light or dark) from the
 /// application resources.
 /// </summary>
 public static class Themes
@@ -83,6 +86,7 @@ public static class Themes
 
         bool d = style.IsDark;
         Set(r, "BoardBorder",   d ? "#26FFFFFF" : "#1F000000");
+        Set(r, "Line",          d ? "#17FFFFFF" : "#14000000");
         Set(r, "TextPrimary",   d ? "#F2FFFFFF" : "#E6000000");
         Set(r, "TextSecondary", d ? "#B3FFFFFF" : "#B8000000");
         Set(r, "TextMuted",     d ? "#8CFFFFFF" : "#96000000");
@@ -92,12 +96,23 @@ public static class Themes
         Set(r, "Done",          d ? "#6CCB5F"   : "#0F7B0F");
         Set(r, "Overdue",       d ? "#FF99A4"   : "#B3261E");
         Set(r, "ScrollThumb",   d ? "#40FFFFFF" : "#40000000");
+        // chip backgrounds: neutral, and a 16 % tint of the accent and the overdue color
+        Set(r, "ChipBg",        d ? "#14FFFFFF" : "#0F000000");
+        Set(r, "AccentBg",      Tint(d ? "#60CDFF" : "#005FB8"));
+        Set(r, "OverdueBg",     Tint(d ? "#FF99A4" : "#B3261E"));
+    }
+
+    static Color Tint(string hex)
+    {
+        var c = Parse(hex);
+        return Color.FromArgb(PillAlpha, c.R, c.G, c.B);
     }
 
     static void ApplyBoardHighContrast(IResourceDictionary r, ContrastColors c)
     {
         Set(r, "BoardBg", c.Window);
         Set(r, "BoardBorder", c.WindowText);
+        Set(r, "Line", c.WindowText);
         Set(r, "TextPrimary", c.WindowText);
         Set(r, "TextSecondary", c.WindowText);
         Set(r, "TextMuted", c.WindowText);
@@ -109,9 +124,17 @@ public static class Themes
         Set(r, "Done", c.Highlight);
         Set(r, "Overdue", c.HotTrack);
         Set(r, "ScrollThumb", c.WindowText);
+        Set(r, "ChipBg", c.Window);
+        Set(r, "AccentBg", c.Window);
+        Set(r, "OverdueBg", c.Window);
     }
 
-    /// <summary>Brushes for menus, tooltips, dialogs and the archive window.</summary>
+    /// <summary>
+    /// Brushes for everything outside the widgets: menus, tooltips, dialogs, the PinList window and the phone.
+    /// One scheme: Bg (screens), Surface (boxes, cards), Raised (menus, sheets, dialogs), Line, Text1 to Text3,
+    /// Hover, Selected, Accent, Danger and Done. ItemHover and ItemHoverText are what a hovered menu entry or
+    /// list row shows (they differ from Hover only in high contrast, where menus need the Highlight colors).
+    /// </summary>
     public static void ApplyChrome(IResourceDictionary r, bool dark)
     {
         if (ContrastSource() is { } hc)
@@ -121,62 +144,50 @@ public static class Themes
         }
 
         bool d = dark;
-        // menus, tooltips, dialogs
-        Set(r, "MenuBg",        d ? "#2C2C2C"   : "#F9F9F9");
-        Set(r, "MenuBorder",    d ? "#33FFFFFF" : "#1F000000");
-        Set(r, "MenuText",      d ? "#F2FFFFFF" : "#E4000000");
-        Set(r, "MenuTextMuted", d ? "#99FFFFFF" : "#9B000000");
-        Set(r, "MenuHover",     d ? "#17FFFFFF" : "#0F000000");
-        Set(r, "MenuHoverText", d ? "#F2FFFFFF" : "#E4000000");
-        Set(r, "ControlBg",     d ? "#0FFFFFFF" : "#FFFFFF");
-        Set(r, "ControlHover",  d ? "#1AFFFFFF" : "#F5F5F5");
-        Set(r, "ControlBorder", d ? "#1AFFFFFF" : "#26000000");
-        Set(r, "AccentFill",    d ? "#60CDFF"   : "#005FB8");
-        Set(r, "AccentText",    d ? "#000000"   : "#FFFFFF");
-        Set(r, "DangerFill",    d ? "#FF99A4"   : "#C42B1C");
-        Set(r, "DangerText",    d ? "#000000"   : "#FFFFFF");
-
-        // archive window
-        Set(r, "ArcBg",           d ? "#202020"   : "#F3F3F3");
-        Set(r, "ArcSurface",      d ? "#2A2A2A"   : "#FFFFFF");
-        Set(r, "ArcBorder",       d ? "#1FFFFFFF" : "#1A000000");
-        Set(r, "ArcText",         d ? "#F2FFFFFF" : "#E4000000");
-        Set(r, "ArcMuted",        d ? "#99FFFFFF" : "#9B000000");
-        Set(r, "ArcHover",        d ? "#0FFFFFFF" : "#0A000000");
-        Set(r, "ArcSelected",     d ? "#3360CDFF" : "#26005FB8");
-        Set(r, "ArcSelectedText", d ? "#F2FFFFFF" : "#E4000000");
-        Set(r, "Accent",          d ? "#60CDFF"   : "#005FB8");
-        Set(r, "ScrollThumb",     d ? "#40FFFFFF" : "#40000000");
+        Set(r, "Bg",         d ? "#18181A" : "#F4F4F6");
+        Set(r, "Surface",    d ? "#222225" : "#FFFFFF");
+        Set(r, "Raised",     d ? "#2C2C2F" : "#FFFFFF");
+        Set(r, "Line",       d ? "#17FFFFFF" : "#14000000");
+        Set(r, "Text1",      d ? "#F0FFFFFF" : "#E0000000");
+        Set(r, "Text2",      d ? "#B3FFFFFF" : "#B8000000");
+        Set(r, "Text3",      d ? "#8CFFFFFF" : "#96000000");
+        Set(r, "Hover",      d ? "#0FFFFFFF" : "#0A000000");
+        Set(r, "Selected",   d ? "#2E6CB8FF" : "#1F0A64C8");
+        Set(r, "Accent",     d ? "#6CB8FF" : "#0A64C8");
+        Set(r, "AccentText", d ? "#04223F" : "#FFFFFF");
+        Set(r, "Danger",     d ? "#FF8A8A" : "#C42B1C");
+        Set(r, "DangerText", d ? "#000000" : "#FFFFFF");
+        Set(r, "Done",       d ? "#5FD08A" : "#1D8A4A");
+        Set(r, "ScrollThumb", d ? "#40FFFFFF" : "#40000000");
+        Set(r, "ItemHover",     d ? "#17FFFFFF" : "#0F000000");
+        Set(r, "ItemHoverText", d ? "#F0FFFFFF" : "#E0000000");
+        Set(r, "SelectedText",  d ? "#F0FFFFFF" : "#E0000000");
+        Set(r, "SwitchKnob",    "#FFFFFF");
 
         MapFluent(r);
     }
 
     static void ApplyChromeHighContrast(IResourceDictionary r, ContrastColors c)
     {
-        Set(r, "MenuBg", c.Window);
-        Set(r, "MenuBorder", c.WindowText);
-        Set(r, "MenuText", c.WindowText);
-        Set(r, "MenuTextMuted", c.WindowText);
-        Set(r, "MenuHover", c.Highlight);
-        Set(r, "MenuHoverText", c.HighlightText);
-        Set(r, "ControlBg", c.Window);
-        Set(r, "ControlHover", c.Window);
-        Set(r, "ControlBorder", c.WindowText);
-        Set(r, "AccentFill", c.Highlight);
-        Set(r, "AccentText", c.HighlightText);
-        Set(r, "DangerFill", c.Highlight);
-        Set(r, "DangerText", c.HighlightText);
-
-        Set(r, "ArcBg", c.Window);
-        Set(r, "ArcSurface", c.Window);
-        Set(r, "ArcBorder", c.WindowText);
-        Set(r, "ArcText", c.WindowText);
-        Set(r, "ArcMuted", c.WindowText);
-        Set(r, "ArcHover", c.Window);
-        Set(r, "ArcSelected", c.Highlight);
-        Set(r, "ArcSelectedText", c.HighlightText);
+        Set(r, "Bg", c.Window);
+        Set(r, "Surface", c.Window);
+        Set(r, "Raised", c.Window);
+        Set(r, "Line", c.WindowText);
+        Set(r, "Text1", c.WindowText);
+        Set(r, "Text2", c.WindowText);
+        Set(r, "Text3", c.WindowText);
+        Set(r, "Hover", c.Window);
+        Set(r, "Selected", c.Highlight);
         Set(r, "Accent", c.Highlight);
+        Set(r, "AccentText", c.HighlightText);
+        Set(r, "Danger", c.Highlight);
+        Set(r, "DangerText", c.HighlightText);
+        Set(r, "Done", c.Highlight);
         Set(r, "ScrollThumb", c.WindowText);
+        Set(r, "ItemHover", c.Highlight);
+        Set(r, "ItemHoverText", c.HighlightText);
+        Set(r, "SelectedText", c.HighlightText);
+        Set(r, "SwitchKnob", c.HighlightText);
 
         MapFluent(r);
     }
@@ -185,25 +196,134 @@ public static class Themes
     static void MapFluent(IResourceDictionary r)
     {
         void Same(string fluentKey, string ourKey) => r[fluentKey] = r[ourKey];
-        Same("MenuFlyoutPresenterBackground", "MenuBg");
-        Same("MenuFlyoutPresenterBorderBrush", "MenuBorder");
-        Same("MenuFlyoutItemForeground", "MenuText");
-        Same("MenuFlyoutItemForegroundPointerOver", "MenuHoverText");
-        Same("MenuFlyoutItemForegroundPressed", "MenuHoverText");
-        Same("MenuFlyoutItemForegroundDisabled", "MenuTextMuted");
-        Same("MenuFlyoutItemBackgroundPointerOver", "MenuHover");
-        Same("MenuFlyoutItemBackgroundPressed", "MenuHover");
-        Same("MenuFlyoutItemKeyboardAcceleratorTextForeground", "MenuTextMuted");
-        Same("MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver", "MenuHoverText");
-        Same("MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed", "MenuHoverText");
-        Same("MenuFlyoutSubItemChevron", "MenuText");
-        Same("MenuFlyoutSubItemChevronPointerOver", "MenuHoverText");
-        Same("MenuFlyoutSubItemChevronPressed", "MenuHoverText");
-        Same("MenuFlyoutSubItemChevronSubMenuOpened", "MenuHoverText");
-        Same("ToolTipBackground", "MenuBg");
-        Same("ToolTipForeground", "MenuText");
-        Same("ToolTipBorderBrush", "MenuBorder");
+        Same("MenuFlyoutPresenterBackground", "Raised");
+        Same("MenuFlyoutPresenterBorderBrush", "Line");
+        Same("MenuFlyoutItemForeground", "Text1");
+        Same("MenuFlyoutItemForegroundPointerOver", "ItemHoverText");
+        Same("MenuFlyoutItemForegroundPressed", "ItemHoverText");
+        Same("MenuFlyoutItemForegroundDisabled", "Text3");
+        Same("MenuFlyoutItemBackgroundPointerOver", "ItemHover");
+        Same("MenuFlyoutItemBackgroundPressed", "ItemHover");
+        Same("MenuFlyoutItemKeyboardAcceleratorTextForeground", "Text3");
+        Same("MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver", "ItemHoverText");
+        Same("MenuFlyoutItemKeyboardAcceleratorTextForegroundPressed", "ItemHoverText");
+        Same("MenuFlyoutSubItemChevron", "Text1");
+        Same("MenuFlyoutSubItemChevronPointerOver", "ItemHoverText");
+        Same("MenuFlyoutSubItemChevronPressed", "ItemHoverText");
+        Same("MenuFlyoutSubItemChevronSubMenuOpened", "ItemHoverText");
+        Same("ToolTipBackground", "Raised");
+        Same("ToolTipForeground", "Text1");
+        Same("ToolTipBorderBrush", "Line");
+        // switches in the app's accent color, not the system one
+        foreach (var state in new[] { "", "PointerOver", "Pressed" })
+        {
+            Same("ToggleSwitchFillOn" + state, "Accent");
+            Same("ToggleSwitchStrokeOn" + state, "Accent");
+            Same("ToggleSwitchKnobFillOn" + state, "SwitchKnob");
+            // Fluent's own "accent" buttons (Sign in with Google) in the app's accent color too
+            Same("AccentButtonBackground" + state, "Accent");
+            Same("AccentButtonForeground" + state, "AccentText");
+        }
+        Same("AccentButtonBorderBrush", "Accent");
     }
+
+    /// <summary>
+    /// WCAG contrast ratio of two colors (1 to 21). A translucent first color is laid over the second one first,
+    /// like it looks on screen.
+    /// </summary>
+    public static double Contrast(Color foreground, Color background)
+    {
+        if (foreground.A < 255)
+        {
+            double a = foreground.A / 255.0;
+            foreground = Color.FromRgb(
+                (byte)Math.Round(foreground.R * a + background.R * (1 - a)),
+                (byte)Math.Round(foreground.G * a + background.G * (1 - a)),
+                (byte)Math.Round(foreground.B * a + background.B * (1 - a)));
+        }
+        double l1 = Luminance(foreground), l2 = Luminance(background);
+        if (l1 < l2) (l1, l2) = (l2, l1);
+        return (l1 + 0.05) / (l2 + 0.05);
+    }
+
+    static double Luminance(Color c)
+    {
+        static double Channel(byte v)
+        {
+            double s = v / 255.0;
+            return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * Channel(c.R) + 0.7152 * Channel(c.G) + 0.0722 * Channel(c.B);
+    }
+
+    const string FallbackCategoryColor = "#A0A0A0";
+
+    /// <summary>
+    /// The shade of a category color that is shown on a list. The stored colors (Actions.Palette) are bright and were
+    /// picked for dark backgrounds, so on light lists they are darkened (and on dark lists lightened) until the
+    /// category name has 4.5:1 contrast and the check circle's outline 3:1. An invalid or empty color counts as gray.
+    /// </summary>
+    public static Color CategoryShade(string? storedHex, string? boardStyleKey)
+    {
+        var style = Get(boardStyleKey);
+        var bg = Parse(style.Background);
+        var color = StoredColor(storedHex) ?? Parse(FallbackCategoryColor);
+        var target = style.IsDark ? Colors.White : Colors.Black;
+        // Blending all the way gives black or white, which pass on every list color, so the loop always ends
+        for (int step = 0; ; step++)
+        {
+            double t = Math.Min(1, step * 0.04);
+            var shade = Color.FromRgb(Mix(color.R, target.R, t), Mix(color.G, target.G, t), Mix(color.B, target.B, t));
+            var ring = Color.FromArgb(RingAlpha, shade.R, shade.G, shade.B);
+            if (Contrast(shade, bg) >= 4.5 && Contrast(ring, bg) >= 3.0) return shade;
+        }
+    }
+
+    /// <summary>The category's dot: its shade, or in high contrast its own stored color (so categories can be told apart).</summary>
+    public static Color CategoryDot(string? storedHex, string? boardStyleKey) =>
+        (ContrastSource() != null ? StoredColor(storedHex) : null) ?? CategoryShade(storedHex, boardStyleKey);
+
+    /// <summary>A stored category color (#RRGGBB), or null when it is empty or isn't a hex color (names like "red" don't count).</summary>
+    static Color? StoredColor(string? hex) =>
+        hex is ['#', ..] && Color.TryParse(hex, out var c) ? Color.FromRgb(c.R, c.G, c.B) : null;
+
+    const byte RingAlpha = 0xB3; // 70 %
+    const byte LineAlpha = 0x59; // 35 %
+    const byte PillAlpha = 0x29; // 16 %
+
+    static byte Mix(byte from, byte to, double t) => (byte)Math.Round(from + (to - from) * t);
+
+    /// <summary>
+    /// A color for one part of a category (name, dot, guide line, circle, count pill) on a list.
+    /// In high contrast the parts use the system colors, only the dot keeps the category color.
+    /// </summary>
+    public static Color CategoryColor(string? storedHex, string? boardStyleKey, CategoryPart part)
+    {
+        if (ContrastSource() is { } hc)
+        {
+            return part switch
+            {
+                CategoryPart.Fill => hc.Highlight,
+                CategoryPart.Tick => hc.HighlightText,
+                CategoryPart.Pill => Colors.Transparent,
+                _ => hc.WindowText,
+            };
+        }
+        var shade = CategoryShade(storedHex, boardStyleKey);
+        return part switch
+        {
+            CategoryPart.Ring => Color.FromArgb(RingAlpha, shade.R, shade.G, shade.B),
+            CategoryPart.Line => Color.FromArgb(LineAlpha, shade.R, shade.G, shade.B),
+            CategoryPart.Pill => Color.FromArgb(PillAlpha, shade.R, shade.G, shade.B),
+            CategoryPart.Tick => TickOn(shade),
+            _ => shade,
+        };
+    }
+
+    static readonly Color DarkTick = Color.Parse("#10131A");
+
+    /// <summary>The tick on a filled circle: dark on light fills, white on the darkened shades of light lists.</summary>
+    static Color TickOn(Color fill) => Contrast(DarkTick, fill) >= Contrast(Colors.White, fill) ? DarkTick : Colors.White;
 
     public static Color Parse(string hex) => Color.Parse(hex);
 

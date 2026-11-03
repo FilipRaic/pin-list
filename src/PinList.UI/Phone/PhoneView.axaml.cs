@@ -19,14 +19,21 @@ using PinList.Sync;
 
 namespace PinList;
 
+/// <summary>The three screens of the bottom bar.</summary>
+public enum PhoneSection { Lists, Archive, Settings }
+
+/// <summary>One choice of a bottom sheet. <paramref name="IsOn"/> (not null) draws a switch on its right.</summary>
+internal sealed record SheetOption(string Text, Action Run, bool Danger = false, string? Icon = null, bool? IsOn = null);
+
 /// <summary>
-/// The phone app: the cards (one per board), one board full screen, and the archive. Menus, choices and the date
-/// picker slide up from the bottom; changes can be undone from the bar that shows after them.
+/// The phone app: the cards (one per board), one board full screen, the archive and the settings, with a bottom bar
+/// for the three tabs. Menus, choices and the date picker slide up from the bottom; changes can be undone from the
+/// bar that shows after them.
 /// </summary>
 public partial class PhoneView : UserControl
 {
     readonly ObservableCollection<BoardCard> _cards = new();
-    readonly ObservableCollection<ArchivedItem> _archiveShown = new();
+    readonly ObservableCollection<object> _archiveRows = new();
     readonly PhoneDrag _homeDrag, _boardDrag;
     readonly DispatcherTimer _snackTimer = new() { Interval = TimeSpan.FromSeconds(5) };
     AppData? _data;
@@ -34,9 +41,6 @@ public partial class PhoneView : UserControl
 
     /// <summary>The current time. Tests replace it (the date picker's quick choices depend on it).</summary>
     public static Func<DateTime> Clock { get; set; } = () => DateTime.Now;
-
-    /// <summary>How long a completed item stays (crossed out) before it goes to the archive; tests shorten it.</summary>
-    public static TimeSpan CompleteDelay { get; set; } = TimeSpan.FromMilliseconds(900);
 
     /// <summary>Asks for a file to export into (the system file picker). Tests replace it.</summary>
     public static Func<TopLevel, Task<Stream?>> PickExportFile { get; set; } = SystemExportPicker;
@@ -74,7 +78,15 @@ public partial class PhoneView : UserControl
         InitializeComponent();
         Look.GrayscaleText(this);
         Cards.ItemsSource = _cards;
-        ArchiveList.ItemsSource = _archiveShown;
+        ArchiveList.ItemTemplate = ArchiveRowTemplate.Instance;
+        ArchiveList.ItemsSource = _archiveRows;
+        ArchiveList.ContainerPrepared += (_, e) =>
+        {
+            bool header = e.Container.DataContext is ArchiveDayHeader;
+            e.Container.Focusable = !header;
+            e.Container.IsHitTestVisible = !header; // day headings are not rows to tap
+        };
+        SetupSheet();
 
         _homeDrag = new PhoneDrag(HomeScreen, HomeScroller, o => o is Board)
         {
@@ -96,17 +108,22 @@ public partial class PhoneView : UserControl
         _snackTimer.Tick += (_, _) => HideSnackbar();
         _snackbarAction = UndoLastChange; // the bar's button starts as Undo
         App_ThemeOrDataChanged();
+        UpdateBar();
     }
 
     /// <summary>
-    /// The desktop's "All lists" window: right click opens the menus that a long press opens on the phone, cards get a
-    /// "Widget" switch, and the phone's own ⋮ menu is left out (the desktop has its menus in the tray and the widgets).
+    /// The "All lists" section of the desktop's PinList window: right click opens the menus that a long press opens on
+    /// the phone, cards get an "On desktop" switch, and there is no bottom bar (the window has its own sidebar).
     /// </summary>
     public PhoneView(bool desktop) : this()
     {
         IsDesktop = desktop;
         _homeDrag.RightClickOpensMenu = _boardDrag.RightClickOpensMenu = desktop;
-        AppMenuButton.IsVisible = !desktop;
+        HomeTitle.Text = desktop ? "All lists" : "Lists";
+        NewListCard.IsVisible = desktop;
+        HomeBottomSpace.IsVisible = !desktop;
+        AddBoardButton.IsVisible = !desktop;
+        UpdateBar();
         Reload();
     }
 
@@ -118,11 +135,17 @@ public partial class PhoneView : UserControl
     internal PhoneDrag HomeDrag => _homeDrag;
     internal Board? OpenBoard => _board;
     internal ObservableCollection<BoardCard> CardList => _cards;
-    internal ObservableCollection<ArchivedItem> ArchiveShown => _archiveShown;
+    internal System.Collections.Generic.IEnumerable<ArchivedItem> ArchiveShown => _archiveRows.OfType<ArchivedItem>();
+    internal System.Collections.Generic.IReadOnlyList<object> ArchiveRows => _archiveRows;
+    internal PhoneSection Section { get; private set; } = PhoneSection.Lists;
+    internal SettingsView? SettingsPage => _settings;
+    internal bool BottomBarVisible => BottomBar.IsVisible;
     internal bool SheetOpen => SheetLayer.IsVisible;
     internal string SheetTitleText => SheetTitle.Text!;
     internal Panel? SheetPanel => SheetContent.Content as Panel;
+    internal Border SheetHandleArea => SheetHandle;
     internal bool SnackbarShown => Snackbar.IsVisible;
+    internal bool AddBoardButtonVisible => AddBoardButton.IsVisible;
     internal string SnackbarMessage => SnackbarText.Text!;
 
     /// <summary>Shows the data that's in the store now (at start and after an import replaced everything).</summary>
@@ -172,7 +195,9 @@ public partial class PhoneView : UserControl
     /// <summary>The app theme changed (or the app started): colors of the cards screen, menus and the archive.</summary>
     public void App_ThemeOrDataChanged()
     {
+        ChromeLook.Apply(this);
         if (_board != null) ApplyBoardLook(_board);
+        _settingsHost?.RaiseChanged();
     }
 
     // ================= Screens =================
@@ -226,30 +251,13 @@ public partial class PhoneView : UserControl
         if (state.Status != SyncStatus.Problem) return;
         if (_sync.NeedsSignIn)
             ShowSheet("Google signed you out. Sign in again to keep syncing.",
-                ("Sign in again", () => _ = _sync.SignIn(System.Threading.CancellationToken.None), false),
-                ("Not now", () => { }, false));
+                new SheetOption("Sign in again", () => _ = _sync.SignIn(System.Threading.CancellationToken.None), Icon: "Line.Sync"),
+                new SheetOption("Not now", () => { }));
         else
             ShowSheet(state.Problem == "Can't reach Google Drive."
                     ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this phone until it works again."
                     : state.Problem!,
-                ("OK", () => { }, false));
-    }
-
-    /// <summary>The ⋮ menu's "Google sync" (the same choices as the desktop's tray menu).</summary>
-    void ShowSyncSheet()
-    {
-        var sync = _sync!;
-        if (!sync.IsAvailable) ShowSheet(sync.UnavailableText, ("OK", () => { }, false));
-        else if (sync.Account is not { } account)
-            ShowSheet("Google sync", ("Sign in with Google", () => _ = sync.SignIn(System.Threading.CancellationToken.None), false));
-        else
-            ShowSheet($"Signed in as {account.Email} · Last synced: {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}",
-                ("Sync now", () => _ = sync.SyncNow(), false),
-                ("Sign out", () => _ = sync.SignOut(false), false),
-                ("Sign out and delete cloud data", () => ShowSheet(
-                    "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
-                    ("Delete", () => _ = sync.SignOut(true), true),
-                    ("Cancel", () => { }, false)), true));
+                new SheetOption("OK", () => { }));
     }
 
     // ================= Updates =================
@@ -262,10 +270,16 @@ public partial class PhoneView : UserControl
         get => _updates;
         set
         {
-            if (_updates != null) _updates.Found -= OnUpdateFound;
+            if (_updates != null)
+            {
+                _updates.Found -= OnUpdateFound;
+                _updates.Changed -= OnUpdatesChanged;
+            }
             _updates = value;
+            RefreshUpdateRow();
             if (_updates == null) return;
             _updates.Found += OnUpdateFound;
+            _updates.Changed += OnUpdatesChanged;
             if (_updates.Enabled == null) Dispatcher.UIThread.Post(AskAboutUpdates);
         }
     }
@@ -276,24 +290,32 @@ public partial class PhoneView : UserControl
         if (_updates is not { Enabled: null } updates) return;
         ShowSheet("PinList can look for a new version about once a day and tell you when there is one. " +
                   "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent. " +
-                  "You can change this later in the ⋮ menu.",
-            ("Check for updates", () => updates.Enabled = true, false),
-            ("Don't check", () => updates.Enabled = false, false));
+                  "You can change this later in Settings.",
+            new SheetOption("Check for updates", () => updates.Enabled = true, Icon: "Line.Download"),
+            new SheetOption("Don't check", () => updates.Enabled = false));
     }
 
-    /// <summary>The ⋮ menu's "Updates": on or off.</summary>
-    void ShowUpdatesSheet()
+    /// <summary>The update check or its setting changed: Settings shows the new state.</summary>
+    void OnUpdatesChanged()
     {
-        var updates = _updates!;
-        ShowSheet("Look for new versions of PinList",
-            ((updates.Enabled == true ? "✓ " : "") + "Check about once a day", () => updates.Enabled = true, false),
-            ((updates.Enabled == false ? "✓ " : "") + "Don't check", () => updates.Enabled = false, false));
+        RefreshUpdateRow();
+        _settingsHost?.RaiseChanged();
     }
+
+    /// <summary>"Get PinList x.y" at the top of Settings, while a newer version is out.</summary>
+    void RefreshUpdateRow()
+    {
+        var available = _updates?.Available;
+        UpdateRow.IsVisible = available != null;
+        if (available != null) UpdateRow.Content = $"Get PinList {available.Version}";
+    }
+
+    void UpdateRow_Click(object? sender, RoutedEventArgs e) => OpenUpdate();
 
     /// <summary>A new version, found for the first time: a bar that offers it.</summary>
     void OnUpdateFound(UpdateInfo update) =>
         ShowSnackbar($"PinList {update.Version} is available", "Get it", OpenUpdate,
-            $"PinList {update.Version} is available. Get it from the button, or later from the menu.",
+            $"PinList {update.Version} is available. Get it from the button, or later in Settings.",
             TimeSpan.FromSeconds(10));
 
     /// <summary>Downloads the new version's APK in the browser (or opens its release page).</summary>
@@ -305,13 +327,43 @@ public partial class PhoneView : UserControl
 
     void ShowHome()
     {
+        bool wasBoard = _board != null;
         if (_board != null) _board.PropertyChanged -= OnOpenBoardChanged;
         _board = null;
-        BoardScope.IsVisible = false;
+        if (wasBoard) SlideOutBoard();
+        else BoardScope.IsVisible = false;
         ArchiveScreen.IsVisible = false;
+        SettingsScreen.IsVisible = false;
         HomeScreen.IsVisible = true;
-        AddBoardButton.IsVisible = true;
+        AddBoardButton.IsVisible = !IsDesktop;
+        Section = PhoneSection.Lists;
+        UpdateBar();
+        if (!wasBoard) FadeIn(HomeScreen);
     }
+
+    /// <summary>The bottom bar shows on the three screens, not inside an open list (and not in the PinList window).</summary>
+    void UpdateBar()
+    {
+        BottomBar.IsVisible = !IsDesktop && _board == null;
+        TabLists.Classes.Set("selected", Section == PhoneSection.Lists);
+        TabArchive.Classes.Set("selected", Section == PhoneSection.Archive);
+        TabSettings.Classes.Set("selected", Section == PhoneSection.Settings);
+    }
+
+    /// <summary>Switches to one of the three screens (the bottom bar and the tests use it).</summary>
+    internal void ShowSection(PhoneSection section)
+    {
+        CommitEdits();
+        switch (section)
+        {
+            case PhoneSection.Lists: ShowHome(); break;
+            case PhoneSection.Archive: ShowArchive(); break;
+            default: ShowSettings(); break;
+        }
+    }
+
+    void Tab_Click(object? sender, RoutedEventArgs e) =>
+        ShowSection(Enum.Parse<PhoneSection>((string)((Control)sender!).Tag!));
 
     internal void ShowBoard(Board board)
     {
@@ -326,7 +378,10 @@ public partial class PhoneView : UserControl
         HomeScreen.IsVisible = false;
         AddBoardButton.IsVisible = false;
         ArchiveScreen.IsVisible = false;
+        SettingsScreen.IsVisible = false;
         BoardScope.IsVisible = true;
+        UpdateBar();
+        SlideInBoard();
     }
 
     void ApplyBoardLook(Board board)
@@ -334,6 +389,9 @@ public partial class PhoneView : UserControl
         var style = Themes.Get(board.Style);
         Themes.ApplyBoard(BoardScreen.Resources, style, transparent: false);
         BoardScope.RequestedThemeVariant = style.IsDark ? ThemeVariant.Dark : ThemeVariant.Light;
+        // the category colors get a readable shade on this list color
+        ChromeLook.SetStyleKey(BoardScreen, style.Key);
+        ChromeLook.SetVersion(BoardScreen, ChromeLook.GetVersion(BoardScreen) + 1);
     }
 
     void UpdateBoardTitle()
@@ -348,17 +406,58 @@ public partial class PhoneView : UserControl
     {
         ArchiveSearch.Text = "";
         RefreshArchive();
+        bool wasBoard = _board != null;
+        if (wasBoard) _board!.PropertyChanged -= OnOpenBoardChanged;
+        _board = null;
         HomeScreen.IsVisible = false;
         AddBoardButton.IsVisible = false;
         BoardScope.IsVisible = false;
+        SettingsScreen.IsVisible = false;
         ArchiveScreen.IsVisible = true;
+        Section = PhoneSection.Archive;
+        UpdateBar();
+        FadeIn(ArchiveScreen);
     }
+
+    /// <summary>The settings tab (the page is made when it is first needed).</summary>
+    internal void ShowSettings()
+    {
+        if (_settings == null)
+        {
+            _settingsHost = new PhoneSettingsHost(this, ConfirmDeleteCloudData);
+            _settings = new SettingsView(_settingsHost);
+            _settings.Classes.Add("phone");
+            _settings.Refresh();
+            SettingsHost.Content = _settings;
+        }
+        else _settings.Refresh();
+        bool wasBoard = _board != null;
+        if (wasBoard) _board!.PropertyChanged -= OnOpenBoardChanged;
+        _board = null;
+        HomeScreen.IsVisible = false;
+        AddBoardButton.IsVisible = false;
+        BoardScope.IsVisible = false;
+        ArchiveScreen.IsVisible = false;
+        SettingsScreen.IsVisible = true;
+        Section = PhoneSection.Settings;
+        UpdateBar();
+        FadeIn(SettingsScreen);
+    }
+
+    SettingsView? _settings;
+    PhoneSettingsHost? _settingsHost;
+
+    /// <summary>"Sign out and delete cloud data" asks first, in a sheet.</summary>
+    void ConfirmDeleteCloudData(Action delete) =>
+        ShowSheet("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
+            new SheetOption("Delete", delete, Danger: true, Icon: "Line.Delete"),
+            new SheetOption("Cancel", () => { }));
 
     /// <summary>The back button or gesture: closes a menu, then goes back to the cards. False on the cards screen.</summary>
     public bool GoBack()
     {
         if (SheetLayer.IsVisible) { HideSheet(); return true; }
-        if (BoardScope.IsVisible || ArchiveScreen.IsVisible)
+        if (_board != null || Section != PhoneSection.Lists)
         {
             CommitEdits();
             ShowHome();
@@ -402,12 +501,10 @@ public partial class PhoneView : UserControl
 
     void OnBackRequested(object? sender, RoutedEventArgs e) => e.Handled = GoBack();
 
-    void Archive_Click(object? sender, RoutedEventArgs e) => ShowArchive();
-
     void Card_Tapped(object? sender, TappedEventArgs e)
     {
         if (_homeDrag.SuppressTap) return;
-        if (e.Source is Visual v && v.FindAncestorOfType<CheckBox>(includeSelf: true) != null) return; // the Widget switch
+        if (e.Source is Visual v && v.FindAncestorOfType<ToggleSwitch>(includeSelf: true) != null) return; // the On desktop switch
         ShowBoard((Board)((Control)sender!).Tag!);
     }
 
@@ -553,25 +650,22 @@ public partial class PhoneView : UserControl
         ToggleCompleting((TodoItem)((Control)sender!).Tag!);
     }
 
+    CompleteFlow? _completeFlow;
+
+    /// <summary>The steps of completing: crossed out, sliding away, archived (see CompleteFlow).</summary>
+    CompleteFlow Flow => _completeFlow ??= new CompleteFlow(CompleteNow);
+
     /// <summary>Starts completing (with a moment to change one's mind), or cancels if it's already completing.</summary>
     internal void ToggleCompleting(TodoItem item)
     {
-        if (item.IsCompleting)
-        {
-            item.IsCompleting = false;
-            A11y.Announce(this, "Cancelled");
-            return;
-        }
-        item.IsCompleting = true;
-        var timer = new DispatcherTimer { Interval = CompleteDelay };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            if (!item.IsCompleting || Store.Locate(item) == null) return;
-            Actions.Complete(item);
-            ShowUndo($"Completed {FirstLine(item.Text)}");
-        };
-        timer.Start();
+        if (Flow.Toggle(item) == CompleteResult.Cancelled) A11y.Announce(this, "Cancelled");
+    }
+
+    /// <summary>Archives the item once its row has left.</summary>
+    void CompleteNow(TodoItem item)
+    {
+        Actions.Complete(item);
+        ShowUndo($"Completed {FirstLine(item.Text)}");
     }
 
     static string FirstLine(string s)
@@ -681,17 +775,26 @@ public partial class PhoneView : UserControl
 
     // ================= Menus (bottom sheet) =================
 
-    /// <summary>Shows a list of choices sliding up from the bottom; a tap outside or Back closes it.</summary>
-    internal void ShowSheet(string title, params (string text, Action action, bool danger)[] options)
+    /// <summary>Shows a list of choices sliding up from the bottom; a tap outside, a swipe down or Back closes it.</summary>
+    internal void ShowSheet(string title, params SheetOption[] options) => ShowSheetWithRow(title, null, options);
+
+    /// <summary>A sheet whose first part is something else than a row (the color swatches of a list).</summary>
+    void ShowSheetWithRow(string title, Control? first, SheetOption[] options)
     {
         var panel = new StackPanel();
-        foreach (var (text, action, danger) in options)
+        if (first != null) panel.Children.Add(first);
+        foreach (var option in options)
         {
-            var b = new Button { Content = text };
-            b.Classes.Add("option");
-            if (danger) b.Classes.Add("danger");
-            b.Click += (_, _) => { HideSheet(); action(); };
-            panel.Children.Add(b);
+            var row = new SheetRow
+            {
+                Content = option.Text,
+                Icon = option.Icon == null ? null : Application.Current!.FindResource(option.Icon) as Avalonia.Media.Geometry,
+                HasSwitch = option.IsOn != null,
+                SwitchOn = option.IsOn == true,
+            };
+            if (option.Danger) row.Classes.Add("danger");
+            row.Click += (_, _) => { HideSheet(); option.Run(); };
+            panel.Children.Add(row);
         }
         ShowSheetContent(title, panel);
     }
@@ -701,6 +804,7 @@ public partial class PhoneView : UserControl
         SheetTitle.Text = title;
         SheetContent.Content = content;
         SheetLayer.IsVisible = true;
+        SlideSheetIn();
     }
 
     internal void HideSheet()
@@ -713,18 +817,18 @@ public partial class PhoneView : UserControl
 
     internal void ShowItemMenu(TodoItem item)
     {
-        var options = new System.Collections.Generic.List<(string, Action, bool)>
+        var options = new System.Collections.Generic.List<SheetOption>
         {
-            ("Edit", () => BeginEdit(item), false),
-            ("Copy", () => Copied(Copying.Item(this, item)), false),
-            (item.HasDue ? "Change due date" : "Add due date", () => PickDate(item, reminder: false), false),
+            new("Edit", () => BeginEdit(item), Icon: "Line.Rename"),
+            new("Copy", () => Copied(Copying.Item(this, item)), Icon: "Line.Copy"),
+            new(item.HasDue ? "Change due date" : "Add due date", () => PickDate(item, reminder: false), Icon: "Line.Calendar"),
         };
-        if (item.HasDue) options.Add(("Remove due date", () => Actions.SetDueDate(item, null), false));
-        options.Add((item.HasPendingReminder ? "Change reminder" : "Add reminder", () => PickDate(item, reminder: true), false));
-        if (item.HasPendingReminder) options.Add(("Remove reminder", () => Actions.SetReminder(item, null), false));
+        if (item.HasDue) options.Add(new("Remove due date", () => Actions.SetDueDate(item, null), Icon: "Line.Calendar"));
+        options.Add(new(item.HasPendingReminder ? "Change reminder" : "Add reminder", () => PickDate(item, reminder: true), Icon: "Line.Bell"));
+        if (item.HasPendingReminder) options.Add(new("Remove reminder", () => Actions.SetReminder(item, null), Icon: "Line.Bell"));
         if (Store.Data.Boards.Any(b => b != _board && b.Categories.Count > 0))
-            options.Add(("Move to list", () => ShowMoveToBoard(item), false));
-        options.Add(("Delete", () => { Actions.Delete(item); ShowUndo($"Deleted {FirstLine(item.Text)}"); }, true));
+            options.Add(new("Move to list", () => ShowMoveToBoard(item), Icon: "Line.Folder"));
+        options.Add(new("Delete", () => { Actions.Delete(item); ShowUndo($"Deleted {FirstLine(item.Text)}"); }, Danger: true, Icon: "Line.Delete"));
         ShowSheet(FirstLine(item.Text), options.ToArray());
     }
 
@@ -734,25 +838,25 @@ public partial class PhoneView : UserControl
         ShowSheet("Move to list", targets.Select(b =>
         {
             string name = string.IsNullOrWhiteSpace(b.Title) ? "No title" : b.Title;
-            return (name, (Action)(() =>
+            return new SheetOption(name, () =>
             {
                 var cat = b.Categories[0];
                 Actions.MoveItem(item, cat, cat.Items.Count);
                 ShowUndo($"Moved to {name}");
-            }), false);
+            }, Icon: "Line.Folder");
         }).ToArray());
     }
 
     internal void ShowCategoryMenu(Category cat)
     {
-        var options = new System.Collections.Generic.List<(string, Action, bool)>
+        var options = new System.Collections.Generic.List<SheetOption>
         {
-            ("Rename", () => BeginEdit(cat), false),
-            ("Color", () => ShowSheet("Color", Actions.Palette.Select((hex, i) =>
-                (Actions.PaletteNames[i], (Action)(() => Actions.SetCategoryColor(cat, hex)), false)).ToArray()), false),
+            new("Rename", () => BeginEdit(cat), Icon: "Line.Rename"),
+            new("Color", () => ShowSheet("Color", Actions.Palette.Select((hex, i) =>
+                new SheetOption(Actions.PaletteNames[i], () => Actions.SetCategoryColor(cat, hex), Icon: "Line.Palette")).ToArray()), Icon: "Line.Palette"),
         };
-        if (cat.Items.Count > 0) options.Add(("Copy items", () => Copied(Copying.Category(this, cat)), false));
-        options.Add(("Delete category", () => { Actions.DeleteCategory(cat); ShowUndo($"Deleted category {cat.Name}"); }, true));
+        if (cat.Items.Count > 0) options.Add(new("Copy items", () => Copied(Copying.Category(this, cat)), Icon: "Line.Copy"));
+        options.Add(new("Delete category", () => { Actions.DeleteCategory(cat); ShowUndo($"Deleted category {cat.Name}"); }, Danger: true, Icon: "Line.Delete"));
         ShowSheet(cat.Name, options.ToArray());
     }
 
@@ -767,17 +871,41 @@ public partial class PhoneView : UserControl
     internal void ShowBoardMenu(Board board, bool fromCard)
     {
         string name = string.IsNullOrWhiteSpace(board.Title) ? "No title" : board.Title;
-        var options = new System.Collections.Generic.List<(string, Action, bool)>();
-        if (fromCard) options.Add(("Open", () => ShowBoard(board), false));
-        else options.Add(("Rename", BeginTitleEdit, false));
-        options.Add(("Color", () => ShowSheet("Color", Themes.BoardStyles.Select(s =>
-            (s.Name, (Action)(() => SetBoardStyle(board, s.Key)), false)).ToArray()), false));
+        var options = new System.Collections.Generic.List<SheetOption>();
         if (_sync?.IsAvailable == true)
-            options.Add(((board.Synced ? "✓ " : "") + "Sync this list", () => _ = _sync.SetSynced(board, !board.Synced), false));
+            options.Add(new("Sync this list", () => _ = _sync.SetSynced(board, !board.Synced), Icon: "Line.Sync", IsOn: board.Synced));
         if (CopyText.Count(board) > 0)
-            options.Add(("Copy all items", () => Copied(Copying.Board(this, board)), false));
-        options.Add(("Delete list", () => ConfirmDeleteBoard(board, name), true));
-        ShowSheet(name, options.ToArray());
+            options.Add(new("Copy all items", () => Copied(Copying.Board(this, board)), Icon: "Line.Copy"));
+        options.Add(fromCard ? new("Open", () => ShowBoard(board), Icon: "Line.Folder") : new("Rename", BeginTitleEdit, Icon: "Line.Rename"));
+        options.Add(new("Delete list", () => ConfirmDeleteBoard(board, name), Danger: true, Icon: "Line.Delete"));
+        ShowSheetWithRow(name, ListColorRow(board), options.ToArray());
+    }
+
+    /// <summary>"List color": one row of swatches, the current one ringed.</summary>
+    Control ListColorRow(Board board)
+    {
+        var swatches = new WrapPanel { Margin = new Thickness(22, 6, 16, 4) };
+        foreach (var style in Themes.BoardStyles)
+        {
+            var button = new Button
+            {
+                Content = new Avalonia.Controls.Shapes.Ellipse
+                {
+                    Fill = Themes.Brush(style.Background),
+                    Stroke = Themes.Brush("#40808080"),
+                    StrokeThickness = 1,
+                },
+            };
+            button.Classes.Add("swatch");
+            button.Classes.Set("selected", style.Key == board.Style);
+            Avalonia.Automation.AutomationProperties.SetName(button, style.Name);
+            string key = style.Key;
+            button.Click += (_, _) => { HideSheet(); SetBoardStyle(board, key); };
+            swatches.Children.Add(button);
+        }
+        var label = new TextBlock { Text = "List color", FontSize = 13, Margin = new Thickness(22, 4, 16, 0) };
+        label.Bind(TextBlock.ForegroundProperty, label.GetResourceObservable("Text3"));
+        return new StackPanel { Children = { label, swatches } };
     }
 
     void SetBoardStyle(Board board, string key)
@@ -798,29 +926,12 @@ public partial class PhoneView : UserControl
         var question = items > 0 ? $"Delete \"{name}\" with {items} items? They don't go to the archive." : $"Delete \"{name}\"?";
         if (board.Synced) question += " It will also be deleted from your other devices.";
         ShowSheet(question,
-            ("Delete", () =>
+            new SheetOption("Delete", () =>
             {
                 Actions.DeleteBoard(board); // asked first, so not undoable
                 if (_board == board) ShowHome();
-            }, true),
-            ("Cancel", () => { }, false));
-    }
-
-    void AppMenu_Click(object? sender, RoutedEventArgs e)
-    {
-        var options = new System.Collections.Generic.List<(string, Action, bool)>();
-        if (_updates?.Available is { } update) options.Add(($"Get PinList {update.Version}", OpenUpdate, false));
-        options.AddRange(new (string, Action, bool)[]
-        {
-            ("Archive", ShowArchive, false),
-            ("App theme", () => ShowSheet("App theme", Themes.AppThemes.Select(t =>
-                ((Store.Data.Settings.Theme == t.Key ? "✓ " : "") + t.Name, (Action)(() => SetTheme(t.Key)), false)).ToArray()), false),
-        });
-        if (_sync != null) options.Add(("Google sync", ShowSyncSheet, false));
-        if (_updates != null) options.Add(("Updates", ShowUpdatesSheet, false));
-        options.Add(("Export", () => _ = Export(), false));
-        options.Add(("Import", () => _ = Import(), false));
-        ShowSheet("PinList", options.ToArray());
+            }, Danger: true, Icon: "Line.Delete"),
+            new SheetOption("Cancel", () => { }));
     }
 
     /// <summary>Changes the app theme (the head app applies it to the app's colors).</summary>
@@ -842,7 +953,7 @@ public partial class PhoneView : UserControl
         var time = new TextBox { Text = initial?.ToString("HH:mm") ?? "", PlaceholderText = "Time, e.g. 9:30", IsVisible = reminder };
         Avalonia.Automation.AutomationProperties.SetName(time, "Time");
         var error = new TextBlock { IsVisible = false, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
-        error.Bind(TextBlock.ForegroundProperty, error.GetResourceObservable("DangerFill"));
+        error.Bind(TextBlock.ForegroundProperty, error.GetResourceObservable("Danger"));
 
         void Done(DateTime value)
         {
@@ -919,12 +1030,12 @@ public partial class PhoneView : UserControl
     void RefreshArchive()
     {
         var q = (ArchiveSearch.Text ?? "").Trim();
-        _archiveShown.Clear();
-        foreach (var a in Store.Data.Archive.Where(a => q.Length == 0
+        var matches = Store.Data.Archive.Where(a => q.Length == 0
                      || a.Text.Contains(q, StringComparison.CurrentCultureIgnoreCase)
                      || a.CategoryName.Contains(q, StringComparison.CurrentCultureIgnoreCase)
-                     || a.BoardTitle.Contains(q, StringComparison.CurrentCultureIgnoreCase)))
-            _archiveShown.Add(a);
+                     || a.BoardTitle.Contains(q, StringComparison.CurrentCultureIgnoreCase));
+        _archiveRows.Clear();
+        foreach (var row in ArchiveGroups.Rows(matches, DateTime.Now)) _archiveRows.Add(row);
         ArchiveEmpty.IsVisible = Store.Data.Archive.Count == 0;
     }
 
@@ -935,15 +1046,15 @@ public partial class PhoneView : UserControl
 
     internal void ShowArchivedMenu(ArchivedItem a) =>
         ShowSheet(FirstLine(a.Text),
-            ("Restore", () =>
+            new SheetOption("Restore", () =>
             {
                 var done = Actions.Restore(new[] { a });
                 if (done.Count == 0) ShowMessage("There is no category to restore into. Add a category to a list first.");
                 else if (done[0].category.Id != a.CategoryId)
                     ShowUndo($"\"{a.CategoryName}\" no longer exists, so it went to \"{done[0].category.Name}\"");
                 else ShowUndo("Restored");
-            }, false),
-            ("Delete permanently", () => { Actions.DeleteArchived(new[] { a }); ShowUndo("Deleted permanently"); }, true));
+            }, Icon: "Line.Restore"),
+            new SheetOption("Delete permanently", () => { Actions.DeleteArchived(new[] { a }); ShowUndo("Deleted permanently"); }, Danger: true, Icon: "Line.Delete"));
 
     // ================= Undo bar =================
 
@@ -1032,8 +1143,8 @@ public partial class PhoneView : UserControl
         int lists = imported.Boards.Count, items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
         ShowSheet($"Import {lists} list{(lists == 1 ? "" : "s")} with {items} item{(items == 1 ? "" : "s")}?" +
                   (Store.HasSyncedBoards ? " Synced lists aren't replaced." : ""),
-            ("Add next to mine", () => { Store.Merge(imported); ShowMessage("Imported"); }, false),
-            ("Replace everything (a copy of mine is kept)", () =>
+            new SheetOption("Add next to mine", () => { Store.Merge(imported); ShowMessage("Imported"); }, Icon: "Line.Import"),
+            new SheetOption("Replace everything (a copy of mine is kept)", () =>
             {
                 try
                 {
@@ -1048,7 +1159,7 @@ public partial class PhoneView : UserControl
                     Store.Log($"Import: {ex}");
                     ShowMessage("Import failed: " + ex.Message);
                 }
-            }, true),
-            ("Cancel", () => { }, false));
+            }, Danger: true, Icon: "Line.Restore"),
+            new SheetOption("Cancel", () => { }));
     }
 }

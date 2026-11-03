@@ -54,8 +54,7 @@ public abstract class UiTest : IDisposable
             w.CloseForReload();
         }
         app.LastTrayMenu?.Close();
-        app.Archive?.Close();
-        app.CloseListsWindow();
+        app.CloseMainWindow();
         DialogHost.Current?.Close();
         Pump();
         App.ShuttingDown = false;
@@ -63,7 +62,9 @@ public abstract class UiTest : IDisposable
         app.ReminderService.Clock = () => DateTime.Now;
         Actions.ClearUndo();
         BoardWindow.SetActive(null);
-        BoardWindow.CompleteDelay = TimeSpan.FromMilliseconds(900);
+        CompleteFlow.LeaveAt = TimeSpan.FromMilliseconds(650);
+        CompleteFlow.Total = TimeSpan.FromMilliseconds(930);
+        BoardWindow.UndoPillDuration = TimeSpan.FromSeconds(4);
         BoardWindow.SystemResize = true;
         Themes.ContrastSource = () => null;
         Themes.SystemDarkSource = () => true;
@@ -82,6 +83,13 @@ public abstract class UiTest : IDisposable
     }
 
     protected static void Pump() => UiHost.Pump();
+
+    /// <summary>Completing takes this long in a test (the row starts to leave after two thirds of it). Reset after each test.</summary>
+    protected static void CompleteIn(TimeSpan total)
+    {
+        CompleteFlow.Total = total;
+        CompleteFlow.LeaveAt = total * 0.65;
+    }
 
     // ================= Widgets =================
 
@@ -207,7 +215,26 @@ public abstract class UiTest : IDisposable
     /// <summary>The text of a menu item (items with a shortcut have a panel as header, and the text as their name).</summary>
     protected static string? Header(MenuItem m) => m.Header as string ?? AutomationProperties.GetName(m);
 
-    /// <summary>Clicks a menu item (path: "Window color", "Yellow") and lets its deferred action run.</summary>
+    /// <summary>The swatch row of a menu (list color, category color).</summary>
+    protected static SwatchMenuItem Swatches(ContextMenu menu, string label) =>
+        menu.Items.OfType<SwatchMenuItem>().First(s => (AutomationProperties.GetName(s) ?? "").StartsWith(label + ", "));
+
+    /// <summary>Picks a color of a swatch row by clicking its swatch (found by the color name).</summary>
+    protected static void ChooseSwatch(ContextMenu menu, string label, string colorName)
+    {
+        var item = Swatches(menu, label);
+        var swatch = FindAll<Border>(item).First(b => ToolTip.GetTip(b) as string == colorName);
+        MouseDown(swatch);
+        menu.Close();
+        item.RaiseEvent(new RoutedEventArgs(Avalonia.Controls.MenuItem.ClickEvent, item));
+        Pump();
+    }
+
+    /// <summary>The entries of a menu as texts (separators are null, swatch rows and switches use their label).</summary>
+    protected static object?[] Entries(ContextMenu menu) =>
+        menu.Items.Select(i => i is Avalonia.Controls.MenuItem m ? (object?)(AutomationProperties.GetName(m) is { Length: > 0 } n ? n.Split(", ")[0] : Header(m)) : null).ToArray();
+
+    /// <summary>Clicks a menu item (path: "Archive" or "Sync now") and lets its deferred action run.</summary>
     protected static void ChooseFromMenu(ContextMenu menu, params string[] path)
     {
         var item = MenuItem(menu, path);

@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:PinList"
+        x:Class="PinList.MainWindow"
+        Title="PinList"
+        Icon="avares://PinList/Assets/app.ico"
+        Width="980" Height="660" MinWidth="640" MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        FontSize="{DynamicResource T.Body}"
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Text1}">
+
+    <Window.Styles>
+        <!-- Sidebar entries -->
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="{StaticResource R.Menu}"/>
+            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusAdorner" Value="{StaticResource InnerFocusRing}"/>
+        </Style>
+        <Style Selector="Button.nav local|LineIcon">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ItemHover}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ItemHoverText}"/>
+        </Style>
+        <Style Selector="Button.nav.selected /template/ ContentPresenter#PART_ContentPresenter,
+                         Button.nav.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Selected}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SelectedText}"/>
+        </Style>
+        <Style Selector="Button.nav.selected local|LineIcon">
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="Button.nav TextBlock.count">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Opacity" Value="0.75"/>
+        </Style>
+    </Window.Styles>
+
+    <Panel>
+        <LayoutTransformControl x:Name="Scaler">
+            <Grid ColumnDefinitions="220,*">
+
+                <!-- Sidebar: PinList, All lists, Archive, and Settings at the bottom -->
+                <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0">
+                    <DockPanel Margin="12,16,12,12">
+                        <TextBlock DockPanel.Dock="Top" Text="PinList" FontSize="{DynamicResource T.Title}" FontWeight="Bold"
+                                   Margin="12,2,0,14"/>
+                        <Button x:Name="NavSettings" DockPanel.Dock="Bottom" Classes="nav" Click="Nav_Click" Tag="Settings"
+                                AutomationProperties.Name="Settings">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <local:LineIcon Data="{DynamicResource Line.Settings}"/>
+                                <TextBlock Text="Settings"/>
+                            </StackPanel>
+                        </Button>
+                        <StackPanel>
+                            <Button x:Name="NavLists" Classes="nav" Click="Nav_Click" Tag="Lists" AutomationProperties.Name="All lists">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <local:LineIcon Data="{DynamicResource Line.Grid}" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="All lists"/>
+                                    <TextBlock x:Name="ListsCount" Grid.Column="2" Classes="count"/>
+                                </Grid>
+                            </Button>
+                            <Button x:Name="NavArchive" Classes="nav" Click="Nav_Click" Tag="Archive" AutomationProperties.Name="Archive">
+                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                    <local:LineIcon Data="{DynamicResource Line.Archive}" Margin="0,0,10,0"/>
+                                    <TextBlock Grid.Column="1" Text="Archive"/>
+                                    <TextBlock x:Name="ArchiveCount" Grid.Column="2" Classes="count"/>
+                                </Grid>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+
+                <!-- The sections (the code adds the views) -->
+                <Panel x:Name="Sections" Grid.Column="1"/>
+            </Grid>
+        </LayoutTransformControl>
+        <local:LiveRegion/>
+    </Panel>
+</Window>

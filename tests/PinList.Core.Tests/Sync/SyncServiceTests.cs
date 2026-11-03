@@ -552,7 +552,7 @@ public class SyncServiceTests : StoreTestBase
         Sync(A);
         var state = A.Service.StateOf(b);
         Assert.Equal(SyncStatus.Problem, state.Status);
-        Assert.Equal("Update PinList to keep syncing this window.", state.Problem);
+        Assert.Equal("Update PinList to keep syncing this list.", state.Problem);
         Assert.DoesNotContain(_cloud.Copy(FileOf(A, b)).Items, i => i.Text == "not sent");
     }
 

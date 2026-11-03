@@ -120,7 +120,7 @@ public class MoveBoardTests : StoreTestBase
         Assert.True(Saver.Requests > 0);
 
         Assert.True(Actions.Undo(out var what));
-        Assert.Equal("moving the window “A”", what);
+        Assert.Equal("moving the list “A”", what);
         Assert.Equal(new[] { "A", "B", "C" }, Store.Data.Boards.Select(x => x.Title));
 
         Actions.MoveBoard(a, 0); // already there: nothing to undo

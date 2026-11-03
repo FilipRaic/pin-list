@@ -7,7 +7,7 @@ using PinList.Sync;
 
 namespace PinList;
 
-/// <summary>The widget's Google sync icon and "Sync this window" (spec 4.3, 4.4).</summary>
+/// <summary>The widget's Google sync icon and its "Turn on sync for this list" (spec 4.3, 4.4).</summary>
 public partial class BoardWindow
 {
     SyncStatus _syncStatus = SyncStatus.Hidden;
@@ -41,19 +41,8 @@ public partial class BoardWindow
         }
         var menu = NewMenu(SyncBtn, PlacementMode.Bottom);
         menu.Items.Add(state.Status == SyncStatus.Local
-            ? Item("Turn on sync for this window", () => _ = App.Instance.SetBoardSynced(Board, true, this))
+            ? Item("Turn on sync for this list", () => _ = App.Instance.SetBoardSynced(Board, true, this))
             : Item("Sync now", () => _ = SyncService.Current!.SyncNow()));
         Open(menu, SyncBtn);
-    }
-
-    /// <summary>"Sync this window" (checkable), in its own group of the ⋯ menu; only in builds that can sync.</summary>
-    void AddSyncMenuItem(ContextMenu menu)
-    {
-        if (SyncService.Current?.IsAvailable != true) return;
-        menu.Items.Add(new Separator());
-        var sync = Item("Sync this window", () => _ = App.Instance.SetBoardSynced(Board, !Board.Synced, this));
-        sync.ToggleType = MenuItemToggleType.CheckBox;
-        sync.IsChecked = Board.Synced;
-        menu.Items.Add(sync);
     }
 }

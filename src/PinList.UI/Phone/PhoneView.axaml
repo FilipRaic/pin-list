@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:PinList"
              x:Class="PinList.PhoneView"
-             FontSize="16" Background="{DynamicResource ArcBg}" Foreground="{DynamicResource MenuText}">
+             FontSize="{DynamicResource T.PhoneBody}" Background="{DynamicResource Bg}" Foreground="{DynamicResource Text1}">
 
     <UserControl.Styles>
         <!-- Big touch targets -->
@@ -15,14 +15,67 @@
             <Setter Property="CornerRadius" Value="24"/>
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
         </Style>
         <Style Selector="Button.bar PathIcon">
-            <Setter Property="Width" Value="20"/>
-            <Setter Property="Height" Value="20"/>
+            <Setter Property="Width" Value="{StaticResource S.PhoneIcon}"/>
+            <Setter Property="Height" Value="{StaticResource S.PhoneIcon}"/>
+        </Style>
+        <Style Selector="Button.bar local|LineIcon">
+            <Setter Property="Width" Value="{StaticResource S.PhoneIcon}"/>
+            <Setter Property="Height" Value="{StaticResource S.PhoneIcon}"/>
         </Style>
         <Style Selector="Border.boardscreen Button.bar">
             <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        </Style>
+
+        <!-- Bottom bar: Lists, Archive, Settings. The selected tab has an accent pill behind its icon. -->
+        <Style Selector="Button.tab">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0,4"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+            <Setter Property="MinHeight" Value="52"/>
+        </Style>
+        <Style Selector="Button.tab Border.tabpill">
+            <Setter Property="Width" Value="60"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="CornerRadius" Value="16"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.tab local|LineIcon">
+            <Setter Property="Width" Value="{StaticResource S.PhoneIcon}"/>
+            <Setter Property="Height" Value="{StaticResource S.PhoneIcon}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.tab.selected">
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        </Style>
+        <Style Selector="Button.tab.selected Border.tabpill">
+            <Setter Property="Background" Value="{DynamicResource Selected}"/>
+        </Style>
+        <Style Selector="Button.tab.selected local|LineIcon">
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="Button.tab:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <!-- The labeled "New list" button -->
+        <Style Selector="Button.newlist">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource R.Card}"/>
+            <Setter Property="Padding" Value="20,14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="Button.newlist:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.newlist:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+            <Setter Property="Opacity" Value="0.9"/>
         </Style>
 
         <!-- Cards and rows: lift while held or dragged, slide when the list is reordered.
@@ -40,7 +93,7 @@
         </Style>
         <Style Selector="local|AccessibleRow.row">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="CornerRadius" Value="{StaticResource R.PhoneRow}"/>
         </Style>
         <Style Selector="local|AccessibleRow.row.lifted">
             <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
@@ -48,40 +101,70 @@
             <Setter Property="ZIndex" Value="1"/>
         </Style>
 
-        <!-- The round "complete" button: 48 px touch target around a 22 px circle -->
+        <!-- The round "complete" button: 48 px touch target around the circle. The row sets the colors:
+             BorderBrush is the outline (the shade of the category), Foreground the fill while completing. -->
         <Style Selector="Button.check">
             <Setter Property="Template">
                 <ControlTemplate>
                     <Panel Width="48" Height="44" Background="Transparent">
-                        <Ellipse Name="Circle" Width="22" Height="22" StrokeThickness="1.7"
-                                 Stroke="{DynamicResource TextSecondary}" Fill="Transparent"/>
-                        <PathIcon Name="Tick" Data="{StaticResource Icon.Checkmark}" Width="12" Height="12" Foreground="Transparent"/>
+                        <Ellipse Name="Circle" Width="{StaticResource S.PhoneCheck}" Height="{StaticResource S.PhoneCheck}" StrokeThickness="1.8"
+                                 Stroke="{TemplateBinding BorderBrush}" Fill="Transparent"/>
+                        <PathIcon Name="Tick" Data="{StaticResource Icon.Checkmark}" Width="12" Height="12" Foreground="Transparent"
+                                  RenderTransformOrigin="0%,50%"/>
                     </Panel>
                 </ControlTemplate>
             </Setter>
         </Style>
+        <!-- Completing: the circle fills and pops, the tick draws itself, the shared styles sweep the line and slide the row away -->
         <Style Selector="local|AccessibleRow.completing Button.check /template/ Ellipse#Circle">
-            <Setter Property="Fill" Value="{DynamicResource Done}"/>
-            <Setter Property="Stroke" Value="{DynamicResource Done}"/>
+            <Setter Property="Fill" Value="{TemplateBinding Foreground}"/>
+            <Setter Property="Stroke" Value="{TemplateBinding Foreground}"/>
+            <Setter Property="RenderTransform" Value="scale(1)"/>
+            <Style.Animations>
+                <Animation Duration="0:0:0.3" Easing="0.34,1.56,0.64,1">
+                    <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
+                    <KeyFrame Cue="40%"><Setter Property="ScaleTransform.ScaleX" Value="1.12"/><Setter Property="ScaleTransform.ScaleY" Value="1.12"/></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1"/><Setter Property="ScaleTransform.ScaleY" Value="1"/></KeyFrame>
+                </Animation>
+            </Style.Animations>
         </Style>
         <Style Selector="local|AccessibleRow.completing Button.check /template/ PathIcon#Tick">
-            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Foreground" Value="{TemplateBinding Background}"/>
+            <Setter Property="RenderTransform" Value="scaleX(1)"/>
+            <Style.Animations>
+                <Animation Duration="0:0:0.25" Easing="CubicEaseOut" FillMode="Backward">
+                    <KeyFrame Cue="0%"><Setter Property="ScaleTransform.ScaleX" Value="0"/></KeyFrame>
+                    <KeyFrame Cue="100%"><Setter Property="ScaleTransform.ScaleX" Value="1"/></KeyFrame>
+                </Animation>
+            </Style.Animations>
         </Style>
-        <Style Selector="local|AccessibleRow.completing TextBlock.itemtext">
-            <Setter Property="TextDecorations" Value="Strikethrough"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+        <Style Selector="Border.strike">
+            <Setter Property="Margin" Value="0,11,0,0"/>
+        </Style>
+
+        <!-- Due date and reminder chips: small pills with a line icon -->
+        <Style Selector="Border.chipbox">
+            <Setter Property="CornerRadius" Value="{StaticResource R.Pill}"/>
+            <Setter Property="Padding" Value="9,2"/>
+            <Setter Property="Margin" Value="0,4,8,0"/>
+            <Setter Property="Background" Value="{DynamicResource ChipBg}"/>
+        </Style>
+        <Style Selector="Border.chipbox.today">
+            <Setter Property="Background" Value="{DynamicResource AccentBg}"/>
+        </Style>
+        <Style Selector="Border.chipbox.overdue">
+            <Setter Property="Background" Value="{DynamicResource OverdueBg}"/>
         </Style>
         <Style Selector="StackPanel.chip">
             <Setter Property="Orientation" Value="Horizontal"/>
-            <Setter Property="Margin" Value="0,2,14,0"/>
-            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource TextMuted}"/>
-            <Setter Property="(TextElement.FontSize)" Value="13"/>
+            <Setter Property="Spacing" Value="5"/>
+            <Setter Property="(TextElement.Foreground)" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="(TextElement.FontSize)" Value="{StaticResource T.PhoneChip}"/>
         </Style>
-        <Style Selector="StackPanel.chip PathIcon">
-            <Setter Property="Width" Value="12"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="Margin" Value="0,1,5,0"/>
-            <Setter Property="Foreground" Value="{Binding $parent[StackPanel].(TextElement.Foreground)}"/>
+        <Style Selector="StackPanel.chip local|LineIcon">
+            <Setter Property="Width" Value="13"/>
+            <Setter Property="Height" Value="13"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
         <Style Selector="StackPanel.chip.today">
             <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Accent}"/>
@@ -89,263 +172,462 @@
         <Style Selector="StackPanel.chip.overdue">
             <Setter Property="(TextElement.Foreground)" Value="{DynamicResource Overdue}"/>
         </Style>
+        <Style Selector="Border.countpill">
+            <Setter Property="CornerRadius" Value="{StaticResource R.Pill}"/>
+            <Setter Property="Padding" Value="9,2"/>
+            <Setter Property="Margin" Value="8,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
         <Style Selector="PathIcon.chevron">
             <Setter Property="Width" Value="12"/>
             <Setter Property="Height" Value="12"/>
             <Setter Property="Data" Value="{StaticResource Icon.ChevronDown}"/>
         </Style>
-        <Style Selector="PathIcon.chevron.collapsed">
-            <Setter Property="Data" Value="{StaticResource Icon.ChevronRight}"/>
+
+        <Style Selector="Button.newcard">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.newcard:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Hover}"/>
+            <Setter Property="CornerRadius" Value="16"/>
         </Style>
 
-        <!-- Sheet options -->
-        <Style Selector="Button.option">
+        <!-- Sheets: a row with an icon, a text and maybe a switch -->
+        <Style Selector="local|SheetRow">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Padding" Value="20,14"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="CornerRadius" Value="0"/>
-            <Setter Property="Foreground" Value="{DynamicResource MenuText}"/>
+            <Setter Property="Padding" Value="14,14"/>
+            <Setter Property="FontSize" Value="{StaticResource T.PhoneBody}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+            <Setter Property="Template">
+                <ControlTemplate TargetType="local:SheetRow">
+                    <Border Name="RowBackground" Background="{TemplateBinding Background}" CornerRadius="{StaticResource R.PhoneRow}"
+                            Margin="8,0" Padding="{TemplateBinding Padding}" TextElement.Foreground="{TemplateBinding Foreground}">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                            <local:LineIcon Data="{TemplateBinding Icon}" IsVisible="{TemplateBinding Icon, Converter={x:Static ObjectConverters.IsNotNull}}"
+                                            Width="{StaticResource S.PhoneIcon}" Height="{StaticResource S.PhoneIcon}" Margin="0,0,16,0"/>
+                            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center"
+                                              HorizontalContentAlignment="Left"/>
+                            <Border Grid.Column="2" Classes="switchtrack" Classes.on="{TemplateBinding SwitchOn}" IsVisible="{TemplateBinding HasSwitch}"
+                                    Width="44" Height="26" CornerRadius="13" Padding="3" VerticalAlignment="Center">
+                                <Ellipse Width="18" Height="18"/>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
         </Style>
-        <Style Selector="Button.option.danger">
-            <Setter Property="Foreground" Value="{DynamicResource DangerFill}"/>
+        <Style Selector="local|SheetRow:pressed /template/ Border#RowBackground">
+            <Setter Property="Background" Value="{DynamicResource Hover}"/>
+        </Style>
+        <Style Selector="local|SheetRow.danger">
+            <Setter Property="Foreground" Value="{DynamicResource Danger}"/>
+        </Style>
+        <Style Selector="Border.grab">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="4"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="Background" Value="{DynamicResource Text3}"/>
+            <Setter Property="Opacity" Value="0.5"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.swatch">
+            <Setter Property="Width" Value="{StaticResource S.PhoneIconButton}"/>
+            <Setter Property="Height" Value="{StaticResource S.PhoneIconButton}"/>
+            <Setter Property="CornerRadius" Value="20"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Margin" Value="0,0,6,6"/>
+        </Style>
+        <Style Selector="Button.swatch.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        </Style>
+        <Style Selector="Button.swatch:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.swatch:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="Button.updaterow">
+            <Setter Property="Background" Value="{DynamicResource Selected}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+            <Setter Property="CornerRadius" Value="{StaticResource R.PhoneRow}"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="Margin" Value="16,8,16,0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
     </UserControl.Styles>
 
     <Panel x:Name="Root">
 
-        <!-- ================= Cards: one per board ================= -->
-        <DockPanel x:Name="HomeScreen">
-            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="20,10,6,6">
-                <TextBlock Text="PinList" FontSize="28" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <Button Grid.Column="1" Classes="bar" Click="Archive_Click" AutomationProperties.Name="Archive">
-                    <PathIcon Data="{StaticResource Icon.Archive}"/>
-                </Button>
-                <Button x:Name="AppMenuButton" Grid.Column="2" Classes="bar" Click="AppMenu_Click" AutomationProperties.Name="Menu">
-                    <PathIcon Data="{StaticResource Icon.MoreVertical}"/>
-                </Button>
-            </Grid>
-            <ScrollViewer x:Name="HomeScroller" HorizontalScrollBarVisibility="Disabled">
-                <ItemsControl x:Name="Cards" Margin="0,0,0,100">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="local:BoardCard">
-                            <Border Classes="card" Tag="{Binding Board}" Background="{Binding Background}"
-                                    BorderBrush="{Binding Border}" BorderThickness="1" CornerRadius="16"
-                                    Padding="16,12,16,14" Margin="12,0,12,10" Focusable="True"
-                                    AutomationProperties.Name="{Binding AccessibleName}" Tapped="Card_Tapped">
-                                <StackPanel Spacing="3">
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,4">
-                                        <TextBlock Text="{Binding DisplayTitle}" FontSize="18" FontWeight="SemiBold"
-                                                   Foreground="{Binding Foreground}" TextTrimming="CharacterEllipsis"
-                                                   Classes.untitled="{Binding !HasTitle}"/>
-                                        <PathIcon Grid.Column="1" Classes="sync" Width="15" Height="15" Margin="8,0,0,0"
-                                                  VerticalAlignment="Center" IsVisible="{Binding HasSyncIcon}"
-                                                  Data="{Binding SyncIcon}" Foreground="{Binding SyncBrush}"
-                                                  AutomationProperties.Name="{Binding SyncTip}"/>
-                                        <Border Grid.Column="2" IsVisible="{Binding HasOverdue}" Background="{Binding Overdue}"
-                                                CornerRadius="9" Padding="7,1" Margin="8,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding OverdueText}" FontSize="12" Foreground="{Binding Background}"/>
-                                        </Border>
-                                        <TextBlock Grid.Column="3" Text="{Binding OpenCount}" FontSize="14" Margin="10,0,0,0"
-                                                   Foreground="{Binding Muted}" VerticalAlignment="Center"/>
-                                        <CheckBox Grid.Column="4" Content="Widget" IsVisible="{Binding ShowWidgetSwitch}"
-                                                  IsChecked="{Binding IsWidget}" Foreground="{Binding Foreground}"
-                                                  Margin="12,0,0,0" MinHeight="0" VerticalAlignment="Center"
-                                                  AutomationProperties.Name="Show as a widget on this computer"/>
-                                    </Grid>
-                                    <ItemsControl ItemsSource="{Binding Preview}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="local:PreviewLine">
-                                                <Grid ColumnDefinitions="24,*" Margin="0,1">
-                                                    <Ellipse Width="8" Height="8" Fill="{Binding Dot}" IsVisible="{Binding IsCategory}" HorizontalAlignment="Left"/>
-                                                    <Ellipse Width="13" Height="13" StrokeThickness="1.4" Opacity="0.6" HorizontalAlignment="Left"
-                                                             Stroke="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"
-                                                             IsVisible="{Binding !IsCategory}"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="15" MaxLines="1" TextTrimming="CharacterEllipsis"
-                                                               Classes.category="{Binding IsCategory}"
-                                                               Foreground="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                    <TextBlock Text="{Binding MoreText}" IsVisible="{Binding HasMore}" FontSize="13"
-                                               Foreground="{Binding Muted}" Margin="24,2,0,0"/>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                    <ItemsControl.Styles>
-                        <Style Selector="TextBlock.untitled">
-                            <Setter Property="FontStyle" Value="Italic"/>
-                            <Setter Property="Opacity" Value="0.6"/>
-                        </Style>
-                        <Style Selector="TextBlock.category">
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                        </Style>
-                    </ItemsControl.Styles>
-                </ItemsControl>
-            </ScrollViewer>
-        </DockPanel>
-        <Button x:Name="AddBoardButton" Width="60" Height="60" CornerRadius="18" Background="{DynamicResource AccentFill}"
-                Foreground="{DynamicResource AccentText}" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,20,24"
-                AutomationProperties.Name="New list" Click="NewBoard_Click">
-            <PathIcon Data="{StaticResource Icon.AddLarge}" Width="22" Height="22"/>
-        </Button>
+        <DockPanel>
 
-        <!-- ================= One board ================= -->
-        <ThemeVariantScope x:Name="BoardScope" IsVisible="False">
-            <Border x:Name="BoardScreen" Classes="boardscreen" Background="{DynamicResource BoardBg}">
-                <DockPanel>
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="4,8,4,4">
-                        <Button Classes="bar" Click="Back_Click" AutomationProperties.Name="Back">
-                            <PathIcon Data="{StaticResource Icon.Back}"/>
-                        </Button>
-                        <Panel Grid.Column="1" VerticalAlignment="Center" Margin="4,0">
-                            <TextBlock x:Name="BoardTitle" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
-                                       TextTrimming="CharacterEllipsis" Tapped="BoardTitle_Tapped" Background="Transparent"/>
-                            <TextBox x:Name="BoardTitleBox" Classes="bare" FontSize="22" FontWeight="SemiBold" IsVisible="False"
-                                     PlaceholderText="Title (optional)" AutomationProperties.Name="List title"
-                                     TextInputOptions.AutoCapitalization="True"/>
-                        </Panel>
-                        <!-- Google sync status of the list (hidden while signed out) -->
-                        <Button x:Name="BoardSyncBtn" Grid.Column="2" Classes="bar" Click="BoardSync_Click" IsVisible="False">
-                            <PathIcon/>
-                        </Button>
-                        <Button Grid.Column="3" Classes="bar" Click="AddCategory_Click" AutomationProperties.Name="New category">
-                            <PathIcon Data="{StaticResource Icon.NewCategory}"/>
-                        </Button>
-                        <Button Grid.Column="4" Classes="bar" Click="BoardMenu_Click" AutomationProperties.Name="List menu">
-                            <PathIcon Data="{StaticResource Icon.MoreVertical}"/>
-                        </Button>
+            <!-- ================= Bottom bar ================= -->
+            <Border x:Name="BottomBar" DockPanel.Dock="Bottom" Background="{DynamicResource Surface}"
+                    BorderBrush="{DynamicResource Line}" BorderThickness="0,1,0,0" Padding="8,2,8,4">
+                <Grid ColumnDefinitions="*,*,*">
+                    <Button x:Name="TabLists" Classes="tab" Click="Tab_Click" Tag="Lists" AutomationProperties.Name="Lists">
+                        <StackPanel>
+                            <Border Classes="tabpill"><local:LineIcon Data="{DynamicResource Line.Grid}"/></Border>
+                            <TextBlock Text="Lists" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="TabArchive" Grid.Column="1" Classes="tab" Click="Tab_Click" Tag="Archive" AutomationProperties.Name="Archive">
+                        <StackPanel>
+                            <Border Classes="tabpill"><local:LineIcon Data="{DynamicResource Line.Archive}"/></Border>
+                            <TextBlock Text="Archive" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="TabSettings" Grid.Column="2" Classes="tab" Click="Tab_Click" Tag="Settings" AutomationProperties.Name="Settings">
+                        <StackPanel>
+                            <Border Classes="tabpill"><local:LineIcon Data="{DynamicResource Line.Settings}"/></Border>
+                            <TextBlock Text="Settings" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <Panel x:Name="Screens">
+
+                <!-- ================= Cards: one per board ================= -->
+                <DockPanel x:Name="HomeScreen">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*" Margin="22,14,16,8">
+                        <TextBlock x:Name="HomeTitle" Text="Lists" FontSize="{StaticResource T.ScreenTitle}" FontWeight="Bold" VerticalAlignment="Center"/>
                     </Grid>
-                    <ScrollViewer x:Name="BoardScroller" HorizontalScrollBarVisibility="Disabled">
-                        <ItemsControl x:Name="Categories" Margin="0,0,0,60">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="local:Category">
-                                    <StackPanel Margin="0,0,0,10">
-                                        <local:AccessibleRow Classes="row" Tag="{Binding}" Padding="18,12,14,8"
-                                                             AutomationProperties.Name="{Binding AccessibleName}" Tapped="CategoryHeader_Tapped" DoubleTapped="CategoryHeader_Tapped">
-                                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                                <Ellipse Width="10" Height="10" Fill="{Binding Color}" Margin="0,0,12,0" VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"
-                                                           IsVisible="{Binding !IsEditing}"/>
-                                                <TextBox Grid.Column="1" Classes="bare phoneedit" FontSize="15" FontWeight="SemiBold"
-                                                         IsVisible="{Binding IsEditing}" AutomationProperties.Name="Category name"
-                                                         TextInputOptions.AutoCapitalization="True"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Items.Count}" FontSize="14" Foreground="{DynamicResource TextMuted}"
-                                                           Margin="8,0" VerticalAlignment="Center"/>
-                                                <PathIcon Grid.Column="3" Classes="chevron" Classes.collapsed="{Binding Collapsed}"
-                                                          Foreground="{DynamicResource TextMuted}" Margin="4,0"/>
-                                            </Grid>
-                                        </local:AccessibleRow>
-                                        <StackPanel IsVisible="{Binding !Collapsed}">
-                                            <ItemsControl ItemsSource="{Binding Items}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="local:TodoItem">
-                                                        <local:AccessibleRow Classes="row" Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
-                                                                             Padding="6,0,14,0" MinHeight="48"
-                                                                             AutomationProperties.Name="{Binding AccessibleName}">
-                                                            <Grid ColumnDefinitions="Auto,*">
-                                                                <Button Classes="check" Tag="{Binding}" Click="Check_Click" VerticalAlignment="Top"
-                                                                        AutomationProperties.Name="{Binding Text, StringFormat='Complete {0}'}"/>
-                                                                <StackPanel Grid.Column="1" IsVisible="{Binding !IsEditing}" VerticalAlignment="Center"
-                                                                            Background="Transparent" Tapped="ItemText_Tapped" Margin="2,10,0,10">
-                                                                    <TextBlock Classes="itemtext" Text="{Binding Text}" TextWrapping="Wrap"
-                                                                               Foreground="{DynamicResource TextPrimary}"/>
-                                                                    <WrapPanel>
-                                                                        <StackPanel Classes="chip" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
-                                                                                    IsVisible="{Binding HasDue}">
-                                                                            <PathIcon Data="{StaticResource Icon.Calendar}"/>
-                                                                            <TextBlock Text="{Binding DueText}" VerticalAlignment="Center"/>
-                                                                        </StackPanel>
-                                                                        <StackPanel Classes="chip" IsVisible="{Binding HasPendingReminder}">
-                                                                            <PathIcon Data="{StaticResource Icon.Bell}"/>
-                                                                            <TextBlock Text="{Binding ReminderText}" VerticalAlignment="Center"/>
-                                                                        </StackPanel>
-                                                                    </WrapPanel>
-                                                                </StackPanel>
-                                                                <TextBox Grid.Column="1" Classes="bare phoneedit" FontSize="16" TextWrapping="Wrap" AcceptsReturn="False"
-                                                                         IsVisible="{Binding IsEditing}" AutomationProperties.Name="Item text" Margin="2,8,0,8"
-                                                                         TextInputOptions.AutoCapitalization="True"/>
+                    <ScrollViewer x:Name="HomeScroller" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel>
+                            <ItemsControl x:Name="Cards" Margin="0,0,0,10">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="local:BoardCard">
+                                        <Border Classes="card" Tag="{Binding Board}" Background="{Binding Background}"
+                                                BorderBrush="{Binding Border}" BorderThickness="1" CornerRadius="{StaticResource R.Card}"
+                                                Padding="18,14,18,16" Margin="14,0,14,12" Focusable="True"
+                                                AutomationProperties.Name="{Binding AccessibleName}" Tapped="Card_Tapped">
+                                            <StackPanel Spacing="3">
+                                                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,4">
+                                                    <TextBlock Text="{Binding DisplayTitle}" FontSize="{StaticResource T.PhoneTitle}" FontWeight="Bold"
+                                                               Foreground="{Binding Foreground}" TextTrimming="CharacterEllipsis"
+                                                               Classes.untitled="{Binding !HasTitle}"/>
+                                                    <PathIcon Grid.Column="1" Classes="sync" Width="15" Height="15" Margin="8,0,0,0"
+                                                              VerticalAlignment="Center" IsVisible="{Binding HasSyncIcon}"
+                                                              Data="{Binding SyncIcon}" Foreground="{Binding SyncBrush}"
+                                                              AutomationProperties.Name="{Binding SyncTip}"/>
+                                                    <Border Grid.Column="2" IsVisible="{Binding HasOverdue}" Background="{Binding Overdue}"
+                                                            CornerRadius="9" Padding="8,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding OverdueText}" FontSize="{StaticResource T.PhoneChip}" FontWeight="SemiBold" Foreground="{Binding Background}"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="3" Text="{Binding OpenCount}" FontSize="14" Margin="10,0,0,0"
+                                                               Foreground="{Binding Muted}" VerticalAlignment="Center"/>
+                                                    <ToggleSwitch Grid.Column="4" OnContent="On desktop" OffContent="On desktop" IsVisible="{Binding ShowWidgetSwitch}"
+                                                                  IsChecked="{Binding IsWidget}" Foreground="{Binding Foreground}"
+                                                                  Margin="12,0,0,0" MinHeight="0" MinWidth="0" VerticalAlignment="Center"
+                                                                  AutomationProperties.Name="Show as a widget on this computer"/>
+                                                </Grid>
+                                                <ItemsControl ItemsSource="{Binding Preview}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="local:PreviewLine">
+                                                            <Grid ColumnDefinitions="24,*" Margin="0,1">
+                                                                <Ellipse Width="8" Height="8" Fill="{Binding Dot}" IsVisible="{Binding IsCategory}" HorizontalAlignment="Left"/>
+                                                                <Ellipse Width="13" Height="13" StrokeThickness="1.4" Opacity="0.6" HorizontalAlignment="Left"
+                                                                         Stroke="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"
+                                                                         IsVisible="{Binding !IsCategory}"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="{StaticResource T.PhoneBody}" MaxLines="1" TextTrimming="CharacterEllipsis"
+                                                                           Classes.category="{Binding IsCategory}"
+                                                                           Foreground="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"/>
                                                             </Grid>
-                                                        </local:AccessibleRow>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                            <TextBox Classes="bare phoneadd" PlaceholderText="Add item" Tag="{Binding}" Margin="56,4,16,4"
-                                                     AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"
-                                                     TextInputOptions.AutoCapitalization="True"/>
-                                        </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                                <TextBlock Text="{Binding MoreText}" IsVisible="{Binding HasMore}" FontSize="13"
+                                                           Foreground="{Binding Muted}" Margin="24,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                                <ItemsControl.Styles>
+                                    <Style Selector="TextBlock.untitled">
+                                        <Setter Property="FontStyle" Value="Italic"/>
+                                        <Setter Property="Opacity" Value="0.6"/>
+                                    </Style>
+                                    <Style Selector="TextBlock.category">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </Style>
+                                </ItemsControl.Styles>
+                            </ItemsControl>
+                            <!-- Desktop only: a dashed card at the end starts a new list (the phone has its own button) -->
+                            <Button x:Name="NewListCard" Classes="newcard" Margin="14,0,14,100" IsVisible="False" Click="NewBoard_Click"
+                                    AutomationProperties.Name="New list">
+                                <Panel>
+                                    <Rectangle RadiusX="18" RadiusY="18" StrokeThickness="1.5" StrokeDashArray="5,4"
+                                               Stroke="{DynamicResource Text3}" Fill="Transparent"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,18">
+                                        <local:LineIcon Data="{DynamicResource Line.Add}" Width="16" Height="16"/>
+                                        <TextBlock Text="New list" FontWeight="SemiBold"/>
                                     </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                                </Panel>
+                            </Button>
+                            <!-- room under the last card for the New list button of the phone -->
+                            <Border x:Name="HomeBottomSpace" Height="80"/>
+                        </StackPanel>
                     </ScrollViewer>
                 </DockPanel>
-            </Border>
-        </ThemeVariantScope>
+                <Button x:Name="AddBoardButton" Classes="newlist" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,18,18"
+                        AutomationProperties.Name="New list" Click="NewBoard_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <local:LineIcon Data="{DynamicResource Line.Add}" Width="20" Height="20"/>
+                        <TextBlock Text="New list"/>
+                    </StackPanel>
+                </Button>
 
-        <!-- ================= Archive ================= -->
-        <DockPanel x:Name="ArchiveScreen" IsVisible="False" Background="{DynamicResource ArcBg}">
-            <StackPanel DockPanel.Dock="Top" Margin="4,8,12,8" Spacing="8">
-                <Grid ColumnDefinitions="Auto,*">
-                    <Button Classes="bar" Click="Back_Click" AutomationProperties.Name="Back">
-                        <PathIcon Data="{StaticResource Icon.Back}"/>
-                    </Button>
-                    <TextBlock Grid.Column="1" Text="Completed items" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" Margin="4,0"/>
-                </Grid>
-                <TextBox x:Name="ArchiveSearch" Classes="search" PlaceholderText="Search" Margin="12,0,0,0"
-                         AutomationProperties.Name="Search completed items"/>
-            </StackPanel>
-            <Panel>
-                <ListBox x:Name="ArchiveList" Background="Transparent" Tapped="ArchiveItem_Tapped"
-                         AutomationProperties.Name="Completed items">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="local:ArchivedItem">
-                            <Grid ColumnDefinitions="Auto,*" Margin="8,6">
-                                <Ellipse Width="9" Height="9" Fill="{Binding CategoryColor}" Margin="0,7,14,0" VerticalAlignment="Top"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Text, Converter={x:Static local:Converters.FirstLine}}" FontSize="16"
-                                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource ArcText}"/>
-                                    <TextBlock FontSize="13" Foreground="{DynamicResource ArcMuted}">
-                                        <Run Text="{Binding CompletedAt, StringFormat='dd.MM.yyyy HH:mm', Mode=OneWay}"/>
-                                        <Run Text="  ·  "/>
-                                        <Run Text="{Binding CategoryName, Mode=OneWay}"/>
-                                    </TextBlock>
-                                </StackPanel>
+                <!-- ================= One board ================= -->
+                <ThemeVariantScope x:Name="BoardScope" IsVisible="False">
+                    <Border x:Name="BoardScreen" Classes="boardscreen" Background="{DynamicResource BoardBg}">
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto,Auto" Margin="4,8,4,4">
+                                <Button Classes="bar" Click="Back_Click" AutomationProperties.Name="Back">
+                                    <local:LineIcon Data="{DynamicResource Line.Back}"/>
+                                </Button>
+                                <Panel Grid.Column="1" VerticalAlignment="Center" Margin="4,0">
+                                    <TextBlock x:Name="BoardTitle" FontSize="{StaticResource T.PhoneTitle}" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}"
+                                               TextTrimming="CharacterEllipsis" Tapped="BoardTitle_Tapped" Background="Transparent"/>
+                                    <TextBox x:Name="BoardTitleBox" Classes="bare" FontSize="{StaticResource T.PhoneTitle}" FontWeight="Bold" IsVisible="False"
+                                             PlaceholderText="Title (optional)" AutomationProperties.Name="List title"
+                                             TextInputOptions.AutoCapitalization="True"/>
+                                </Panel>
+                                <!-- Google sync status of the list (hidden while signed out) -->
+                                <Button x:Name="BoardSyncBtn" Grid.Column="2" Classes="bar" Click="BoardSync_Click" IsVisible="False">
+                                    <PathIcon/>
+                                </Button>
+                                <Button Grid.Column="3" Classes="bar" Click="AddCategory_Click" AutomationProperties.Name="New category">
+                                    <local:LineIcon Data="{DynamicResource Line.NewCategory}"/>
+                                </Button>
+                                <Button Grid.Column="4" Classes="bar" Click="BoardMenu_Click" AutomationProperties.Name="List menu">
+                                    <local:LineIcon Data="{DynamicResource Line.MoreVertical}"/>
+                                </Button>
                             </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <TextBlock x:Name="ArchiveEmpty" Text="Nothing here yet. Completed items show up here."
-                           Foreground="{DynamicResource ArcMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                           TextWrapping="Wrap" TextAlignment="Center" Margin="32"/>
+                            <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Line}"/>
+                            <ScrollViewer x:Name="BoardScroller" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl x:Name="Categories" Margin="0,8,0,60">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="local:Category">
+                                            <StackPanel Margin="0,0,0,10">
+                                                <!-- Category header: dot, name and count in the shade of the category -->
+                                                <local:AccessibleRow Classes="row" Tag="{Binding}" Padding="14,12,14,8"
+                                                                     AutomationProperties.Name="{Binding AccessibleName}" Tapped="CategoryHeader_Tapped" DoubleTapped="CategoryHeader_Tapped">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                        <!-- The dot is centered in a 20 px cell, 24 px from the left. The guide line below uses the same center. -->
+                                                        <Panel Width="20" VerticalAlignment="Center">
+                                                            <Ellipse Classes="catdot" Width="10" Height="10">
+                                                                <Ellipse.Fill>
+                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Dot">
+                                                                        <Binding Path="Color"/>
+                                                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                    </MultiBinding>
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
+                                                        </Panel>
+                                                        <TextBlock Grid.Column="1" Classes="catname" Text="{Binding Name}" Margin="6,0,0,0"
+                                                                   FontSize="{StaticResource T.PhoneCategory}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                   IsVisible="{Binding !IsEditing}">
+                                                            <TextBlock.Foreground>
+                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
+                                                                    <Binding Path="Color"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                </MultiBinding>
+                                                            </TextBlock.Foreground>
+                                                        </TextBlock>
+                                                        <TextBox Grid.Column="1" Classes="bare phoneedit" Margin="6,0,0,0" FontSize="{StaticResource T.PhoneCategory}" FontWeight="SemiBold"
+                                                                 IsVisible="{Binding IsEditing}" AutomationProperties.Name="Category name"
+                                                                 TextInputOptions.AutoCapitalization="True"/>
+                                                        <Border Grid.Column="2" Classes="countpill">
+                                                            <Border.Background>
+                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Pill">
+                                                                    <Binding Path="Color"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                </MultiBinding>
+                                                            </Border.Background>
+                                                            <TextBlock Text="{Binding Items.Count}" FontSize="{StaticResource T.PhoneChip}" FontWeight="SemiBold">
+                                                                <TextBlock.Foreground>
+                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
+                                                                        <Binding Path="Color"/>
+                                                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                        </Border>
+                                                        <PathIcon Grid.Column="3" Classes="chevron turns" Classes.collapsed="{Binding Collapsed}"
+                                                                  Foreground="{DynamicResource TextMuted}" Margin="4,0"/>
+                                                    </Grid>
+                                                </local:AccessibleRow>
+                                                <!-- Collapsing and expanding: the items close and open smoothly, then hide (see Collapser) -->
+                                                <local:Collapser Classes="section" Classes.closed="{Binding Collapsed}" HidesWhenClosed="True">
+                                                    <Grid RowDefinitions="Auto,Auto">
+                                                        <Border Classes="guide" Width="2" Margin="23,2,0,2" HorizontalAlignment="Left" CornerRadius="1">
+                                                            <Border.Background>
+                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Line">
+                                                                    <Binding Path="Color"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                    <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                </MultiBinding>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <ItemsControl Margin="30,0,0,0" ItemsSource="{Binding Items}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="local:TodoItem">
+                                                                    <local:Collapser Classes.leaving="{Binding IsLeaving}">
+                                                                    <local:AccessibleRow Classes="row" Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
+                                                                                         Padding="0,0,14,0" MinHeight="48"
+                                                                                         AutomationProperties.Name="{Binding AccessibleName}">
+                                                                        <Grid ColumnDefinitions="Auto,*">
+                                                                            <Button Classes="check" Tag="{Binding}" Click="Check_Click" VerticalAlignment="Top"
+                                                                                    AutomationProperties.Name="{Binding Text, StringFormat='Complete {0}'}">
+                                                                                <Button.BorderBrush>
+                                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Ring">
+                                                                                        <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                                    </MultiBinding>
+                                                                                </Button.BorderBrush>
+                                                                                <Button.Foreground>
+                                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Fill">
+                                                                                        <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                                    </MultiBinding>
+                                                                                </Button.Foreground>
+                                                                                <Button.Background>
+                                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Tick">
+                                                                                        <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.StyleKey)"/>
+                                                                                        <Binding Path="$self.(local:ChromeLook.Version)"/>
+                                                                                    </MultiBinding>
+                                                                                </Button.Background>
+                                                                            </Button>
+                                                                            <StackPanel Grid.Column="1" IsVisible="{Binding !IsEditing}" VerticalAlignment="Center"
+                                                                                        Background="Transparent" Tapped="ItemText_Tapped" Margin="0,10,0,10">
+                                                                                <Panel HorizontalAlignment="Left">
+                                                                                    <TextBlock Classes="itemtext" Text="{Binding Text}" TextWrapping="Wrap"
+                                                                                               Foreground="{DynamicResource TextPrimary}"/>
+                                                                                    <Border Classes="strike"/>
+                                                                                </Panel>
+                                                                                <WrapPanel>
+                                                                                    <Border Classes="chipbox" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
+                                                                                            IsVisible="{Binding HasDue}">
+                                                                                        <StackPanel Classes="chip" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
+                                                                                                    IsVisible="{Binding HasDue}">
+                                                                                            <local:LineIcon Data="{DynamicResource Line.Calendar}"/>
+                                                                                            <TextBlock Text="{Binding DueText}" VerticalAlignment="Center"/>
+                                                                                        </StackPanel>
+                                                                                    </Border>
+                                                                                    <Border Classes="chipbox" IsVisible="{Binding HasPendingReminder}">
+                                                                                        <StackPanel Classes="chip" IsVisible="{Binding HasPendingReminder}">
+                                                                                            <local:LineIcon Data="{DynamicResource Line.Bell}"/>
+                                                                                            <TextBlock Text="{Binding ReminderText}" VerticalAlignment="Center"/>
+                                                                                        </StackPanel>
+                                                                                    </Border>
+                                                                                </WrapPanel>
+                                                                            </StackPanel>
+                                                                            <TextBox Grid.Column="1" Classes="bare phoneedit" FontSize="{StaticResource T.PhoneBody}" TextWrapping="Wrap" AcceptsReturn="False"
+                                                                                     IsVisible="{Binding IsEditing}" AutomationProperties.Name="Item text" Margin="0,8,0,8"
+                                                                                     TextInputOptions.AutoCapitalization="True"/>
+                                                                        </Grid>
+                                                                    </local:AccessibleRow>
+                                                                    </local:Collapser>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                        <!-- "+ Add item": the plus sits under the check circles, the text lines up with the item text -->
+                                                        <Grid Grid.Row="1" ColumnDefinitions="48,*" Margin="30,4,16,4">
+                                                            <local:LineIcon Data="{DynamicResource Line.Add}" Width="16" Height="16" IsHitTestVisible="False"
+                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                            TextElement.Foreground="{DynamicResource TextMuted}"/>
+                                                            <TextBox Grid.Column="1" Classes="bare phoneadd" PlaceholderText="Add item" Tag="{Binding}"
+                                                                     AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"
+                                                                     TextInputOptions.AutoCapitalization="True"/>
+                                                        </Grid>
+                                                    </Grid>
+                                                </local:Collapser>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </Border>
+                </ThemeVariantScope>
+
+                <!-- ================= Archive ================= -->
+                <DockPanel x:Name="ArchiveScreen" IsVisible="False" Background="{DynamicResource Bg}">
+                    <StackPanel DockPanel.Dock="Top" Margin="16,14,16,8" Spacing="10">
+                        <TextBlock Text="Archive" FontSize="{StaticResource T.ScreenTitle}" FontWeight="Bold" Margin="6,0,0,0"
+                                   AutomationProperties.Name="Completed items"/>
+                        <!-- Search: a rounded field with a magnifier, like the mockup -->
+                        <Panel>
+                            <TextBox x:Name="ArchiveSearch" Classes="search phone" PlaceholderText="Search completed items"
+                                     AutomationProperties.Name="Search completed items"/>
+                            <local:LineIcon Data="{DynamicResource Line.Search}" Width="17" Height="17" Margin="14,0,0,0"
+                                            HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"
+                                            TextElement.Foreground="{DynamicResource Text3}"/>
+                        </Panel>
+                    </StackPanel>
+                    <Panel>
+                        <ListBox x:Name="ArchiveList" Classes="archive" Margin="8,0" Tapped="ArchiveItem_Tapped"
+                                 AutomationProperties.Name="Completed items"/>
+                        <TextBlock x:Name="ArchiveEmpty" Text="Nothing here yet. Completed items show up here."
+                                   Foreground="{DynamicResource Text3}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" TextAlignment="Center" Margin="32"/>
+                    </Panel>
+                </DockPanel>
+
+                <!-- ================= Settings ================= -->
+                <DockPanel x:Name="SettingsScreen" IsVisible="False" Background="{DynamicResource Bg}">
+                    <Button x:Name="UpdateRow" DockPanel.Dock="Top" Classes="updaterow" IsVisible="False" Click="UpdateRow_Click"/>
+                    <ContentControl x:Name="SettingsHost"/>
+                </DockPanel>
             </Panel>
         </DockPanel>
 
         <!-- ================= Undo bar ================= -->
-        <Border x:Name="Snackbar" IsVisible="False" VerticalAlignment="Bottom" Margin="12,0,12,96" CornerRadius="10"
-                Padding="16,6,6,6" Background="{DynamicResource MenuBg}" BorderBrush="{DynamicResource MenuBorder}" BorderThickness="1">
+        <Border x:Name="Snackbar" IsVisible="False" VerticalAlignment="Bottom" Margin="12,0,12,84" CornerRadius="{StaticResource R.PhoneRow}"
+                Padding="16,6,6,6" Background="{DynamicResource Raised}" BorderBrush="{DynamicResource Line}" BorderThickness="1"
+                BoxShadow="0 4 16 0 #40000000">
             <Grid ColumnDefinitions="*,Auto">
-                <TextBlock x:Name="SnackbarText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="15"/>
-                <Button x:Name="UndoButton" Grid.Column="1" Classes="option" Content="Undo" Padding="16,10" Click="SnackbarButton_Click"
-                        Foreground="{DynamicResource Accent}" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                <TextBlock x:Name="SnackbarText" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="{StaticResource T.PhoneBody}"/>
+                <Button x:Name="UndoButton" Grid.Column="1" Content="Undo" Padding="16,10" Click="SnackbarButton_Click"
+                        Foreground="{DynamicResource Accent}" FontWeight="Bold" HorizontalAlignment="Right" Background="Transparent" BorderThickness="0"/>
             </Grid>
         </Border>
 
         <!-- ================= Bottom sheet (menus, choices, date picker) ================= -->
         <Panel x:Name="SheetLayer" IsVisible="False">
-            <Border Background="#66000000" Tapped="SheetBackground_Tapped"/>
+            <Border x:Name="Scrim" Background="#66000000" Tapped="SheetBackground_Tapped"/>
             <!-- at most most of the screen; taller content (the date picker above the keyboard) scrolls -->
-            <Border x:Name="Sheet" VerticalAlignment="Bottom" Background="{DynamicResource MenuBg}" CornerRadius="16,16,0,0"
-                    Padding="0,10,0,18" Margin="0,48,0,0">
+            <Border x:Name="Sheet" VerticalAlignment="Bottom" Background="{DynamicResource Raised}" CornerRadius="{StaticResource R.Sheet}"
+                    Padding="0,0,0,18" Margin="0,48,0,0">
                 <DockPanel>
-                    <TextBlock x:Name="SheetTitle" DockPanel.Dock="Top" FontSize="15" FontWeight="SemiBold" Margin="20,6,20,8"
-                               Foreground="{DynamicResource MenuTextMuted}" TextTrimming="CharacterEllipsis"/>
+                    <!-- Grab handle: drag it (or the title) down to close the sheet -->
+                    <Border x:Name="SheetHandle" DockPanel.Dock="Top" Background="Transparent" Padding="0,10,0,6"
+                            AutomationProperties.Name="Close menu">
+                        <StackPanel>
+                            <Border Classes="grab"/>
+                            <TextBlock x:Name="SheetTitle" FontSize="15" FontWeight="SemiBold" Margin="22,12,22,4"
+                                       Foreground="{DynamicResource Text3}" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </Border>
                     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                         <ContentControl x:Name="SheetContent"/>
                     </ScrollViewer>

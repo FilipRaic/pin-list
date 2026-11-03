@@ -2,6 +2,42 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <!-- Fluent UI System Icons (Microsoft, MIT licence: https://github.com/microsoft/fluentui-system-icons).
          The same icons as the Windows 11 icon font the WPF app used, so every platform looks alike. -->
+    <!-- Line icons (24 x 24 grid, drawn by LineIcon as strokes of about 1.7 with round caps and joins).
+         They are used in menus, sheets, buttons and the sidebar so every screen has one icon style. -->
+    <StreamGeometry x:Key="Line.Archive">M3 4h18v4H3z M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8 M10 12h4</StreamGeometry>
+    <StreamGeometry x:Key="Line.Settings">M4 6h10 M18 6h2 M14 4v4 M4 12h2 M10 12h10 M6 10v4 M4 18h12 M20 18h0 M16 16v4</StreamGeometry>
+    <StreamGeometry x:Key="Line.Grid">M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h6v6h-6z</StreamGeometry>
+    <StreamGeometry x:Key="Line.Copy">M9 9h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V10a1 1 0 0 1 1-1z M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1</StreamGeometry>
+    <StreamGeometry x:Key="Line.Delete">M4 7h16 M10 11v6 M14 11v6 M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12 M9 7V4h6v3</StreamGeometry>
+    <StreamGeometry x:Key="Line.RemoveFromDesktop">M3 5h18v11H3z M8 20h8 M12 16v4 M9.5 8.5l5 5 M14.5 8.5l-5 5</StreamGeometry>
+    <StreamGeometry x:Key="Line.Transparent">M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z</StreamGeometry>
+    <StreamGeometry x:Key="Line.Sync">M20 12a8 8 0 0 0-14-5.3L4 9 M4 4v5h5 M4 12a8 8 0 0 0 14 5.3L20 15 M20 20v-5h-5</StreamGeometry>
+    <StreamGeometry x:Key="Line.Rename">M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4z M13.5 6.5l4 4</StreamGeometry>
+    <StreamGeometry x:Key="Line.Lock">M5 11h14v9H5z M8 11V8a4 4 0 0 1 8 0v3</StreamGeometry>
+    <StreamGeometry x:Key="Line.Unlock">M5 11h14v9H5z M8 11V8a4 4 0 0 1 7.5-2</StreamGeometry>
+    <StreamGeometry x:Key="Line.Calendar">M4 6h16v14H4z M4 10h16 M8 3v4 M16 3v4</StreamGeometry>
+    <StreamGeometry x:Key="Line.Bell">M6 16V10.5a6 6 0 0 1 12 0V16l1.5 1.5h-15z M10 20.5a2 2 0 0 0 4 0</StreamGeometry>
+    <StreamGeometry x:Key="Line.NewCategory">M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z M12 10v6 M9 13h6</StreamGeometry>
+    <StreamGeometry x:Key="Line.More">M4.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0 M10.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0 M16.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0</StreamGeometry>
+    <StreamGeometry x:Key="Line.MoreVertical">M10.8 5a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0 M10.8 12a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0 M10.8 19a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0</StreamGeometry>
+    <StreamGeometry x:Key="Line.Back">M19 12H5 M11 6l-6 6 6 6</StreamGeometry>
+    <StreamGeometry x:Key="Line.Search">M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M20 20l-4-4</StreamGeometry>
+    <StreamGeometry x:Key="Line.Add">M12 5v14 M5 12h14</StreamGeometry>
+    <StreamGeometry x:Key="Line.Check">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
+    <StreamGeometry x:Key="Line.ChevronDown">M6 9l6 6 6-6</StreamGeometry>
+    <StreamGeometry x:Key="Line.ChevronRight">M9 6l6 6-6 6</StreamGeometry>
+    <StreamGeometry x:Key="Line.ChevronUp">M6 15l6-6 6 6</StreamGeometry>
+    <StreamGeometry x:Key="Line.ArrowUp">M12 19V5 M6 11l6-6 6 6</StreamGeometry>
+    <StreamGeometry x:Key="Line.ArrowDown">M12 5v14 M6 13l6 6 6-6</StreamGeometry>
+    <StreamGeometry x:Key="Line.Palette">M12 3a9 9 0 1 0 0 18c1.5 0 2-1 1.5-2s0-2 1.5-2h2a3 3 0 0 0 3-3 9 9 0 0 0-8-11z M7.5 11h.01 M10 7.5h.01 M14.5 7.5h.01</StreamGeometry>
+    <StreamGeometry x:Key="Line.Restore">M3 12a9 9 0 1 0 3-6.7L3 8 M3 3v5h5</StreamGeometry>
+    <StreamGeometry x:Key="Line.Export">M12 4v11 M7 9l5-5 5 5 M5 20h14</StreamGeometry>
+    <StreamGeometry x:Key="Line.Import">M12 15V4 M7 10l5 5 5-5 M5 20h14</StreamGeometry>
+    <StreamGeometry x:Key="Line.Folder">M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z</StreamGeometry>
+    <StreamGeometry x:Key="Line.Download">M12 4v11 M7 10l5 5 5-5 M5 20h14</StreamGeometry>
+    <StreamGeometry x:Key="Line.Exit">M10 4H5v16h5 M15 8l4 4-4 4 M19 12H9</StreamGeometry>
+    <StreamGeometry x:Key="Line.Sort">M7 5v14 M3 15l4 4 4-4 M17 19V5 M13 9l4-4 4 4</StreamGeometry>
+    <!-- Filled icons (Fluent UI System Icons) -->
     <StreamGeometry x:Key="Icon.ChevronDown">M3.15 5.65c.2-.2.5-.2.7 0L8 9.79l4.15-4.14a.5.5 0 0 1 .7.7l-4.5 4.5a.5.5 0 0 1-.7 0l-4.5-4.5a.5.5 0 0 1 0-.7Z</StreamGeometry>
     <StreamGeometry x:Key="Icon.ChevronRight">M5.65 3.15a.5.5 0 0 0 0 .7L9.79 8l-4.14 4.15a.5.5 0 0 0 .7.7l4.5-4.5a.5.5 0 0 0 0-.7l-4.5-4.5a.5.5 0 0 0-.7 0Z</StreamGeometry>
     <StreamGeometry x:Key="Icon.ChevronLeft">M10.35 3.15c.2.2.2.5 0 .7L6.21 8l4.14 4.15a.5.5 0 0 1-.7.7l-4.5-4.5a.5.5 0 0 1 0-.7l4.5-4.5c.2-.2.5-.2.7 0Z</StreamGeometry>

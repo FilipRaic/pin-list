@@ -1,0 +1,34 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Design values shared by the desktop and the phone: corners (R), font sizes (T) and control sizes (S).
+         Colors are not here, they come from Themes (DynamicResource brushes). -->
+
+    <!-- Corners -->
+    <CornerRadius x:Key="R.Window">14</CornerRadius>
+    <CornerRadius x:Key="R.Row">8</CornerRadius>
+    <CornerRadius x:Key="R.Menu">12</CornerRadius>
+    <CornerRadius x:Key="R.MenuItem">7</CornerRadius>
+    <CornerRadius x:Key="R.Pill">99</CornerRadius>
+    <CornerRadius x:Key="R.Card">18</CornerRadius>
+    <CornerRadius x:Key="R.PhoneRow">12</CornerRadius>
+    <CornerRadius x:Key="R.Sheet">24,24,0,0</CornerRadius>
+
+    <!-- Font sizes -->
+    <x:Double x:Key="T.Body">13.5</x:Double>
+    <x:Double x:Key="T.Title">14</x:Double>
+    <x:Double x:Key="T.Category">12.5</x:Double>
+    <x:Double x:Key="T.Chip">11</x:Double>
+    <x:Double x:Key="T.PhoneBody">15</x:Double>
+    <x:Double x:Key="T.PhoneTitle">21</x:Double>
+    <x:Double x:Key="T.ScreenTitle">26</x:Double>
+    <x:Double x:Key="T.PhoneCategory">14</x:Double>
+    <x:Double x:Key="T.PhoneChip">12</x:Double>
+
+    <!-- Sizes -->
+    <x:Double x:Key="S.IconButton">28</x:Double>
+    <x:Double x:Key="S.Icon">15</x:Double>
+    <x:Double x:Key="S.Check">18</x:Double>
+    <x:Double x:Key="S.PhoneIconButton">40</x:Double>
+    <x:Double x:Key="S.PhoneIcon">20</x:Double>
+    <x:Double x:Key="S.PhoneCheck">22</x:Double>
+</ResourceDictionary>
