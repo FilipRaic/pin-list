@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia.Android" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Android" Version="12.1.5" />
     <!-- Google sign-in for sync (Authorization API) -->
     <PackageReference Include="Xamarin.GooglePlayServices.Auth" Version="122.0.0" />
     <!-- Play services raises AndroidX Lifecycle to 2.11; this keeps Avalonia's Lifecycle.Process on the same line -->

@@ -1,4 +1,4 @@
-# Opens pull requests when the GitHub Actions or the test packages have new versions.
+# Opens pull requests when the GitHub Actions, Avalonia or the test packages have new versions.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -11,10 +11,23 @@ updates:
         patterns: [ "*" ]
 
   - package-ecosystem: nuget
-    directory: /tests/PinList.Tests
+    # every project that references Avalonia, so all its packages move to the same version together
+    directories:
+      - /src/PinList
+      - /src/PinList.UI
+      - /src/PinList.Android
+      - /tests/PinList.Tests
     schedule:
       interval: monthly
+    # only Avalonia and the test packages, the Android Google and AndroidX packages are updated by hand
+    allow:
+      - dependency-name: "Avalonia*"
+      - dependency-name: "xunit*"
+      - dependency-name: "Microsoft.NET.Test.Sdk"
+      - dependency-name: "coverlet*"
     groups:
+      avalonia:
+        patterns: [ "Avalonia*" ]
       test-packages:
         patterns: [ "*" ]
     ignore:
