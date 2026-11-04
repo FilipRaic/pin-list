@@ -41,8 +41,9 @@ jobs:
 
       # The UI tests run the real app headless (nothing is shown). The build fails if coverage drops
       # below 99 % of lines or 92 % of branches (Release builds count branches a little differently).
+      # The 500+ UI tests take 6 to 9 minutes on GitHub's Windows machines, so the limit leaves room for a slow day.
       - name: Test
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: >
           dotnet test PinList.Desktop.slnf -c Release --no-build
           -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
