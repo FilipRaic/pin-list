@@ -12,7 +12,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 
 ## Features
 
-- **Desktop widgets** (Windows and macOS). Each list is a borderless widget that stays on the desktop. On Windows it survives **Win+D / Show desktop** and stays out of the taskbar and Alt+Tab; on macOS it's on every Space and out of the Dock and Cmd+Tab.
+- **Desktop widgets** (Windows and macOS). Each list is a borderless widget that stays on the desktop. On Windows it survives **Win+D / Show desktop** and stays out of the taskbar and Alt+Tab; on macOS it's on every Space and out of the Dock and Cmd+Tab (PinList shows in the Dock only while the PinList window is open).
 - **Phone app** (Android). A bottom bar with **Lists**, **Archive** and **Settings**. Lists shows a card for every list with its color, item count, overdue items and a short preview. Tap one to open it full screen.
 - **As many lists as you want.** Every widget remembers its position and size, and can be locked in place.
 - **One PinList window** (Windows and macOS). A sidebar with **All lists**, **Archive** and **Settings**. All lists shows every list as a card, like the phone. Each card has an **On desktop** switch, so a list can be a widget on one computer and not on another, and still be opened and edited there.
@@ -41,7 +41,7 @@ Get the files from the [website](https://filipraic.github.io/pin-list/#download)
 
 ### Windows – `PinList.exe`
 
-PinList is a single exe – put it anywhere (e.g. `%LOCALAPPDATA%\Programs\PinList`) and run it. On first start it creates one widget and adds itself to *Start with Windows* (you can turn that off in **Settings**). Starting it again while it's running brings the widgets to the front.
+PinList is a single exe – put it anywhere (e.g. `%LOCALAPPDATA%\Programs\PinList`) and run it. On first start it opens the PinList window and adds itself to *Start with Windows* (you can turn that off in **Settings**). Starting it again while it's running brings the widgets to the front.
 
 > The exe isn't code-signed, so Windows SmartScreen may show *"Windows protected your PC"*. Click **More info → Run anyway**, or build it yourself from source.
 
@@ -57,7 +57,7 @@ Get-FileHash .\PinList.exe -Algorithm SHA256   # compare with PinList.exe.sha256
    xattr -dr com.apple.quarantine /Applications/PinList.app
    ```
    Then open PinList normally. (Alternatively: try to open it once, then **System Settings → Privacy & Security → Open Anyway**.)
-3. PinList lives in the **menu bar** (no Dock icon). On first start it creates one widget and adds itself to the login items. You can turn that off in **Settings**.
+3. PinList lives in the **menu bar**, with a Dock icon only while the PinList window is open. On first start it opens the PinList window and adds itself to the login items. You can turn that off in **Settings**.
 
 If macOS says the app *"is damaged"*, sign it for your Mac and try again:
 
@@ -103,7 +103,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | New category | The folder button in the widget header. |
 | Category options | Right-click a category header: rename, color, collapse, copy items, delete. |
 | Copy | Right-click an item → **Copy**, a category → **Copy items**, or **⋯ → Copy all items** for the whole list. One item per line with "- " in front, ready to paste anywhere. |
-| All lists | **⋯ → All lists** or the tray / menu bar menu opens the PinList window on every list as a card. Click one to open and edit it, right-click for its menu. The **On desktop** switch on each card shows or hides that list's widget on this computer. Lists still sync, whatever the switch says. **+ New list** at the end adds a list. |
+| All lists | **⋯ → All lists** or the tray / menu bar menu opens the PinList window on every list as a card. Click one to open and edit it, right-click for its menu. The **On desktop** switch on each card shows or hides that list's widget on this computer. Lists still sync, whatever the switch says. **+ New list** at the end adds a list. With no lists it says *No lists yet, create one to get started*. |
 | Remove a widget from the desktop | **⋯ → Remove from desktop**. The list stays in **All lists** and on your other devices. Ctrl+Z brings the widget back. |
 | Rename a widget | Double-click its header. The title is optional – leave it empty for no title. |
 | List color | **⋯ → List color** is a row of colors (use the arrow keys and Enter). **⋯ → Transparent** is a switch. |
@@ -113,7 +113,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | Sync a list | **⋯ → Sync this list** (signs in with Google first if needed). See [Sync](#sync). |
 | Export / import | **Settings → Your data → Export** saves all lists and the archive to a file. **Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
 | Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit (*Quit PinList* on a Mac). |
-| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import and the data folder. Handy on a Mac when the menu bar icon is hidden. |
+| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import and the data folder. |
 | Updates | When a new version is out, the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
 Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete list** to delete the list. Shutting down or restarting the computer closes PinList without asking.
@@ -148,7 +148,7 @@ How it behaves:
 - Changes reach your other devices within about 20 seconds while PinList runs. The **phone also syncs in the background, about every 15 minutes** (only with a network, and only while you're signed in with at least one synced list), so reminders set on the PC ring on the phone even if PinList is closed. On **Xiaomi / HyperOS** and some other brands, set **Settings → Apps → PinList → Battery saver → No restrictions** for that.
 - Edits made on different devices, also offline, are merged item by item. If the same item was changed on two devices, the newer change wins. An item deleted on one device is deleted everywhere – unless it was edited on another device after that, then it stays.
 - Deleting a synced list deletes it on all devices (PinList asks first and says so).
-- **Sign out** keeps all lists on this device and pauses their sync. **Sign out and delete cloud data** also removes PinList's data from your Google Drive; your lists stay on every device as local lists.
+- **Sign out** keeps all lists on this device and pauses their sync. Your other devices stay signed in. **Sign out and delete cloud data** also removes PinList's data from your Google Drive and PinList's access to your Google account, which signs out every device; your lists stay on every device as local lists.
 - Widget positions and sizes, the lock, the app theme and "start with Windows" are per device and never synced.
 
 Privacy: PinList can only see its own hidden folder in your Drive, never your other files, and there is no PinList server. The full policy is on the [privacy page](https://filipraic.github.io/pin-list/privacy). Building your own release with sync needs your own Google project – see [Releasing a new version](#releasing-a-new-version).
@@ -218,6 +218,8 @@ scripts\publish.bat
 |---|---|
 | `scripts\run.bat` | Runs the Windows app in Debug mode (`dotnet run`) while you're developing |
 | `scripts\publish.bat` | Empties `publish\`, builds a Release exe into `publish\PinList.exe` and starts it |
+| `scripts\publish-android.bat` | Builds the Android APK signed with the release key into `publish\android\PinList-android.apk`. Asks for the keystore password (hidden, never saved). Optional argument: the keystore path (default `pinlist.keystore` in the repo folder) |
+| `scripts\publish-mac.bat` | On Windows: builds `PinList.app` for Apple Silicon into `publish\mac\PinList-mac-arm64.zip`, like `package-mac.sh` but without the signature (that needs a Mac). After unzipping on the Mac, run `codesign --force --deep --sign - PinList.app && xattr -cr PinList.app` once |
 | `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.2.0`) |
 
 Both `.bat` scripts close a running PinList first, because only one instance can run at a time. Debug and Release builds share the same data.
@@ -257,14 +259,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.4.0
-   git push origin master v2.4.0
+   git tag v2.5.0
+   git push origin master v2.5.0
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.4.0
-   git push -f origin v2.4.0
+   git tag -f v2.5.0
+   git push -f origin v2.5.0
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):
@@ -287,7 +289,7 @@ pin-list/
 ├─ .github/                 CI (build + tests, releases) and Dependabot
 ├─ docs/                    the website on GitHub Pages: index.html, privacy.html, data-format.html and site.css,
 │                           plus the social preview image (social-preview.html is its source)
-├─ scripts/                 run.bat, publish.bat, package-mac.sh
+├─ scripts/                 run.bat, publish.bat, publish-android.bat, publish-mac.bat (+ .ps1), package-mac.sh
 ├─ Version.props            the version of every app
 ├─ Directory.Build.props    keeps build output small (see Building from source)
 ├─ src/PinList.Core/        no UI, runs everywhere
@@ -325,7 +327,7 @@ pin-list/
 
 On **Windows**, each widget is a borderless window whose owner is the desktop window (`Progman`). Owned windows aren't hidden by *Show desktop*, and the `WS_EX_TOOLWINDOW` style keeps them out of the taskbar and Alt+Tab. If Explorer restarts, the widgets are recreated automatically.
 
-On **macOS**, each widget's window joins all Spaces and stays put when switching between them (`NSWindowCollectionBehavior`), and the app has no Dock icon (`LSUIElement`).
+On **macOS**, each widget's window joins all Spaces and stays put when switching between them (`NSWindowCollectionBehavior`), and the app has no Dock icon (`LSUIElement`) except while the PinList window is open (it switches the activation policy).
 
 ### Changing the data format
 

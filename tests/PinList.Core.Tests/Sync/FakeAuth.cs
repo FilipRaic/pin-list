@@ -16,6 +16,9 @@ sealed class FakeAuth : IGoogleAuth
 
     public int SignIns, SignOuts;
 
+    /// <summary>Sign-outs that also removed PinList's access at Google (every device signed out).</summary>
+    public int Revokes;
+
     /// <summary>Thrown by the next sign-in (e.g. no network).</summary>
     public Exception? SignInError { get; set; }
 
@@ -29,9 +32,10 @@ sealed class FakeAuth : IGoogleAuth
 
     public Task<string?> AccessToken(CancellationToken ct) => Task.FromResult(TokenValid ? "token" : null);
 
-    public Task SignOut()
+    public Task SignOut(bool revokeAccess)
     {
         SignOuts++;
+        if (revokeAccess) Revokes++;
         return Task.CompletedTask;
     }
 }

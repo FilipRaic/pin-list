@@ -363,6 +363,9 @@
                                     </Style>
                                 </ItemsControl.Styles>
                             </ItemsControl>
+                            <!-- With no lists at all (the text is EmptyText in the code) -->
+                            <TextBlock x:Name="HomeEmpty" IsVisible="False" Foreground="{DynamicResource Text3}"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" Margin="32"/>
                             <!-- Desktop only: a dashed card at the end starts a new list (the phone has its own button) -->
                             <Button x:Name="NewListCard" Classes="newcard" Margin="14,0,14,100" IsVisible="False" Click="NewBoard_Click"
                                     AutomationProperties.Name="New list">

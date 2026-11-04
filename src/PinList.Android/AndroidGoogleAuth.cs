@@ -48,7 +48,18 @@ public sealed class AndroidGoogleAuth(Context context) : IGoogleAuth
         var token = await Authorize(interactive: true, ct);
         Trace(token == null ? "sign-in: no access token (cancelled or refused)" : "sign-in: got an access token, asking for the account");
         if (token == null) return null;
-        var account = await _oauth.UserInfo(token, ct);
+        GoogleAccount account;
+        try { account = await _oauth.UserInfo(token, ct); }
+        catch (CloudException ex) when (ex.Kind == CloudError.Unauthorized)
+        {
+            // Play services handed out a token Google no longer accepts (access was removed, e.g. by "Sign out and
+            // delete cloud data" on another device). Drop it from Play services and ask once more.
+            Trace("sign-in: the token was refused, asking Google for a new one");
+            await ClearToken(token);
+            token = await Authorize(interactive: true, ct);
+            if (token == null) return null;
+            account = await _oauth.UserInfo(token, ct);
+        }
         Trace("sign-in: account id received" + (string.IsNullOrEmpty(account.Email) ? ", but no email" : ""));
         return account;
     }
@@ -106,11 +117,30 @@ public sealed class AndroidGoogleAuth(Context context) : IGoogleAuth
         return true;
     }
 
-    /// <summary>Removes PinList's access at Google (spec 5.7).</summary>
-    public async Task SignOut()
+    /// <summary>
+    /// Forgets the sign-in on this phone (spec 5.7): Play services drops its token. With revokeAccess, PinList's access
+    /// is also removed at Google, which signs out every device.
+    /// </summary>
+    public async Task SignOut(bool revokeAccess)
     {
         var token = _lastToken ?? await AccessToken(CancellationToken.None);
-        if (token != null) await _oauth.Revoke(token);
+        if (token != null)
+        {
+            if (revokeAccess) await _oauth.Revoke(token);
+            await ClearToken(token);
+        }
         _lastToken = null;
+    }
+
+    /// <summary>Removes a token from Play services' cache, so the next request gets a fresh one. Never fails.</summary>
+    async Task ClearToken(string token)
+    {
+        try
+        {
+            var request = ClearTokenRequest.InvokeBuilder().SetToken(token).Build();
+            await Identity.GetAuthorizationClient(context).ClearToken(request).AsAsync<Java.Lang.Object>();
+        }
+        catch (Exception ex) { Store.Log("Google: couldn't clear the old token: " + ex.Message); }
+        if (_lastToken == token) _lastToken = null;
     }
 }

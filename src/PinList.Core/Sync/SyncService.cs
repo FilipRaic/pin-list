@@ -221,9 +221,10 @@ public sealed class SyncService
     }
 
     /// <summary>
-    /// Signs out: syncs first, then forgets the sign-in; lists stay and synced lists pause (spec 5.7). With
-    /// <paramref name="deleteCloudData"/>, all of PinList's cloud files are deleted (other devices make their lists
-    /// local when they see the reset marker) and this device's lists become local.
+    /// Signs out this device: syncs first, then forgets the sign-in; lists stay and synced lists pause (spec 5.7).
+    /// Other devices stay signed in. With <paramref name="deleteCloudData"/>, all of PinList's cloud files are deleted
+    /// (other devices make their lists local when they see the reset marker), this device's lists become local and
+    /// PinList's access is removed at Google, which signs out every device.
     /// </summary>
     public async Task SignOut(bool deleteCloudData)
     {
@@ -257,7 +258,7 @@ public sealed class SyncService
             if (s.Stripping.Count > 0) await RunOnce(CancellationToken.None);
         }
 
-        await _auth.SignOut();
+        await _auth.SignOut(revokeAccess: deleteCloudData);
         s.Account = null;
         _problem = null;
         _waiting = false;

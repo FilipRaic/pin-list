@@ -102,12 +102,7 @@ public class PhoneApp : Application
         Store.Notify = (message, _) => View.ShowMessageForStore(message);
         PhoneView.SetTheme = SetTheme;
 
-        if (!Store.Load() || Store.Data.Boards.Count == 0)
-        {
-            // First start: one empty list to begin with
-            Store.Data.Boards.Add(Store.DefaultBoard(new WorkArea(0, 0, 1280, 800), Themes.SystemUsesDark() ? "Dark" : "Light"));
-            Store.SaveNow();
-        }
+        if (!Store.Load()) Store.SaveNow(); // first start: no lists yet, the cards screen says how to begin
         ApplyTheme();
         View.Reload();
 

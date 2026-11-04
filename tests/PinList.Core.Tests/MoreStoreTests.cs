@@ -118,15 +118,6 @@ public class MoreStoreTests : StoreTestBase
     }
 
     [Fact]
-    public void Default_board_sits_in_the_top_right_corner()
-    {
-        var b = Store.DefaultBoard(new WorkArea(0, 0, 1920, 1040), "Light");
-        Assert.Equal((1920 - 320 - 24, 24.0), (b.X, b.Y));
-        Assert.Equal("Light", b.Style);
-        Assert.Equal("General", Assert.Single(b.Categories).Name);
-    }
-
-    [Fact]
     public void AllItems_lists_items_of_every_board()
     {
         MakeBoard(("A", new[] { "a", "b" }));

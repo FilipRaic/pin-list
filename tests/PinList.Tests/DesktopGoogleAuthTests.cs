@@ -108,17 +108,26 @@ public class DesktopGoogleAuthTests : StoreTestBase
     }
 
     [Fact]
-    public async Task Sign_out_revokes_and_deletes_the_token()
+    public async Task Sign_out_forgets_the_token_on_this_device_only()
+    {
+        _tokens.Token = "rt";
+        await Auth().SignOut(revokeAccess: false);
+        Assert.Null(_tokens.Token);
+        Assert.Empty(_http.Requests); // nothing goes to Google, so other devices stay signed in
+    }
+
+    [Fact]
+    public async Task Sign_out_with_revoking_revokes_and_deletes_the_token()
     {
         _tokens.Token = "rt";
         _http.Answer(HttpStatusCode.OK);
         var auth = Auth();
-        await auth.SignOut();
+        await auth.SignOut(revokeAccess: true);
         Assert.Equal("https://oauth2.googleapis.com/revoke", _http.Url(0));
         Assert.Contains("token=rt", _http.Requests[0].body);
         Assert.Null(_tokens.Token);
 
-        await auth.SignOut(); // nothing left to revoke
+        await auth.SignOut(revokeAccess: true); // nothing left to revoke
         Assert.Single(_http.Requests);
     }
 

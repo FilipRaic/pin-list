@@ -24,8 +24,11 @@ public interface IGoogleAuth
     /// <summary>A valid access token without asking the user. Null if the user must sign in again.</summary>
     Task<string?> AccessToken(CancellationToken ct);
 
-    /// <summary>Revokes access at Google (best effort) and forgets the stored sign-in.</summary>
-    Task SignOut();
+    /// <summary>
+    /// Forgets the sign-in on this device. With <paramref name="revokeAccess"/>, it also removes PinList's access at
+    /// Google (best effort), which signs out every device: Google revokes the whole grant, not one device's token.
+    /// </summary>
+    Task SignOut(bool revokeAccess);
 }
 
 /// <summary>Where the desktop keeps the refresh token (DPAPI on Windows, Keychain on macOS).</summary>

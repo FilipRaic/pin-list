@@ -58,6 +58,9 @@ public partial class App : Application
     /// <summary>Creates the update check when the app starts (tests use one without GitHub).</summary>
     internal static Func<Updates> CreateUpdates { get; set; } = CreateRealUpdates;
 
+    /// <summary>Adds (true) or removes (false) PinList's Dock icon on a Mac. Does nothing on Windows.</summary>
+    internal static Action<bool> ShowInDock { get; set; } = SetDockIcon;
+
     // These act on the operating system itself (an icon in the real taskbar, a file manager window, ending the
     // process), so tests replace them and they're left out of the coverage numbers.
 
@@ -67,6 +70,14 @@ public partial class App : Application
 #else
     static ITrayIcon CreateRealTrayIcon() => new AvaloniaTrayIcon();
 #endif
+
+    [ExcludeFromCodeCoverage(Justification = "Changes the real Dock on a Mac; tests record the calls.")]
+    static void SetDockIcon(bool on)
+    {
+#if !WINDOWS
+        MacNative.SetDockIcon(on);
+#endif
+    }
 
     [ExcludeFromCodeCoverage(Justification = "Opens a file manager window.")]
     static void OpenInFileManager(string path) =>
@@ -120,6 +131,10 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => Stop();
             desktop.ShutdownRequested += OnShutdownRequested;
+            // Opening PinList again on a Mac (Finder, Launchpad, Spotlight, a Dock click) doesn't start a second
+            // copy: macOS tells the running one instead
+            if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+                activatable.Activated += (_, e) => { if (e.Kind == ActivationKind.Reopen) OnReopen(); };
             if (!Start())
             {
                 ShuttingDown = true;
@@ -179,14 +194,8 @@ public partial class App : Application
 
         if (firstRun)
         {
-            // First run: one empty widget (in the system color), start with Windows
-            Store.Data.Boards.Add(Store.DefaultBoard(Displays.Primary.ToWorkArea(), Themes.SystemUsesDark() ? "Dark" : "Light"));
+            // First run: no lists yet (the PinList window opens on All lists), start with Windows
             if (ManageAutostart) Autostart.Set(true);
-            Store.SaveNow();
-        }
-        if (Store.Data.Boards.Count == 0)
-        {
-            Store.Data.Boards.Add(Store.DefaultBoard(Displays.Primary.ToWorkArea()));
             Store.SaveNow();
         }
         if (ManageAutostart) Autostart.RefreshPath();
@@ -198,10 +207,16 @@ public partial class App : Application
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged += OnNetworkChange;
         OpenAllBoards();
         CreateTray();
+#if !WINDOWS
+        NativeMenu.SetMenu(this, AvaloniaTrayIcon.BuildMenu(AppMenuEntries())); // the app menu, while there's a Dock icon
+#endif
         UseUpdates(CreateUpdates());
         if (_updates!.Enabled == null) Dispatcher.UIThread.Post(() => _ = AskAboutUpdates());
         _ = SyncService.Current?.SyncNow(); // on start (spec 5.2)
         _instance.ListenForShow(() => Dispatcher.UIThread.Post(ShowAllBoards));
+        // On a Mac, Avalonia sets "no Dock icon" when launching finishes, which is after the PinList window opened
+        // above: set it again once the app runs
+        Dispatcher.UIThread.Post(() => { if (_inDock) ShowInDock(true); });
 
         _reminders.Due += ShowReminders;
         _reminders.Start();
@@ -381,7 +396,7 @@ public partial class App : Application
     void OnUpdateFound(UpdateInfo update)
     {
         _lastNotificationIsUpdate = true;
-        _tray!.ShowNotification($"PinList {update.Version} is available", "Click here to open the download page.");
+        _tray?.ShowNotification($"PinList {update.Version} is available", "Click here to open the download page.");
     }
 
     /// <summary>Opens the download page of the new version (or of the latest release).</summary>
@@ -544,6 +559,32 @@ public partial class App : Application
     }
 
     MainWindow? _main;
+    bool _inDock;
+
+    /// <summary>Whether PinList has a Dock icon now (on a Mac: while the PinList window is shown).</summary>
+    internal bool InDock => _inDock;
+
+    void SetInDock(bool on)
+    {
+        if (_inDock == on) return;
+        _inDock = on;
+        ShowInDock(on);
+    }
+
+    /// <summary>
+    /// PinList was opened again while running (macOS). The PinList window comes to the front if it's open,
+    /// otherwise the widgets do (or All lists, when there are none).
+    /// </summary>
+    internal void OnReopen()
+    {
+        if (_main is { IsVisible: true } main)
+        {
+            // only to the front: the section, its focus and what the user is typing stay as they are
+            if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
+            main.Activate();
+        }
+        else ShowAllBoards();
+    }
 
     /// <summary>The PinList window (All lists, Archive, Settings), once it was opened. It is hidden, not closed, when the user closes it.</summary>
     internal MainWindow? MainWindow => _main;
@@ -555,9 +596,18 @@ public partial class App : Application
         {
             _main = new MainWindow();
             var created = _main;
-            created.Closed += (_, _) => { if (_main == created) _main = null; };
+            created.Closed += (_, _) =>
+            {
+                if (_main == created) _main = null;
+                SetInDock(false);
+            };
+            created.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == Visual.IsVisibleProperty) SetInDock(created.IsVisible);
+            };
         }
         if (!_main.IsVisible) _main.Show();
+        SetInDock(true);
         _main.ShowSection(section);
         if (_main.WindowState == WindowState.Minimized) _main.WindowState = WindowState.Normal;
         _main.Activate();
@@ -730,11 +780,6 @@ public partial class App : Application
                 foreach (var w in _windows.ToList()) w.CloseForReload();
                 Store.ReplaceAll(imported);
                 Actions.ClearUndo();
-                if (Store.Data.Boards.Count == 0)
-                {
-                    Store.Data.Boards.Add(Store.DefaultBoard(Displays.Primary.ToWorkArea()));
-                    Store.SaveNow();
-                }
                 OpenAllBoards();
                 _reminders.Check();
             }
@@ -752,7 +797,14 @@ public partial class App : Application
 
     void CreateTray()
     {
-        _tray = CreateTrayIcon();
+        try { _tray = CreateTrayIcon(); }
+        catch (Exception ex)
+        {
+            // PinList still runs: the widgets' menus and the PinList window are other ways in
+            Store.Log("Tray icon: " + ex.Message);
+            _tray = null;
+            return;
+        }
         _tray.LeftClick += ShowAllBoards;
         _tray.RightClick += () => ShowTrayMenu();
         _tray.NotificationClicked += OnReminderClicked;
@@ -770,6 +822,17 @@ public partial class App : Application
         new TrayEntry("Settings", ShowSettings),
         new TrayEntry(OsText.Exit, ExitApp),
     }).ToList();
+
+    /// <summary>
+    /// The PinList menu at the top-left on a Mac (it shows while there's a Dock icon). Quit comes from Avalonia's own
+    /// app menu entry, which saves through <see cref="OnShutdownRequested"/>.
+    /// </summary>
+    internal IReadOnlyList<TrayEntry> AppMenuEntries() => new[]
+    {
+        new TrayEntry("Settings", ShowSettings, Gesture: new KeyGesture(Key.OemComma, KeyModifiers.Meta)),
+        new TrayEntry("All lists", ShowListsWindow),
+        new TrayEntry("Archive", ShowArchive),
+    };
 
     /// <summary>Invisible window the tray menu belongs to (a menu needs a window; this one sits under the cursor).</summary>
     Window MenuHost()

@@ -60,10 +60,10 @@ public sealed class DesktopGoogleAuth(GoogleClient? client, ITokenStore tokens, 
         if (token.RefreshToken != null) tokens.Write(token.RefreshToken);
     }
 
-    public async Task SignOut()
+    public async Task SignOut(bool revokeAccess)
     {
         var token = tokens.Read() ?? _access;
-        if (token != null && _oauth != null) await _oauth.Revoke(token);
+        if (revokeAccess && token != null && _oauth != null) await _oauth.Revoke(token);
         tokens.Delete();
         _access = null;
     }

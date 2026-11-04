@@ -1,4 +1,5 @@
 using System;
+using Avalonia.Input;
 #if WINDOWS
 using WinForms = System.Windows.Forms;
 #endif
@@ -24,9 +25,10 @@ public interface ITrayIcon : IDisposable
 
 /// <summary>
 /// One tray menu entry; <see cref="Separator"/> draws a line. A disabled entry is a line of text (e.g. the account).
-/// An entry with <paramref name="Checked"/> set is an on / off switch with a check mark.
+/// An entry with <paramref name="Checked"/> set is an on / off switch with a check mark. <paramref name="Gesture"/>
+/// is the shortcut shown next to it (the macOS app menu).
 /// </summary>
-public sealed record TrayEntry(string Text, Action? Action, bool Enabled = true, bool? Checked = null)
+public sealed record TrayEntry(string Text, Action? Action, bool Enabled = true, bool? Checked = null, KeyGesture? Gesture = null)
 {
     public static readonly TrayEntry Separator = new("-", null);
 }

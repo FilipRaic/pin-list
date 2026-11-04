@@ -145,6 +145,74 @@ public partial class PhoneTests : UiTest
         Assert.Single(Store.Data.Boards);
     }
 
+    // ================= Empty state =================
+
+    [AvaloniaFact]
+    public void No_lists_shows_the_empty_text()
+    {
+        Show();
+        Assert.True(_view.HomeEmptyVisible);
+        Assert.Equal(PhoneView.EmptyText, Named<TextBlock>(_view, "HomeEmpty").Text);
+        Assert.Equal("No lists yet, create one to get started", PhoneView.EmptyText);
+    }
+
+    [AvaloniaFact]
+    public void The_empty_text_hides_with_a_list_and_comes_back_after_deleting_it()
+    {
+        Show();
+        var b = Actions.NewBoard(new WorkArea(0, 0, 1280, 800), null);
+        Pump();
+        Assert.False(_view.HomeEmptyVisible);
+
+        Actions.DeleteBoard(b);
+        Pump();
+        Assert.True(_view.HomeEmptyVisible);
+    }
+
+    [AvaloniaFact]
+    public void Deleting_the_last_list_puts_focus_on_New_list_and_announces()
+    {
+        var b = MakeBoard(("A", new string[0]));
+        Show();
+        A11y.LastAnnouncement = null;
+        Actions.DeleteBoard(b);
+        Pump();
+        Assert.True(Named<Button>(_view, "AddBoardButton").IsFocused);
+        Assert.Equal(PhoneView.EmptyText, A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void Deleting_one_of_two_lists_leaves_focus_alone()
+    {
+        var a = MakeBoard(("A", new string[0]));
+        MakeBoard(("B", new string[0]));
+        Show();
+        A11y.LastAnnouncement = null;
+        Actions.DeleteBoard(a);
+        Pump();
+        Assert.False(Named<Button>(_view, "AddBoardButton").IsFocused);
+        Assert.Null(A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void A_synced_list_hides_the_empty_text()
+    {
+        Show();
+        Actions.AddSyncedBoard(new Board { Title = "From PC" }, new WorkArea(0, 0, 1280, 800));
+        Pump();
+        Assert.False(_view.HomeEmptyVisible);
+    }
+
+    [AvaloniaFact]
+    public void Phone_home_with_no_lists_focuses_New_list_and_announces()
+    {
+        Show();
+        _view.ShowHome();
+        Pump();
+        Assert.True(Named<Button>(_view, "AddBoardButton").IsFocused);
+        Assert.Equal(PhoneView.EmptyText, A11y.LastAnnouncement);
+    }
+
     PhoneView Show()
     {
         _view = new PhoneView();
@@ -1203,7 +1271,7 @@ public partial class PhoneTests : UiTest
 public class PhoneAppTests : UiTest
 {
     [AvaloniaFact]
-    public void Start_loads_the_data_and_makes_a_first_list()
+    public void Start_loads_the_data_and_starts_with_no_lists()
     {
         var dir = Path.Combine(Dir, "phone");
         PhoneApp.DataDir = dir;
@@ -1216,13 +1284,21 @@ public class PhoneAppTests : UiTest
         {
             var view = app.Start();
             Assert.NotNull(view);
-            Assert.Single(Store.Data.Boards); // first start: one list
+            Assert.Empty(Store.Data.Boards); // first start: no lists, the empty text shows
+            Assert.True(view.HomeEmptyVisible);
+            var screen = new Window { Content = view, Width = 400, Height = 760 }; // the activity shows the view
+            screen.Show();
+            Pump();
+            Assert.Equal(PhoneView.EmptyText, A11y.LastAnnouncement); // screen readers hear how to begin
+            screen.Content = null;
+            screen.Close();
             Assert.True(File.Exists(Path.Combine(dir, "data.json")));
 
             app.SetTheme("Light");
             Assert.Equal("Light", Store.Data.Settings.Theme);
             Assert.Equal(Avalonia.Styling.ThemeVariant.Light, app.RequestedThemeVariant);
 
+            Actions.NewBoard(new WorkArea(0, 0, 1280, 800));
             var item = Store.Data.Boards[0].Categories[0].Items;
             Actions.AddItem(Store.Data.Boards[0].Categories[0], "Call");
             item[0].ReminderAt = DateTime.Now.AddMinutes(-1);

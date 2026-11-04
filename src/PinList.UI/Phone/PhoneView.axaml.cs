@@ -107,9 +107,19 @@ public partial class PhoneView : UserControl
         ArchiveSearch.PropertyChanged += (_, e) => { if (e.Property == TextBox.TextProperty) RefreshArchive(); };
         _snackTimer.Tick += (_, _) => HideSnackbar();
         _snackbarAction = UndoLastChange; // the bar's button starts as Undo
+        HomeEmpty.Text = EmptyText;
+        // The phone's first screen with no lists: screen readers hear how to begin (the desktop's PinList window
+        // does this when it shows All lists). Posted, because the view's own parts attach after it.
+        AttachedToVisualTree += (_, _) => Dispatcher.UIThread.Post(() =>
+        {
+            if (!IsDesktop && Section == PhoneSection.Lists && _board == null && Store.Data.Boards.Count == 0) FocusNewList();
+        });
         App_ThemeOrDataChanged();
         UpdateBar();
     }
+
+    /// <summary>What the cards screen says when there are no lists at all.</summary>
+    public const string EmptyText = "No lists yet, create one to get started";
 
     /// <summary>
     /// The "All lists" section of the desktop's PinList window: right click opens the menus that a long press opens on
@@ -147,6 +157,7 @@ public partial class PhoneView : UserControl
     internal bool SnackbarShown => Snackbar.IsVisible;
     internal bool AddBoardButtonVisible => AddBoardButton.IsVisible;
     internal string SnackbarMessage => SnackbarText.Text!;
+    internal bool HomeEmptyVisible => HomeEmpty.IsVisible;
 
     /// <summary>Shows the data that's in the store now (at start and after an import replaced everything).</summary>
     public void Reload()
@@ -162,6 +173,7 @@ public partial class PhoneView : UserControl
         foreach (var c in _cards) c.Dispose();
         _cards.Clear();
         foreach (var b in _data.Boards) _cards.Add(NewCard(b));
+        RefreshEmpty();
         RefreshSync();
         RefreshArchive();
         if (_board != null && !_data.Boards.Contains(_board)) ShowHome();
@@ -186,11 +198,28 @@ public partial class PhoneView : UserControl
             if (at < 0) _cards.Insert(i, NewCard(b));
             else if (at != i) _cards.Move(at, i);
         }
+        RefreshEmpty();
+        // the last list went while the cards were showing: the keyboard and screen readers go to New list
+        if (_data.Boards.Count == 0 && e.Action == NotifyCollectionChangedAction.Remove && _board == null
+            && HomeScreen.IsEffectivelyVisible) FocusNewList();
         RefreshSync();
         if (_board != null && !_data.Boards.Contains(_board)) ShowHome(); // the open list is gone (e.g. undone)
     }
 
     void OnArchiveChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshArchive();
+
+    /// <summary>The empty text shows only when there are no lists.</summary>
+    void RefreshEmpty() => HomeEmpty.IsVisible = _data!.Boards.Count == 0;
+
+    /// <summary>
+    /// Puts the keyboard on New list (the dashed card on the desktop, the button on the phone). With no lists, screen
+    /// readers also hear the empty text.
+    /// </summary>
+    public void FocusNewList()
+    {
+        (IsDesktop ? (Control)NewListCard : AddBoardButton).Focus();
+        if (Store.Data.Boards.Count == 0) A11y.Announce(this, EmptyText);
+    }
 
     /// <summary>The app theme changed (or the app started): colors of the cards screen, menus and the archive.</summary>
     public void App_ThemeOrDataChanged()
@@ -325,7 +354,7 @@ public partial class PhoneView : UserControl
         if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, update?.ApkUrl ?? update?.PageUrl ?? Updates.ReleasesPage);
     }
 
-    void ShowHome()
+    internal void ShowHome()
     {
         bool wasBoard = _board != null;
         if (_board != null) _board.PropertyChanged -= OnOpenBoardChanged;
@@ -339,6 +368,7 @@ public partial class PhoneView : UserControl
         Section = PhoneSection.Lists;
         UpdateBar();
         if (!wasBoard) FadeIn(HomeScreen);
+        if (Store.Data.Boards.Count == 0) FocusNewList();
     }
 
     /// <summary>The bottom bar shows on the three screens, not inside an open list (and not in the PinList window).</summary>

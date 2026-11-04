@@ -29,6 +29,49 @@ public class MainWindowTests : UiTest
     static ToggleSwitch WidgetSwitch(MainWindow w, Board b) => Find<ToggleSwitch>(Card(w, b))!;
 
     [AvaloniaFact]
+    public void All_lists_with_no_lists_shows_the_empty_text_and_focuses_the_New_list_card()
+    {
+        var w = Lists();
+        Assert.True(w.Lists.HomeEmptyVisible);
+        Assert.True(Named<Button>(w.Lists, "NewListCard").IsFocused);
+        Assert.Equal(PhoneView.EmptyText, A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void All_lists_with_lists_does_not_announce_or_move_focus()
+    {
+        MakeBoard(("A", new string[0]));
+        var w = Lists();
+        Assert.False(w.Lists.HomeEmptyVisible);
+        Assert.False(Named<Button>(w.Lists, "NewListCard").IsFocused);
+        Assert.Null(A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void Deleting_the_last_list_in_All_lists_puts_focus_on_the_New_list_card()
+    {
+        var b = MakeBoard(("A", new string[0]));
+        Actions.SetWidget(b, false); // not a widget: nothing else reopens All lists
+        var w = Lists();
+        A11y.LastAnnouncement = null;
+        Actions.DeleteBoard(b);
+        Pump();
+        Assert.True(Named<Button>(w.Lists, "NewListCard").IsFocused);
+        Assert.Equal(PhoneView.EmptyText, A11y.LastAnnouncement);
+    }
+
+    [AvaloniaFact]
+    public void A_PinList_window_that_is_not_shown_yet_announces_nothing()
+    {
+        A11y.LastAnnouncement = null;
+        var w = new MainWindow(); // no lists, but not on screen
+        Assert.Null(A11y.LastAnnouncement);
+        App.ShuttingDown = true; // so it closes instead of hiding
+        w.Close();
+        App.ShuttingDown = false;
+    }
+
+    [AvaloniaFact]
     public void A_list_that_is_not_a_widget_has_no_window_but_is_in_all_lists()
     {
         var w = OpenNew(("A", new[] { "a" }));

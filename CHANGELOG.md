@@ -3,6 +3,25 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.5.0] - 2026-11-04
+
+A clean start for new users, and PinList is easier to find on a Mac.
+
+### Added
+- **macOS:** a Dock icon, a Cmd+Tab entry and the PinList app menu (**Settings** ⌘,, **All lists**, **Archive**) while the PinList window is open. With the window closed, PinList lives only in the menu bar as before
+
+### Changed
+- New installs start with no lists. All lists (desktop) and Lists (phone) say *No lists yet, create one to get started*, with **New list** ready to press. The desktop opens the PinList window on first start
+- A new device that signs in to sync no longer gets an extra empty list next to the synced ones
+
+### Fixed
+- **macOS:** opening PinList again from Finder, Launchpad or Spotlight while it runs now shows its widgets, or the PinList window when no list is a widget. Before, nothing happened
+- **macOS:** the menu bar icon is a template image, so macOS colors it for light and dark menu bars
+- PinList starts even when the system can't create its tray / menu bar icon (it notes this in the log)
+- **macOS:** the menu bar icon now shows. It was never handed to the system, so it didn't appear and wasn't listed in System Settings → Menu Bar
+- **Sign out** signs out only this device. Before, it removed PinList's access at Google, which signed out every device. **Sign out and delete cloud data** still signs out everywhere
+- **Android:** signing in works again after PinList's access was removed on another device. Before, Google Play services kept handing out the old token and every sign-in failed with "Google userinfo answered HTTP 401"
+
 ## [2.4.0] - 2026-11-03
 
 One look on Windows, macOS and Android: the Inter font, the same colors and icons, menus without submenus, one PinList window on the desktop and a bottom bar on the phone.

@@ -73,6 +73,7 @@ public partial class MainWindow : Window
         NavSettings.Classes.Set("selected", section == MainSection.Settings);
         if (section == MainSection.Archive) Archive.FocusStart();
         if (section == MainSection.Settings) Settings.Refresh();
+        if (section == MainSection.Lists && Store.Data.Boards.Count == 0 && IsVisible) Lists.FocusNewList();
     }
 
     void Nav_Click(object? sender, RoutedEventArgs e) =>

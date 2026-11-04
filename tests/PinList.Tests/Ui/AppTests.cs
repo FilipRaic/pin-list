@@ -79,10 +79,10 @@ public class AppTests : UiTest
         Assert.Empty(Tray.Notifications);
 
         Tray.Disposed = false;
-        Assert.True(App.Start()); // its data folder, with the widget from the first run
+        Assert.True(App.Start()); // its data folder, with no lists since the first run
         Assert.False(App.ShuttingDown);
         Assert.Equal(UiHost.DataDir, Store.Dir);
-        Assert.NotEmpty(App.OpenWindows);
+        Assert.True(App.MainWindow!.IsVisible); // no widgets: the PinList window is the way in
         Assert.True(App.ReminderService.IsRunning);
         Store.UseDirectory(Dir); // back to this test's folder
     }
@@ -308,15 +308,35 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
-    public void The_first_run_widget_follows_a_light_Windows_theme()
+    public void First_run_starts_with_no_lists_and_opens_All_lists()
     {
         App.Stop();
         File.Delete(Path.Combine(UiHost.DataDir, "data.json"));
-        Themes.SystemDarkSource = () => false;
         Tray.Disposed = false;
         Assert.True(App.Start());
-        Assert.Equal("Light", Assert.Single(Store.Data.Boards).Style);
+        Assert.Empty(Store.Data.Boards);
         Assert.True(File.Exists(Path.Combine(UiHost.DataDir, "data.json"))); // saved right away
+        Autostart.RunKey = UiHost.TestRunKey;
+        Assert.True(Autostart.IsEnabled());
+        Assert.Empty(App.OpenWindows);
+        Assert.True(App.MainWindow!.IsVisible);
+        Assert.Equal(MainSection.Lists, App.MainWindow.Section);
+        Assert.True(App.MainWindow.Lists.HomeEmptyVisible);
+        Store.UseDirectory(Dir);
+    }
+
+    [AvaloniaFact]
+    public void A_start_where_no_list_is_on_this_desktop_opens_All_lists()
+    {
+        App.Stop();
+        File.WriteAllText(Path.Combine(UiHost.DataDir, "data.json"),
+            """{ "version": 1, "boards": [ { "title": "Hidden", "widget": false } ] }""");
+        Tray.Disposed = false;
+        Assert.True(App.Start());
+        Assert.Single(Store.Data.Boards);
+        Assert.Empty(App.OpenWindows);
+        Assert.True(App.MainWindow!.IsVisible);
+        Assert.False(App.MainWindow.Lists.HomeEmptyVisible);
         Store.UseDirectory(Dir);
     }
 
@@ -339,17 +359,49 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
-    public void A_data_file_without_widgets_gets_one()
+    public void A_data_file_without_lists_starts_empty()
     {
         App.Stop();
         File.WriteAllText(Path.Combine(UiHost.DataDir, "data.json"), """{ "version": 1, "boards": [] }""");
         Tray.Disposed = false;
         Assert.True(App.Start());
-        Assert.Single(Store.Data.Boards);
+        Assert.Empty(Store.Data.Boards);
+        Assert.True(App.MainWindow!.IsVisible);
         Store.UseDirectory(Dir);
     }
 
     // ================= Tray icon =================
+
+    [AvaloniaFact]
+    public async Task A_tray_icon_that_cannot_be_created_does_not_stop_PinList()
+    {
+        App.Stop();
+        var realTray = App.CreateTrayIcon;
+        App.CreateTrayIcon = () => throw new InvalidOperationException("no status bar");
+        try
+        {
+            Tray.Disposed = false;
+            Assert.True(App.Start()); // starts anyway, the PinList window is the way in
+            Assert.Null(App.Tray);
+            Assert.True(App.MainWindow!.IsVisible);
+            Assert.Contains("Tray icon: no status bar", File.ReadAllText(Path.Combine(UiHost.DataDir, "log.txt")));
+
+            // things that would use the tray don't fail without one
+            var updates = new Updates(_ => Task.FromResult<UpdateInfo?>(new UpdateInfo(new Version(9, 0, 0), "https://example.com", null)), new Version(2, 0, 0));
+            App.UseUpdates(updates);
+            updates.Enabled = true;
+            await updates.CheckNow();
+            App.ShowReminders(new[] { new TodoItem { Text = "x" } });
+        }
+        finally
+        {
+            App.CreateTrayIcon = realTray;
+            App.Stop();
+            Tray.Disposed = false;
+            App.Start();
+            Store.UseDirectory(Dir);
+        }
+    }
 
     [AvaloniaFact]
     public void Tray_left_click_shows_the_widgets_with_focus_in_the_last()
@@ -547,13 +599,31 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Importing_a_file_without_widgets_still_leaves_one()
+    public void Replacing_everything_with_an_empty_file_leaves_no_lists_and_opens_All_lists()
     {
+        OpenNew(("A", new string[0]));
         Dialogs.OpenFileAnswer = WriteFile(Dir, "empty.json", """{ "version": 1, "boards": [] }""");
         Dialogs.ChooseAnswer = _ => 1;
         Await(App.ImportData(null));
-        Assert.Single(Store.Data.Boards);
+        Pump();
+        Assert.Empty(Store.Data.Boards);
+        Assert.Empty(App.OpenWindows);
+        Assert.True(App.MainWindow!.IsVisible);
+        Assert.True(App.MainWindow.Lists.HomeEmptyVisible);
+    }
+
+    [AvaloniaFact]
+    public void Importing_with_Add_into_no_lists_opens_the_widgets_and_hides_the_empty_text()
+    {
+        App.ShowListsWindow();
+        Pump();
+        Assert.True(App.MainWindow!.Lists.HomeEmptyVisible);
+        Dialogs.OpenFileAnswer = WriteFile(Dir, "good.json", ImportJson);
+        Dialogs.ChooseAnswer = _ => 2; // Add
+        Await(App.ImportData(null));
+        Pump();
         Assert.Single(App.OpenWindows);
+        Assert.False(App.MainWindow.Lists.HomeEmptyVisible);
     }
 
     [AvaloniaFact]

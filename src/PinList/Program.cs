@@ -12,7 +12,8 @@ static class Program
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnExplicitShutdown);
 
     // ShowInDock: on a Mac, Avalonia makes the app a normal Dock app at start, which overrides LSUIElement in
-    // Info.plist. PinList is a menu bar app, so no Dock icon and no Cmd+Tab entry. Other systems ignore it.
+    // Info.plist. PinList is a menu bar app, so it starts with no Dock icon and no Cmd+Tab entry. App adds them
+    // while the PinList window is open (App.ShowInDock). Other systems ignore it.
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()

@@ -473,6 +473,7 @@ public class SyncServiceTests : StoreTestBase
         Item(b, "a").Text = "sent at sign-out";
         Await(A.Service.SignOut(false));
         Assert.Equal(1, A.Auth.SignOuts);
+        Assert.Equal(0, A.Auth.Revokes); // only this device: the others stay signed in
         Assert.Null(A.Service.Account);
         Assert.True(b.Synced);
         Assert.Equal(SyncStatus.Hidden, A.Service.StateOf(b).Status);
@@ -520,6 +521,7 @@ public class SyncServiceTests : StoreTestBase
         Assert.Equal(new[] { "reset.json" }, _cloud.Names);
         Assert.False(b.Synced);
         Assert.Empty(A.Messages);
+        Assert.Equal(1, A.Auth.Revokes); // PinList's access is removed at Google: every device signs out
 
         Assert.True(Sync(B));
         var onB = BoardOf(B, b.Id)!;

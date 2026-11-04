@@ -211,16 +211,6 @@ public static class Store
         return data;
     }
 
-    /// <summary>The widget created on first run (top-right corner of the given work area).</summary>
-    public static Board DefaultBoard(WorkArea workArea, string style = "Dark")
-    {
-        var b = new Board { Title = "My list", Width = 320, Height = 480, Style = style };
-        b.X = workArea.Right - b.Width - 24;
-        b.Y = workArea.Top + 24;
-        b.Categories.Add(new Category { Name = "General", Color = Actions.Palette[0] });
-        return b;
-    }
-
     // ================= Saving =================
 
     public static void MarkDirty() => Saver.Schedule();
