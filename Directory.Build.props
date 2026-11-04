@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    Keeps build output small. Without this, every desktop build folder gets about 550 MB of native libraries:
+    SkiaSharp and HarfBuzz for 17 platforms, plus their debug symbols (libSkiaSharp.pdb alone is 81 MB per
+    Windows platform). With six build folders (Debug and Release, Windows and Mac, tests) that came to 4 GB.
+
+    1. Native debug symbols (.pdb) from packages are never copied. Nobody debugs into SkiaSharp's C++ code.
+    2. A build that isn't for one platform (no -r) only gets the libraries for the system it runs on:
+       Windows for net10.0-windows, macOS for the desktop app's net10.0 build.
+    Release packages use -r (win-x64, osx-arm64), so they get exactly the libraries they need either way.
+
+    The prefix is worked out inside the target, because a project's TargetFramework isn't known yet when
+    this file is read.
+  -->
+  <Target Name="PinListTrimNativeAssets" AfterTargets="ResolvePackageAssets">
+    <PropertyGroup>
+      <PinListRuntimesPrefix Condition="'$(TargetFramework)' == 'net10.0-windows'">win</PinListRuntimesPrefix>
+      <PinListRuntimesPrefix Condition="'$(MSBuildProjectName)' == 'PinList' and '$(TargetFramework)' == 'net10.0'">osx</PinListRuntimesPrefix>
+    </PropertyGroup>
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(Extension)' == '.pdb'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(Extension)' == '.pdb'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)"
+                                    Condition="'$(PinListRuntimesPrefix)' != '' and !$([System.String]::Copy('%(RuntimeIdentifier)').StartsWith('$(PinListRuntimesPrefix)'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

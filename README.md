@@ -217,10 +217,12 @@ scripts\publish.bat
 | Script | What it does |
 |---|---|
 | `scripts\run.bat` | Runs the Windows app in Debug mode (`dotnet run`) while you're developing |
-| `scripts\publish.bat` | Builds a Release exe into `publish\PinList.exe` and starts it |
+| `scripts\publish.bat` | Empties `publish\`, builds a Release exe into `publish\PinList.exe` and starts it |
 | `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.2.0`) |
 
 Both `.bat` scripts close a running PinList first, because only one instance can run at a time. Debug and Release builds share the same data.
+
+`Directory.Build.props` keeps build folders small: native debug symbols are never copied, and a build without `-r` only gets the native libraries for its own system (Windows or macOS). A desktop build folder is about 90 MB.
 
 **Android:** install the workload once with `dotnet workload install android` (it needs the Android SDK and a JDK – installing [Android Studio](https://developer.android.com/studio) gives you both). Then `dotnet build src/PinList.Android -c Release` makes `src/PinList.Android/bin/Release/net10.0-android/com.pinlist.app-Signed.apk` (signed with a debug key – see *Releasing* for the real one).
 
@@ -287,6 +289,7 @@ pin-list/
 │                           plus the social preview image (social-preview.html is its source)
 ├─ scripts/                 run.bat, publish.bat, package-mac.sh
 ├─ Version.props            the version of every app
+├─ Directory.Build.props    keeps build output small (see Building from source)
 ├─ src/PinList.Core/        no UI, runs everywhere
 │  ├─ Models/               Board → Category → TodoItem, ArchivedItem, Settings, AppData
 │  ├─ Services/             Actions (every change + undo), Store (data.json, backups, export/import),
