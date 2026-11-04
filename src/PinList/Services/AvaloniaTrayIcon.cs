@@ -14,6 +14,11 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
 {
     readonly TrayIcon _icon;
 
+    // One menu for the icon's whole life. Avalonia's macOS menu code ties the native menu to the first NativeMenu it
+    // sees, so giving the icon a new NativeMenu later throws "The menu being updated does not match". Only its items
+    // change (SetMenu).
+    readonly NativeMenu _menu = new();
+
     public event Action? LeftClick;
     public event Action? RightClick { add { } remove { } } // the menu bar menu opens by itself
     public event Action? NotificationClicked;
@@ -27,6 +32,7 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
             {
                 Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://PinList/Assets/tray-mac.png"))),
                 ToolTipText = "PinList",
+                Menu = _menu, // before the icon is added below, so Avalonia never makes a menu of its own
             };
             MacOSProperties.SetIsTemplateIcon(_icon, true);
             _icon.IsVisible = true;
@@ -42,12 +48,27 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
         }
     }
 
-    public void SetMenu(IReadOnlyList<TrayEntry> entries) => _icon.Menu = BuildMenu(entries);
+    /// <summary>New entries in the same menu. A menu that can't be updated is logged, PinList keeps running.</summary>
+    public void SetMenu(IReadOnlyList<TrayEntry> entries)
+    {
+        try
+        {
+            _menu.Items.Clear();
+            Fill(_menu, entries);
+        }
+        catch (Exception ex) { Store.Log("Menu bar menu: " + ex.Message); }
+    }
 
-    /// <summary>A native menu from the entries (the menu bar menu and the app menu).</summary>
+    /// <summary>A new native menu from the entries (the app menu, which is set once).</summary>
     internal static NativeMenu BuildMenu(IReadOnlyList<TrayEntry> entries)
     {
         var menu = new NativeMenu();
+        Fill(menu, entries);
+        return menu;
+    }
+
+    static void Fill(NativeMenu menu, IReadOnlyList<TrayEntry> entries)
+    {
         foreach (var e in entries)
         {
             if (e == TrayEntry.Separator) { menu.Items.Add(new NativeMenuItemSeparator()); continue; }
@@ -60,7 +81,6 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
             item.Click += (_, _) => e.Action?.Invoke();
             menu.Items.Add(item);
         }
-        return menu;
     }
 
     public void ShowNotification(string title, string text) =>

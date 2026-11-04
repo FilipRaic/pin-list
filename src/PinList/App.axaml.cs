@@ -208,7 +208,9 @@ public partial class App : Application
         OpenAllBoards();
         CreateTray();
 #if !WINDOWS
-        NativeMenu.SetMenu(this, AvaloniaTrayIcon.BuildMenu(AppMenuEntries())); // the app menu, while there's a Dock icon
+        // the app menu, while there's a Dock icon. A menu problem is logged, it never stops PinList from starting.
+        try { NativeMenu.SetMenu(this, AvaloniaTrayIcon.BuildMenu(AppMenuEntries())); }
+        catch (Exception ex) { Store.Log("App menu: " + ex.Message); }
 #endif
         UseUpdates(CreateUpdates());
         if (_updates!.Enabled == null) Dispatcher.UIThread.Post(() => _ = AskAboutUpdates());

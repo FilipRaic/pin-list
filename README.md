@@ -259,14 +259,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.5.0
-   git push origin master v2.5.0
+   git tag v2.5.1
+   git push origin master v2.5.1
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.5.0
-   git push -f origin v2.5.0
+   git tag -f v2.5.1
+   git push -f origin v2.5.1
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):

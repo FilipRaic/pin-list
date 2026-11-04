@@ -3,6 +3,11 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.5.1] - 2026-11-04
+
+### Fixed
+- **macOS:** PinList 2.5.0 quit right after starting ("PinList quit unexpectedly"). Its menu bar menu was replaced in a way the macOS menu code rejects. The menu now stays the same and only its entries change, and a menu that can't be updated no longer stops PinList
+
 ## [2.5.0] - 2026-11-04
 
 A clean start for new users, and PinList is easier to find on a Mac.
