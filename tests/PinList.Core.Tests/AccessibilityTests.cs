@@ -26,7 +26,7 @@ public class AccessibilityTests : StoreTestBase
     public void Overdue_items_say_so()
     {
         var item = new TodoItem { Text = "Renew passport", DueDate = DateTime.Today.AddDays(-1) };
-        Assert.Equal("Renew passport, overdue, was due Yesterday", item.AccessibleName);
+        Assert.Equal("Renew passport, 1 day overdue, was due Yesterday", item.AccessibleName);
     }
 
     [Fact]

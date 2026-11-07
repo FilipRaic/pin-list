@@ -186,7 +186,8 @@
                 <tr>
                     <td><code>boards</code></td>
                     <td>array</td>
-                    <td><code>Board</code> objects, in order (the phone's card list uses this order too)</td>
+                    <td><code>Board</code> objects, in order (All lists and the phone's card list use this order;
+                        since 2.6.0 it follows <code>position</code>)</td>
                     <td><code>[]</code></td>
                 </tr>
                 <tr>
@@ -340,6 +341,20 @@
                     <td><code>orderSync</code></td>
                     <td>object or absent</td>
                     <td><code>SyncMeta</code> of the order of its categories</td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>position</code></td>
+                    <td>number or absent</td>
+                    <td>Where the list is in the order of all lists (2.6.0). Lists are in rising order of it. Moving a
+                        list gives only that list a new number between its neighbours, so moves of different lists on
+                        different devices all stay. A list without one gets one after the list before it.</td>
+                    <td>absent</td>
+                </tr>
+                <tr>
+                    <td><code>positionSync</code></td>
+                    <td>object or absent</td>
+                    <td><code>SyncMeta</code> of <code>position</code> (2.6.0)</td>
                     <td>absent</td>
                 </tr>
                 </tbody>
@@ -567,7 +582,8 @@
             items
             has its own <code>SyncMeta</code> (<code>orderSync</code>), so reordering (also adding or removing a child)
             on one device and renaming on
-            another are two separate changes and both are kept. Positions, sizes, <code>locked</code>, <code>widget</code>, the theme and the
+            another are two separate changes and both are kept. The same goes for a list's place among the lists
+            (<code>positionSync</code>). Positions, sizes, <code>locked</code>, <code>widget</code>, the theme and the
             undo history are
             per device and never synced.</p>
         <h3 id="deviceinfo-210"><code>DeviceInfo</code> (2.1.0)</h3>
@@ -637,8 +653,8 @@
                 </tr>
                 <tr>
                     <td><code>board</code></td>
-                    <td><code>{ title, style, transparent, categoryOrder, sync, orderSync }</code> null in a
-                        <em>marker</em></td>
+                    <td><code>{ title, style, transparent, categoryOrder, sync, orderSync, position, positionSync }</code>
+                        null in a <em>marker</em> (<code>position</code> and <code>positionSync</code> since 2.6.0)</td>
                 </tr>
                 <tr>
                     <td><code>categories</code></td>
@@ -679,7 +695,8 @@
             completed. The
             order of categories and items comes from the side whose order changed last, new ids keep their place next to
             their
-            old neighbour. A list a device doesn't have appears only if all copies of it together say it syncs and none
+            old neighbour. A list's <code>position</code> is merged like a field of its own (a copy from before 2.6.0
+            has none and changes nothing), and the lists are sorted by it afterwards (the same position: by id). A list a device doesn't have appears only if all copies of it together say it syncs and none
             says it
             was deleted. A device's counter is also raised to the highest of its own stamps any cloud file has seen. The
             code is in <a
@@ -776,6 +793,13 @@
                     <td>PinList 2.3.0 adds the optional <code>Board.widget</code> and removes a reminder when it
                         rings instead of setting <code>reminderShown</code>. Older versions keep <code>widget</code>
                         when they save (and show every list as a widget).
+                    </td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>PinList 2.6.0 adds the optional <code>Board.position</code> and <code>Board.positionSync</code>
+                        (also in cloud files), so the order of the lists syncs. Older versions keep them when they save
+                        and use the order of <code>boards</code>.
                     </td>
                 </tr>
                 </tbody>

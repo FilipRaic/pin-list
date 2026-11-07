@@ -3,12 +3,12 @@
   <Import Project="..\..\Version.props" />
 
   <!--
-    The desktop app (Windows and macOS). The Windows build (net10.0-windows) also uses Win32 and the WinForms
+    The desktop app (Windows and macOS). The Windows build (net10.0-windows10.0.19041.0) also uses Win32 and the WinForms
     tray icon, so Windows behaves exactly like before; the net10.0 build is the macOS app.
   -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net10.0-windows;net10.0</TargetFrameworks>
+    <TargetFrameworks>net10.0-windows10.0.19041.0;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <RootNamespace>PinList</RootNamespace>
@@ -22,14 +22,17 @@
     <Copyright>Copyright © 2026 Filip Raić</Copyright>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+  <PropertyGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- WinForms is only used for the tray icon; DPI awareness comes from app.manifest -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
+    <!-- The Windows 10 SDK version in the target framework is for the notification APIs (WindowsToasts.cs);
+         PinList still runs on Windows 10 1809 and later -->
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows'">
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net10.0-windows'))">
     <!-- WinForms and Avalonia both have these names; the app uses Avalonia's -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />

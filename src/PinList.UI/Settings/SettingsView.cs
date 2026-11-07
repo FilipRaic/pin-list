@@ -240,6 +240,14 @@ public class SettingsView : UserControl
             row.IsEnabled = _host.CanChangeAutostart;
             rows.Add(row);
         }
+        if (_host.ReminderProblem is { } problem)
+        {
+            var text = new TextBlock { Text = problem, FontSize = SmallSize, TextWrapping = TextWrapping.Wrap };
+            text.Classes.Add("problem");
+            var open = SmallButton("Open settings", _host.OpenNotificationSettings);
+            AutomationProperties.SetName(open, "Open notification settings");
+            rows.Add(Row(new StackPanel { Spacing = 2, Children = { Label("Reminders"), text } }, open));
+        }
         hasUpdateRow = _host.UpdatesOn != null;
         if (_host.UpdatesOn is { } updates)
             rows.Add(SwitchRow("Check for updates", _host.VersionText, updates, _host.SetUpdates));

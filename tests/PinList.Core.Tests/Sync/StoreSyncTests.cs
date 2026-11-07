@@ -84,12 +84,14 @@ public class StoreSyncTests : StoreTestBase
         Assert.Null(added.Seen);
         Assert.Null(added.Categories[0].Sync);
         Assert.Null(added.OrderSync);
+        Assert.Null(added.PositionSync);
         Assert.Null(added.Categories[0].OrderSync);
         Assert.Null(added.Categories[0].Items[0].Sync);
         Assert.All(Store.Data.Archive.Where(a => a.BoardId == added.Id), a => Assert.Null(a.Sync));
 
         var stamped = ChangeTracker.StampChanges(Store.Data, DateTime.UtcNow);
-        Assert.Equal(6, stamped); // list and its order, category and its order, item, archived item: all new
+        Assert.Equal(7, stamped); // list, its order and place, category and its order, item, archived item: all new
+        Assert.Same(added, Store.Data.Boards.OrderBy(b => b.Position).Last()); // placed after the lists that were here
         Assert.NotEqual(source.Categories[0].Items[0].Id, added.Categories[0].Items[0].Id);
     }
 

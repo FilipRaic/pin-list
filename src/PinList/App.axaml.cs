@@ -111,7 +111,6 @@ public partial class App : Application
     Window? _menuHost;
     readonly List<BoardWindow> _windows = new();
     readonly Reminders _reminders = new();
-    IReadOnlyList<TodoItem> _lastReminders = Array.Empty<TodoItem>();
     Updates? _updates;
     bool _lastNotificationIsUpdate;
     static bool _errorLoggingHooked;
@@ -220,6 +219,9 @@ public partial class App : Application
         // above: set it again once the app runs
         Dispatcher.UIThread.Post(() => { if (_inDock) ShowInDock(true); });
 
+#if !WINDOWS
+        MacNotifications.Prepare(); // asks for permission before the first reminder can come
+#endif
         _reminders.Due += ShowReminders;
         _reminders.Start();
 
@@ -694,27 +696,25 @@ public partial class App : Application
     internal void ShowReminders(IReadOnlyList<TodoItem> due)
     {
         if (_tray == null) return;
-        _lastReminders = due;
         _lastNotificationIsUpdate = false;
         var (title, text) = Reminders.Describe(due);
-        _tray.ShowNotification(title, text);
+        _tray.ShowReminder(title, text, () => ShowReminderItems(due));
     }
 
-    /// <summary>
-    /// Clicking a reminder brings the widgets to the front and highlights the item. Clicking the notification
-    /// about a new version opens its download page.
-    /// </summary>
-    internal void OnReminderClicked()
+    /// <summary>Clicking a reminder brings the widgets to the front and highlights its (first) item.</summary>
+    internal void ShowReminderItems(IReadOnlyList<TodoItem> due)
     {
-        if (_lastNotificationIsUpdate)
-        {
-            _lastNotificationIsUpdate = false;
-            OpenUpdatePage();
-            return;
-        }
         ShowAllBoards();
-        var item = _lastReminders.FirstOrDefault(i => Store.Locate(i) != null);
+        var item = due.FirstOrDefault(i => Store.Locate(i) != null);
         if (item != null) BoardWindow.Highlight(item);
+    }
+
+    /// <summary>Clicking the notification about a new version opens its download page.</summary>
+    internal void OnNotificationClicked()
+    {
+        if (!_lastNotificationIsUpdate) return;
+        _lastNotificationIsUpdate = false;
+        OpenUpdatePage();
     }
 
     // ================= Export and import =================
@@ -809,7 +809,7 @@ public partial class App : Application
         }
         _tray.LeftClick += ShowAllBoards;
         _tray.RightClick += () => ShowTrayMenu();
-        _tray.NotificationClicked += OnReminderClicked;
+        _tray.NotificationClicked += OnNotificationClicked;
         _tray.SetMenu(TrayMenuEntries());
     }
 

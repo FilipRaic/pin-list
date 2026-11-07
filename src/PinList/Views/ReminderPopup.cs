@@ -1,33 +1,67 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace PinList;
 
 /// <summary>
-/// A small reminder notification in the corner of the screen, for platforms where PinList shows its own
-/// (macOS without a signed app bundle). Clicking it shows the item; it goes away after 10 seconds.
+/// PinList's own notification in the top right corner of the screen, for macOS when it doesn't allow PinList's
+/// notifications (and for the notice about a new version there). Clicking it runs its action and closes it, the ×
+/// only closes it. A reminder stays until it's clicked or closed, other notices go away on their own. Several are
+/// stacked under each other.
 /// </summary>
 static class ReminderPopup
 {
-    public static Window Show(string title, string text, Action onClick)
+    const double Width = 320;
+    const double Margin = 16;
+    const double Gap = 8;
+
+    static readonly List<Window> Open = new();
+
+    /// <summary>The notifications on the screen now, top first (tests look at them).</summary>
+    internal static IReadOnlyList<Window> Shown => Open;
+
+    /// <param name="closeAfter">Closes it after this time; null keeps it until the user clicks or closes it.</param>
+    public static Window Show(string title, string text, Action onClick, TimeSpan? closeAfter = null)
     {
-        var body = new StackPanel { Spacing = 4 };
+        var body = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 28, 0) };
         body.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = 14 });
         body.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, FontSize = 13 });
+
+        var close = new Button
+        {
+            Content = new LineIcon { Data = (Geometry)Application.Current!.FindResource("Line.Close")! },
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, -4, -8, 0),
+        };
+        close.Classes.Add("icon");
+        AutomationProperties.SetName(close, "Close");
+        ToolTip.SetTip(close, "Close");
+
+        var content = new Panel();
+        content.Children.Add(body);
+        content.Children.Add(close);
 
         var border = new Border
         {
             CornerRadius = (CornerRadius)Application.Current!.FindResource("R.Menu")!,
             BorderThickness = new Thickness(1),
             Padding = new Thickness(16, 12),
-            Child = body,
+            Child = content,
         };
         border.Bind(Border.BackgroundProperty, border.GetResourceObservable("Raised"));
         border.Bind(Border.BorderBrushProperty, border.GetResourceObservable("Line"));
         body.Bind(TextBlock.ForegroundProperty, body.GetResourceObservable("Text1"));
+        close.Bind(Button.ForegroundProperty, close.GetResourceObservable("Text3"));
 
         var w = new Window
         {
@@ -35,21 +69,56 @@ static class ReminderPopup
             Background = Brushes.Transparent,
             TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent },
             ShowInTaskbar = false,
+            ShowActivated = false, // never takes the keyboard from what the user is typing in
             Topmost = true,
             CanResize = false,
-            Width = 320,
+            Width = Width,
             SizeToContent = SizeToContent.Height,
             Content = border,
             Title = title,
         };
+        AutomationProperties.SetHelpText(w, text);
         Look.GrayscaleText(w);
-        var wa = Displays.Primary;
-        w.Position = Displays.ToPixels(wa.Right - 320 - 16, wa.Top + 16);
-        w.PointerPressed += (_, _) => { w.Close(); onClick(); };
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
-        timer.Tick += (_, _) => { timer.Stop(); w.Close(); };
-        w.Opened += (_, _) => timer.Start();
+
+        // the × closes it; a click anywhere else runs the action
+        close.Click += (_, e) => { e.Handled = true; w.Close(); };
+        w.PointerPressed += (_, e) =>
+        {
+            if (e.Source is Visual v && v.FindAncestorOfType<Button>(includeSelf: true) == close) return;
+            w.Close();
+            onClick();
+        };
+        w.Closed += (_, _) =>
+        {
+            Open.Remove(w);
+            Arrange();
+        };
+        w.Opened += (_, _) => Native.MakeToolWindow(w);
+        w.SizeChanged += (_, _) => Arrange();
+        if (closeAfter is { } after)
+        {
+            var timer = new DispatcherTimer { Interval = after };
+            timer.Tick += (_, _) => { timer.Stop(); w.Close(); };
+            w.Opened += (_, _) => timer.Start();
+            w.Closed += (_, _) => timer.Stop();
+        }
+
+        Open.Add(w);
+        Arrange();
         w.Show();
         return w;
+    }
+
+    /// <summary>Stacks the notifications from the top right corner down, in the order they came.</summary>
+    static void Arrange()
+    {
+        var wa = Displays.Primary;
+        double top = wa.Top + Margin;
+        foreach (var w in Open.ToList())
+        {
+            w.Position = Displays.ToPixels(wa.Right - Width - Margin, top);
+            double height = w.Bounds.Height > 0 ? w.Bounds.Height : 72;
+            top += height + Gap;
+        }
     }
 }

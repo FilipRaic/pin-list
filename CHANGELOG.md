@@ -3,6 +3,24 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.6.0] - 2026-11-07
+
+Drag lists into order on the desktop too, and the order syncs. Reminders stay until you've seen them.
+
+### Added
+- **All lists** on Windows and macOS: drag a card to put the lists in another order, and drag items and categories in an open list, like on the phone. With a mouse the drag starts as soon as you move, right click still opens the menu. Ctrl+Z undoes a move
+- The order of the lists syncs: move a list on one device and your other devices show it in the same place. Each list keeps its own place, so moving one list on the PC and another on the phone both stay
+
+### Changed
+- An overdue due date says how long it's overdue (*1 day overdue*, *3 days overdue*) instead of the date, on the widgets and on the phone. The tooltip and screen readers still say the date (*was due Wed 4 Nov*)
+- The cards in All lists (desktop) and Lists (phone) start their preview with the items that have a due date, the one due first at the top, each with its due date on the right (red when overdue)
+- **Windows:** a reminder is a Windows notification that stays on the screen until you dismiss it, with **Show** and **Dismiss** buttons. Before, it went away after a few seconds. Clicking it shows the item
+- **macOS:** a reminder is a macOS notification in the alert style that stays until you close it (**Persistent**, called **Alerts** before macOS 15) (PinList asks for permission once). Clicking it shows the item. If notifications are off for PinList, it uses its own small window as before, which now also stays until you close it. When notifications are off, the alert style isn't Persistent / Alerts, or Show in Notification Center is off, **Settings** shows a *Reminders* row that says so, with a button to PinList's page in System Settings (macOS doesn't let apps change these)
+
+### Fixed
+- **macOS:** the widgets showed on top of apps in full screen (the green button). A widget now stays on the desktop (Space) where you put it instead of showing on every Space, so it never covers a full screen app. To have a widget on another desktop, move it there with Mission Control
+- **macOS:** the preselected button of a dialog (e.g. **Check for updates** on first start) looked square. The keyboard focus ring was cut off at the button's edges. It now goes around the button's rounded corners with a small gap, on Windows too
+
 ## [2.5.1] - 2026-11-04
 
 ### Fixed

@@ -300,9 +300,13 @@ public partial class PhoneTests : UiTest
         Assert.Equal("Work", card.DisplayTitle);
         Assert.Equal(5, card.OpenCount);
         Assert.Equal("1 overdue", card.OverdueText);
-        Assert.Equal(new[] { "This week", "Review PR", "Release", "Invoice" }, card.Preview.Select(l => l.Text));
-        Assert.True(card.Preview[0].IsCategory); // a dot for the category, circles for the items
-        Assert.False(card.Preview[1].IsCategory);
+        // the item with a due date comes first, with how long it's overdue, then the categories and their items
+        Assert.Equal(new[] { "Review PR", "This week", "Release", "Invoice" }, card.Preview.Select(l => l.Text));
+        Assert.Equal("1 day overdue", card.Preview[0].Due);
+        Assert.Equal(Color(card.Overdue), Color(card.Preview[0].DueBrush!));
+        Assert.True(card.Preview[1].IsCategory); // a dot for the category, circles for the items
+        Assert.False(card.Preview[2].IsCategory);
+        Assert.False(card.Preview[2].HasDue);
         Assert.Equal("+2 more", card.MoreText);
         Assert.Equal("Work, 5 items, 1 overdue", card.AccessibleName);
         Assert.Equal("No title", _view.CardList[1].DisplayTitle);
@@ -312,13 +316,41 @@ public partial class PhoneTests : UiTest
         Actions.AddItem(work.Categories[1], "new");
         Assert.Equal(6, card.OpenCount);
         work.Categories[0].Items[0].Text = "Renamed";
-        Assert.Equal("Renamed", card.Preview[1].Text);
+        Assert.Equal("Renamed", card.Preview[0].Text);
         work.Title = "Job";
         Assert.Equal("Job", card.DisplayTitle);
         Actions.NewBoard(new WorkArea(0, 0, 800, 600));
         Assert.Equal(3, _view.CardList.Count);
         Store.Data.Boards.Remove(empty);
         Assert.Equal(2, _view.CardList.Count);
+    }
+
+    static Avalonia.Media.Color Color(Avalonia.Media.IBrush b) => ((Avalonia.Media.ISolidColorBrush)b).Color;
+
+    [AvaloniaFact]
+    public void Card_preview_puts_the_items_due_first_at_the_top()
+    {
+        var b = MakeBoard(("Done soon", new[] { "next week", "today" }), ("Other", new[] { "plain" }));
+        b.Categories[0].Items[0].DueDate = DateTime.Today.AddDays(7);
+        b.Categories[0].Items[1].DueDate = DateTime.Today;
+        Show();
+
+        var card = _view.CardList[0];
+        // soonest first; a category whose items are all at the top already isn't repeated
+        Assert.Equal(new[] { "today", "next week", "Other", "plain" }, card.Preview.Select(l => l.Text));
+        Assert.Equal("Today", card.Preview[0].Due);
+        Assert.Equal(Color(card.Accent), Color(card.Preview[0].DueBrush!));
+        Assert.Equal(Color(card.Muted), Color(card.Preview[1].DueBrush!));
+        Assert.Equal("", card.MoreText);
+
+        // the due colors follow the list color
+        b.Style = "Dark";
+        Assert.Equal(Color(card.Accent), Color(card.Preview[0].DueBrush!));
+
+        // a new due date moves the item up
+        b.Categories[1].Items[0].DueDate = DateTime.Today.AddDays(-5);
+        Assert.Equal("plain", card.Preview[0].Text);
+        Assert.Equal("5 days overdue", card.Preview[0].Due);
     }
 
     [AvaloniaFact]

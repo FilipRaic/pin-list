@@ -20,6 +20,9 @@ sealed class FakeSettingsHost : ISettingsHost
     public void SetAutostart(bool on) => AutostartOn = on;
     public bool? UpdatesOn { get; set; } = false;
     public void SetUpdates(bool on) => UpdatesOn = on;
+    public string? ReminderProblem { get; set; }
+    public int NotificationSettingsOpened;
+    public void OpenNotificationSettings() => NotificationSettingsOpened++;
     public string VersionText { get; set; } = "You're on 2.4.0, the newest";
     public int Exports, Imports, FolderOpens, Exits;
     public Task Export() { Exports++; return Task.CompletedTask; }
@@ -117,6 +120,24 @@ public class SettingsViewTests : UiTest
         var problem = FindAll<TextBlock>(view).Single(t => t.Text == "Can't reach Google Drive.");
         Assert.Contains("problem", problem.Classes);
         Assert.DoesNotContain(Texts(view), t => t == "Synced 2 minutes ago"); // the problem replaces the status
+    }
+
+    [AvaloniaFact]
+    public void A_reminder_problem_shows_in_red_with_a_button_to_the_system_settings()
+    {
+        var view = Show();
+        Assert.DoesNotContain(Texts(view), t => t == "Reminders"); // nothing wrong: no row
+
+        _host.ReminderProblem = "Reminders aren't kept in Notification Center.";
+        _host.RaiseChanged();
+        Pump();
+        Assert.Contains("Reminders", Texts(view));
+        var problem = FindAll<TextBlock>(view).Single(t => t.Text == _host.ReminderProblem);
+        Assert.Contains("problem", problem.Classes);
+        var open = ButtonNamed(view, "Open settings");
+        Assert.Equal("Open notification settings", AutomationProperties.GetName(open));
+        Click(open);
+        Assert.Equal(1, _host.NotificationSettingsOpened);
     }
 
     [AvaloniaFact]

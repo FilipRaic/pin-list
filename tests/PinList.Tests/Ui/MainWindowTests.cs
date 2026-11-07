@@ -350,12 +350,14 @@ public class MainWindowTests : UiTest
         Assert.True(App.MainWindow?.IsVisible);
     }
 
-    /// <summary>Press the mouse on a control and hold it longer than a long-press.</summary>
-    static Point Hold(MainWindow lists, Control c)
+    /// <summary>Press the mouse on a control and move it a bit with the button down (a mouse drag starts).</summary>
+    static Point Press(MainWindow lists, Control c, double moveBy = 10)
     {
         var p = c.TranslatePoint(new Point(10, c.Bounds.Height / 2), lists)!.Value;
         lists.MouseDown(p, MouseButton.Left);
-        UiHost.Wait(PhoneDrag.HoldTime + TimeSpan.FromMilliseconds(150));
+        p += new Point(0, moveBy);
+        lists.MouseMove(p, RawInputModifiers.LeftMouseButton);
+        Pump();
         return p;
     }
 
@@ -365,7 +367,7 @@ public class MainWindowTests : UiTest
         var w = OpenNew(("A", new[] { "a" }));
         var lists = Lists();
         Assert.False(SyncService.Current!.IsBusy(w.Board));
-        var p = Hold(lists, Card(lists, w.Board));
+        var p = Press(lists, Card(lists, w.Board));
         Assert.NotNull(lists.Lists.HomeDrag.Lifted);
         Assert.True(SyncService.Current.IsBusy(w.Board));
         lists.MouseUp(p, MouseButton.Left);
@@ -378,10 +380,49 @@ public class MainWindowTests : UiTest
     {
         var w = OpenNew(("A", new[] { "a" }));
         var lists = Lists();
-        var p = Hold(lists, WidgetSwitch(lists, w.Board));
+        var p = Press(lists, WidgetSwitch(lists, w.Board));
         Assert.Null(lists.Lists.HomeDrag.Lifted);
         lists.MouseUp(p, MouseButton.Left);
         Pump();
+    }
+
+    [AvaloniaFact]
+    public void Cards_are_dragged_with_the_mouse_in_all_lists_as_one_undoable_move()
+    {
+        var a = OpenNew(("A", new[] { "a" }));
+        var b = OpenNew(("B", new[] { "b" }));
+        var lists = Lists();
+        Assert.Equal(new[] { a.Board, b.Board }, Store.Data.Boards);
+
+        // holding the mouse still is not a long-press here (a right click opens the menu)
+        var still = Card(lists, b.Board).TranslatePoint(new Point(10, 10), lists)!.Value;
+        lists.MouseDown(still, MouseButton.Left);
+        lists.MouseMove(still + new Point(2, 2), RawInputModifiers.LeftMouseButton); // a tiny move is still a click
+        UiHost.Wait(PhoneDrag.HoldTime + TimeSpan.FromMilliseconds(150));
+        Assert.Null(lists.Lists.HomeDrag.Lifted);
+        Assert.False(lists.Lists.SheetOpen);
+        lists.MouseUp(still, MouseButton.Left);
+        Pump();
+        lists.Lists.ShowHome();
+        Pump();
+
+        // drag B above A
+        var p = Press(lists, Card(lists, b.Board));
+        Assert.Same(b.Board, lists.Lists.HomeDrag.Lifted);
+        var target = Card(lists, a.Board).TranslatePoint(new Point(10, 5), lists)!.Value;
+        lists.MouseMove(target, RawInputModifiers.LeftMouseButton);
+        Pump();
+        lists.MouseUp(target, MouseButton.Left);
+        Pump();
+        Assert.Equal(new[] { b.Board, a.Board }, Store.Data.Boards);
+        Assert.Null(lists.Lists.OpenBoard); // the drop isn't also a click that opens the list
+
+        // the moved list gets a position before the other one, so sync sends the new order
+        Store.SaveNow();
+        Assert.True(b.Board.Position < a.Board.Position);
+
+        Actions.Undo();
+        Assert.Equal(new[] { a.Board, b.Board }, Store.Data.Boards);
     }
 
     [AvaloniaFact]

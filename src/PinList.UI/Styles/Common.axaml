@@ -11,9 +11,21 @@
                 <ResourceInclude Source="avares://PinList.UI/Styles/Icons.axaml"/>
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Keyboard focus ring, drawn on top of the element (only for keyboard focus, not mouse clicks) -->
+            <!--
+                Keyboard focus rings, drawn around the element (only for keyboard focus, not mouse clicks). They sit
+                outside the element with a 1 px gap and follow its rounded corners. Clipping is off: the adorner layer
+                clips to the element's bounds, which left only the ring's corners inside it and made the element look
+                square.
+            -->
             <FocusAdornerTemplate x:Key="FocusRing">
-                <Border Margin="-2" CornerRadius="6" BorderThickness="2" BorderBrush="{DynamicResource Accent}"/>
+                <!-- Icon buttons (R.Row) -->
+                <Border Margin="-3" CornerRadius="11" BorderThickness="2" BorderBrush="{DynamicResource Accent}"
+                        AdornerLayer.IsClipEnabled="False"/>
+            </FocusAdornerTemplate>
+            <FocusAdornerTemplate x:Key="ButtonFocusRing">
+                <!-- Dialog buttons (R.MenuItem) -->
+                <Border Margin="-3" CornerRadius="10" BorderThickness="2" BorderBrush="{DynamicResource Accent}"
+                        AdornerLayer.IsClipEnabled="False"/>
             </FocusAdornerTemplate>
             <FocusAdornerTemplate x:Key="InnerFocusRing">
                 <Border CornerRadius="5" BorderThickness="2" BorderBrush="{DynamicResource Accent}"/>
@@ -79,7 +91,7 @@
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
-        <Setter Property="FocusAdorner" Value="{StaticResource FocusRing}"/>
+        <Setter Property="FocusAdorner" Value="{StaticResource ButtonFocusRing}"/>
     </Style>
     <Style Selector="Button.dialog.accent">
         <Setter Property="Background" Value="{DynamicResource Accent}"/>

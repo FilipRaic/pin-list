@@ -45,10 +45,17 @@ public sealed class PhoneDrag
     /// <summary>With a mouse (the desktop's "All lists" window), a right click opens the menu right away.</summary>
     public bool RightClickOpensMenu { get; set; }
 
+    /// <summary>
+    /// With a mouse (the desktop's "All lists" window), pressing a row and moving it drags it right away, like
+    /// everywhere else on a desktop. There is no long-press then: a right click opens the menu.
+    /// </summary>
+    public bool DragWithMouse { get; set; }
+
     /// <summary>How much bigger the lifted row is drawn.</summary>
     public double LiftScale { get; set; } = 1.02;
 
     const double MoveTolerance = 10;    // a finger wobbles a little while holding
+    const double MouseDragStart = 4;    // a mouse that moved this far is dragging, not clicking
     const double ScrollEdge = 72;       // holding this close to the top or bottom scrolls
     const double MaxScrollSpeed = 1100; // pixels per second, with the finger at the very edge
     static readonly TimeSpan SlideTime = TimeSpan.FromMilliseconds(200); // a bit longer than the row slide
@@ -104,17 +111,29 @@ public sealed class PhoneDrag
         }
         _pointer = e.Pointer;
         _start = _last = e.GetPosition(_root);
+        if (MouseDrags(e.Pointer)) return; // lifted once it moves (OnMoved)
         _holdTimer.Interval = HoldTime;
         _holdTimer.Start();
     }
+
+    bool MouseDrags(IPointer pointer) => DragWithMouse && pointer.Type == PointerType.Mouse;
 
     void OnMoved(object? s, PointerEventArgs e)
     {
         var p = e.GetPosition(_root);
         if (!_held)
         {
-            if (_candidate != null && Distance(p, _start) > MoveTolerance) Cancel(); // a swipe: scroll instead
-            return;
+            if (_candidate != null && _pointer != null && MouseDrags(_pointer))
+            {
+                if (Distance(p, _start) <= MouseDragStart) return;
+                Hold();
+                _dragging = true;
+            }
+            else
+            {
+                if (_candidate != null && Distance(p, _start) > MoveTolerance) Cancel(); // a swipe: scroll instead
+                return;
+            }
         }
         e.PreventGestureRecognition();
         e.Handled = true;

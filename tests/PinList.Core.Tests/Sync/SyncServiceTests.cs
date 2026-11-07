@@ -283,6 +283,33 @@ public class SyncServiceTests : StoreTestBase
     }
 
     [Fact]
+    public void Moving_a_list_moves_it_on_the_other_device_too()
+    {
+        var first = Shared();
+        var second = NewList(A, "Second", "x");
+        Await(A.Service.SetSynced(second, true));
+        Sync(B);
+        Assert.Equal(new[] { first.Id, second.Id }, B.Data.Boards.Select(b => b.Id));
+
+        Use(A);
+        Actions.MoveBoard(second, 0);
+        Sync(A);
+
+        // not while a card is being dragged on B: the cards stay where they are until the next pass
+        Use(B);
+        B.Service.IsBusy = _ => true;
+        Sync(B);
+        Assert.Equal(new[] { first.Id, second.Id }, B.Data.Boards.Select(b => b.Id));
+        B.Service.IsBusy = _ => false;
+        Use(A);
+        BoardOf(A, second.Id)!.Title = "Second list"; // a new change from A, so B merges again
+        Sync(A);
+        Assert.True(Sync(B));
+        Assert.Equal(new[] { second.Id, first.Id }, B.Data.Boards.Select(b => b.Id));
+        Assert.Equal(second.Position, BoardOf(B, second.Id)!.Position);
+    }
+
+    [Fact]
     public void Concurrent_move_and_edit_leaves_one_copy()
     {
         SignIn(A);

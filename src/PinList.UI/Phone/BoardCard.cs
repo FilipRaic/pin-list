@@ -11,12 +11,19 @@ using PinList.Sync;
 
 namespace PinList;
 
-/// <summary>One line of a card's preview: a category (colored dot) or an item (empty circle).</summary>
-public record PreviewLine(bool IsCategory, string Text, IBrush Dot);
+/// <summary>
+/// One line of a card's preview: a category (colored dot) or an item (empty circle). An item with a due date shows
+/// it on the right (<paramref name="Due"/>, in <paramref name="DueBrush"/>).
+/// </summary>
+public record PreviewLine(bool IsCategory, string Text, IBrush Dot, string Due = "", IBrush? DueBrush = null)
+{
+    public bool HasDue => Due.Length > 0;
+}
 
 /// <summary>
-/// A board as a card on the phone's first screen: its color, title, counts and a short preview. Keeps itself up to
-/// date while items are added, changed, moved or completed.
+/// A board as a card on the phone's first screen: its color, title, counts and a short preview. The preview starts
+/// with the items that have a due date, the one due first at the top, then the categories with their other items.
+/// Keeps itself up to date while items are added, changed, moved or completed.
 /// </summary>
 public sealed class BoardCard : Observable, IDisposable
 {
@@ -37,6 +44,7 @@ public sealed class BoardCard : Observable, IDisposable
     public IBrush Foreground => Themes.Brush(Style.IsDark ? "#F2FFFFFF" : "#E6000000");
     public IBrush Muted => Themes.Brush(Style.IsDark ? "#8CFFFFFF" : "#96000000");
     public IBrush Overdue => Themes.Brush(Style.IsDark ? "#FF99A4" : "#B3261E");
+    public IBrush Accent => Themes.Brush(Style.IsDark ? "#60CDFF" : "#005FB8");
     public IBrush Border => Themes.Brush(Style.IsDark ? "#26FFFFFF" : "#1F000000");
 
     public bool HasTitle => !string.IsNullOrWhiteSpace(Board.Title);
@@ -83,11 +91,20 @@ public sealed class BoardCard : Observable, IDisposable
 
         Preview.Clear();
         int shown = 0;
+        // OrderBy keeps the list's order for items due on the same day
+        foreach (var i in items.Where(i => i.HasDue).OrderBy(i => i.DueDate).Take(PreviewLines))
+        {
+            Preview.Add(new PreviewLine(false, FirstLine(i.Text), Brushes.Transparent, i.DueText,
+                i.IsOverdue ? Overdue : i.IsDueToday ? Accent : Muted));
+            shown++;
+        }
         foreach (var c in Board.Categories)
         {
             if (Preview.Count >= PreviewLines) break;
+            var undated = c.Items.Where(i => !i.HasDue).ToList();
+            if (undated.Count == 0 && c.Items.Count > 0) continue; // all its items are at the top already
             Preview.Add(new PreviewLine(true, c.Name, Themes.Brush(c.Color)));
-            foreach (var i in c.Items)
+            foreach (var i in undated)
             {
                 if (Preview.Count >= PreviewLines) break;
                 Preview.Add(new PreviewLine(false, FirstLine(i.Text), Brushes.Transparent));
@@ -126,7 +143,7 @@ public sealed class BoardCard : Observable, IDisposable
     void OnBoardChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Board.Widget)) Raise(nameof(IsWidget));
-        if (e.PropertyName == nameof(Board.Style)) RefreshColors(); // also when the widget or sync changes it
+        if (e.PropertyName == nameof(Board.Style)) { RefreshColors(); Refresh(); } // also when the widget or sync changes it
         if (e.PropertyName != nameof(Board.Title)) return;
         Raise(nameof(HasTitle));
         Raise(nameof(DisplayTitle));
@@ -152,7 +169,7 @@ public sealed class BoardCard : Observable, IDisposable
     /// <summary>The board's color changed (Style isn't observable, so the screen calls this).</summary>
     public void RefreshColors()
     {
-        foreach (var p in new[] { nameof(Background), nameof(Foreground), nameof(Muted), nameof(Overdue), nameof(Border), nameof(SyncBrush) })
+        foreach (var p in new[] { nameof(Background), nameof(Foreground), nameof(Muted), nameof(Overdue), nameof(Accent), nameof(Border), nameof(SyncBrush) })
             Raise(p);
     }
 

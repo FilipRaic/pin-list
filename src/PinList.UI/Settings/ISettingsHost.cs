@@ -36,6 +36,15 @@ public interface ISettingsHost
     bool? UpdatesOn { get; }
     void SetUpdates(bool on);
 
+    /// <summary>
+    /// Why reminders don't show as they should (macOS: notifications off, not Alerts, not in Notification Center);
+    /// null hides the row.
+    /// </summary>
+    string? ReminderProblem { get; }
+
+    /// <summary>Opens the system's notification settings for PinList (the button of the reminder row).</summary>
+    void OpenNotificationSettings();
+
     /// <summary>"You're on 2.4.0, the newest" or "PinList 2.5.0 is out".</summary>
     string VersionText { get; }
 

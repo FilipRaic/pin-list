@@ -84,7 +84,14 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
     }
 
     public void ShowNotification(string title, string text) =>
-        ReminderPopup.Show(title, text, () => NotificationClicked?.Invoke());
+        ReminderPopup.Show(title, text, () => NotificationClicked?.Invoke(), closeAfter: TimeSpan.FromSeconds(10));
+
+    /// <summary>A macOS notification, or PinList's own popup when macOS doesn't allow notifications. Both stay until closed.</summary>
+    public void ShowReminder(string title, string text, Action onClick)
+    {
+        if (MacNotifications.TryShow(title, text, onClick)) return;
+        ReminderPopup.Show(title, text, onClick);
+    }
 
     /// <summary>The application's tray icons (created the first time).</summary>
     static TrayIcons Icons()

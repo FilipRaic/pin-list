@@ -335,7 +335,7 @@
                                                 <ItemsControl ItemsSource="{Binding Preview}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="local:PreviewLine">
-                                                            <Grid ColumnDefinitions="24,*" Margin="0,1">
+                                                            <Grid ColumnDefinitions="24,*,Auto" Margin="0,1">
                                                                 <Ellipse Width="8" Height="8" Fill="{Binding Dot}" IsVisible="{Binding IsCategory}" HorizontalAlignment="Left"/>
                                                                 <Ellipse Width="13" Height="13" StrokeThickness="1.4" Opacity="0.6" HorizontalAlignment="Left"
                                                                          Stroke="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"
@@ -343,6 +343,9 @@
                                                                 <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="{StaticResource T.PhoneBody}" MaxLines="1" TextTrimming="CharacterEllipsis"
                                                                            Classes.category="{Binding IsCategory}"
                                                                            Foreground="{Binding $parent[ItemsControl].((local:BoardCard)DataContext).Foreground}"/>
+                                                                <!-- Due date of an item: "Today", "Fri 13 Nov", "3 days overdue" -->
+                                                                <TextBlock Grid.Column="2" Text="{Binding Due}" IsVisible="{Binding HasDue}" Foreground="{Binding DueBrush}"
+                                                                           FontSize="13" FontWeight="SemiBold" Margin="10,0,0,0" VerticalAlignment="Center"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>

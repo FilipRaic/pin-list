@@ -503,6 +503,8 @@ public sealed class SyncService
 
         StillCurrent(data);
         if (RemoveDuplicates(data, IsBusy)) { markChanged(); merged = true; }
+        // lists moved on another device move here too (not while a card is being dragged)
+        if (merged && !data.Boards.Any(b => IsBusy(b)) && BoardOrder.Sort(data.Boards)) markChanged();
         // what was merged is on disk before the files count as merged (the app may be ended any moment)
         if (merged) Store.SaveNow();
 

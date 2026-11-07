@@ -7,7 +7,7 @@
 
     1. Native debug symbols (.pdb) from packages are never copied. Nobody debugs into SkiaSharp's C++ code.
     2. A build that isn't for one platform (no -r) only gets the libraries for the system it runs on:
-       Windows for net10.0-windows, macOS for the desktop app's net10.0 build.
+       Windows for net10.0-windows10.0.19041.0, macOS for the desktop app's net10.0 build.
     Release packages use -r (win-x64, osx-arm64), so they get exactly the libraries they need either way.
 
     The prefix is worked out inside the target, because a project's TargetFramework isn't known yet when
@@ -15,7 +15,7 @@
   -->
   <Target Name="PinListTrimNativeAssets" AfterTargets="ResolvePackageAssets">
     <PropertyGroup>
-      <PinListRuntimesPrefix Condition="'$(TargetFramework)' == 'net10.0-windows'">win</PinListRuntimesPrefix>
+      <PinListRuntimesPrefix Condition="$(TargetFramework.StartsWith('net10.0-windows'))">win</PinListRuntimesPrefix>
       <PinListRuntimesPrefix Condition="'$(MSBuildProjectName)' == 'PinList' and '$(TargetFramework)' == 'net10.0'">osx</PinListRuntimesPrefix>
     </PropertyGroup>
     <ItemGroup>

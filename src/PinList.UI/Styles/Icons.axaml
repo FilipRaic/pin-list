@@ -23,6 +23,7 @@
     <StreamGeometry x:Key="Line.Back">M19 12H5 M11 6l-6 6 6 6</StreamGeometry>
     <StreamGeometry x:Key="Line.Search">M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z M20 20l-4-4</StreamGeometry>
     <StreamGeometry x:Key="Line.Add">M12 5v14 M5 12h14</StreamGeometry>
+    <StreamGeometry x:Key="Line.Close">M6 6l12 12 M18 6L6 18</StreamGeometry>
     <StreamGeometry x:Key="Line.Check">M5 12.5l4.5 4.5L19 7.5</StreamGeometry>
     <StreamGeometry x:Key="Line.ChevronDown">M6 9l6 6 6-6</StreamGeometry>
     <StreamGeometry x:Key="Line.ChevronRight">M9 6l6 6-6 6</StreamGeometry>

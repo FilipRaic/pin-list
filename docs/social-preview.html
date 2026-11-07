@@ -138,6 +138,8 @@
   .line .lead .ring { width: 13px; height: 13px; border-radius: 50%; border: 1.4px solid currentColor; opacity: .6; }
   .line.c { font-weight: 600; }
   .line span { overflow: hidden; text-overflow: ellipsis; }
+  .line .due { margin-left: auto; padding-left: 10px; flex: none; font-size: 13px; font-weight: 600; }
+  .card.dark .due.overdue { color: #ff99a4; }
   .more { font-size: 13px; margin: 3px 0 0 24px; }
   .fab {
     position: absolute; right: 20px; bottom: 24px; width: 60px; height: 60px; border-radius: 18px;
@@ -232,8 +234,8 @@
 
         <div class="card dark">
           <div class="card-head"><b>Todo</b><span class="pill">1 overdue</span><span class="muted">9</span></div>
+          <div class="line"><span class="lead"><i class="ring" style="display:block"></i></span><span>Book the car service</span><span class="due overdue">2 days overdue</span></div>
           <div class="line c"><span class="lead"><i class="dot" style="display:block;background:#4cc2ff"></i></span><span>General</span></div>
-          <div class="line"><span class="lead"><i class="ring" style="display:block"></i></span><span>Book the car service</span></div>
           <div class="line"><span class="lead"><i class="ring" style="display:block"></i></span><span>Call the team about Saturday's game</span></div>
           <div class="line"><span class="lead"><i class="ring" style="display:block"></i></span><span>Replace watch batteries</span></div>
           <div class="more muted">+6 more</div>

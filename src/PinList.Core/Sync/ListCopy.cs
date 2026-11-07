@@ -18,10 +18,14 @@ public sealed class BoardFields
     public SyncMeta Sync { get; set; } = new();
     public SyncMeta OrderSync { get; set; } = new();
 
+    /// <summary>Where the list is among all lists (PinList 2.6.0 and later; older files have none).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public double? Position { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? PositionSync { get; set; }
+
     public BoardFields Clone() => new()
     {
         Title = Title, Style = Style, Transparent = Transparent, CategoryOrder = new(CategoryOrder), Sync = Sync.Clone(),
-        OrderSync = OrderSync.Clone(),
+        OrderSync = OrderSync.Clone(), Position = Position, PositionSync = PositionSync?.Clone(),
     };
 }
 
@@ -118,6 +122,8 @@ public sealed class ListCopy
                 CategoryOrder = b.Categories.Select(c => c.Id).ToList(),
                 Sync = Meta(b.Sync),
                 OrderSync = Meta(b.OrderSync),
+                Position = b.PositionSync == null ? null : b.Position,
+                PositionSync = b.PositionSync?.Clone(),
             },
         };
         foreach (var c in b.Categories)
@@ -232,6 +238,12 @@ public sealed class ListCopy
             Set(b.Transparent, Board.Transparent, v => b.Transparent = v);
             b.Sync = Board.Sync.Clone();
             b.OrderSync = Board.OrderSync.Clone();
+            if (Board.PositionSync != null)
+            {
+                // a new position only moves the list when sync sorts the lists (BoardOrder.Sort)
+                Set(b.Position, Board.Position, v => b.Position = v);
+                b.PositionSync = Board.PositionSync.Clone();
+            }
 
             var oldCats = b.Categories.ToDictionary(c => c.Id);
             var oldItems = new Dictionary<string, TodoItem>();

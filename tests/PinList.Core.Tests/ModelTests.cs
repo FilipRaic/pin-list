@@ -31,6 +31,19 @@ public class DateTextTests
     public void Rejects_invalid_times(string text) => Assert.False(DateText.TryParseTime(text, out _));
 
     [Fact]
+    public void Overdue_says_how_many_days()
+    {
+        var today = new DateTime(2026, 11, 7);
+        Assert.Equal("1 day overdue", DateText.Overdue(today.AddDays(-1), today));
+        Assert.Equal("3 days overdue", DateText.Overdue(today.AddDays(-3), today));
+        Assert.Equal("1 day overdue", DateText.Overdue(today, today)); // never less than a day
+
+        var item = new TodoItem { DueDate = DateTime.Today.AddDays(-4) };
+        Assert.Equal("4 days overdue", item.DueText);
+        Assert.Equal($"Was due {DateText.Day(DateTime.Today.AddDays(-4))}", item.DueHint);
+    }
+
+    [Fact]
     public void Day_names_relative_to_today()
     {
         var today = new DateTime(2026, 10, 20);
@@ -77,7 +90,7 @@ public class DueHintTests
     [Fact]
     public void Due_hint_says_overdue_today_or_due_date()
     {
-        Assert.Equal("Overdue", new TodoItem { DueDate = DateTime.Today.AddDays(-1) }.DueHint);
+        Assert.Equal("Was due Yesterday", new TodoItem { DueDate = DateTime.Today.AddDays(-1) }.DueHint);
         Assert.Equal("Due today", new TodoItem { DueDate = DateTime.Today }.DueHint);
         Assert.Equal("Due date", new TodoItem { DueDate = DateTime.Today.AddDays(3) }.DueHint);
     }

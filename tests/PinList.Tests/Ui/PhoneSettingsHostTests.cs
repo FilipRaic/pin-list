@@ -41,6 +41,8 @@ public partial class PhoneTests
         var host = SettingsHost();
         Assert.Null(host.Sync);
         Assert.Null(host.UnavailableSyncText);
+        Assert.Null(host.ReminderProblem); // Android shows its own notification hints
+        host.OpenNotificationSettings();   // nothing to open
         Assert.Null(host.UpdatesOn);
         Assert.Null(host.AutostartText);
         Assert.False(host.AutostartOn);

@@ -326,6 +326,7 @@ public static class Store
             // a raw backup may still say "synced": an import never turns sync on (spec 5.8)
             b.Synced = false;
             b.SyncedChanged = null;
+            b.Position = null; // placed after the synced lists that stay (BoardOrder)
         }
         for (int i = 0; i < synced.Count; i++) imported.Boards.Insert(i, synced[i]);
         var archive = imported.Archive.Where(a => !syncedIds.Contains(a.BoardId))
@@ -363,6 +364,7 @@ public static class Store
         foreach (var b in data.Boards)
         {
             (b.Synced, b.Sync, b.OrderSync, b.SyncedChanged, b.Seen) = (false, null, null, null, null);
+            (b.Position, b.PositionSync) = (null, null); // placed after the lists that are here (BoardOrder)
             b.Widget = true;
             foreach (var c in b.Categories)
             {
