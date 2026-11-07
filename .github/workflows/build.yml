@@ -53,7 +53,7 @@ jobs:
       - name: Publish PinList.exe
         shell: pwsh
         run: |
-          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false `
+          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained false `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$env:RUNNER_TEMP/windows"
           if (-not (Test-Path "$env:RUNNER_TEMP/windows/PinList.exe")) { throw "PinList.exe was not built" }
 

@@ -110,7 +110,7 @@ jobs:
         run: |
           # Single-file exe; needs the .NET 10 Desktop Runtime on the user's PC (WinForms is used for the tray icon).
           # Avalonia's native libraries (Skia, HarfBuzz) go inside the exe and are unpacked on first start.
-          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false `
+          dotnet publish src/PinList/PinList.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained false `
             -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out
 
           New-Item -ItemType Directory -Force release | Out-Null

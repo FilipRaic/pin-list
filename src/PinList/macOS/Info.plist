@@ -14,5 +14,7 @@
     <!-- A menu bar app: no Dock icon and not in Cmd+Tab, like the widgets on Windows aren't in the taskbar -->
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <!-- Reminders stay on the screen until they're closed: "Alerts", called "Persistent" since macOS 15 (changeable in System Settings) -->
+    <key>NSUserNotificationAlertStyle</key><string>alert</string>
 </dict>
 </plist>

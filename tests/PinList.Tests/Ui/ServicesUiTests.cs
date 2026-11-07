@@ -290,9 +290,41 @@ public class TrayIconTests : UiTest
         typeof(WinForms.NotifyIcon).GetMethod("OnBalloonTipClicked", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(icon, null);
 
-        tray.ShowNotification("Reminder", "Call the bank");
+        tray.ShowNotification("PinList 9.0 is available", "Click here to open the download page.");
         tray.SetMenu(Array.Empty<TrayEntry>()); // Windows shows the app's own menu instead
         Assert.Equal(new[] { "left", "right", "left", "notification" }, events);
+
+        // a reminder is a Windows notification that stays until it's dismissed
+        var sent = new List<(string id, string title, string text)>();
+        var realSend = WindowsToasts.Send;
+        bool accepted = true;
+        WindowsToasts.Send = (id, title, text) => { sent.Add((id, title, text)); return accepted; };
+        try
+        {
+            tray.ShowReminder("Reminder", "Call the bank", () => events.Add("reminder"));
+            var (id, title, text) = Assert.Single(sent);
+            Assert.Equal(("Reminder", "Call the bank"), (title, text));
+            Assert.Empty(ReminderPopup.Shown); // not PinList's own popup
+
+            WindowsToasts.Activated(id);
+            Assert.Equal("reminder", events.Last());
+            WindowsToasts.Activated(id); // a second click on the same one does nothing
+            Assert.Single(events, "reminder");
+
+            // Windows refused the notification: PinList's own popup shows instead
+            accepted = false;
+            tray.ShowReminder("Reminder", "Pay the rent", () => events.Add("popup"));
+            MouseDown(Assert.Single(ReminderPopup.Shown));
+            Assert.Equal("popup", events.Last());
+        }
+        finally { WindowsToasts.Send = realSend; }
+
+        // the notification: the reminder scenario (stays until dismissed) with Show and Dismiss, text escaped
+        var xml = System.Xml.Linq.XDocument.Parse(WindowsToasts.Xml("abc", "Bills & <rent>", "Pay \"now\""));
+        Assert.Equal("reminder", xml.Root!.Attribute("scenario")!.Value);
+        Assert.Equal("abc", xml.Root.Attribute("launch")!.Value);
+        Assert.Equal(new[] { "Bills & <rent>", "Pay \"now\"" }, xml.Descendants("text").Select(t => t.Value));
+        Assert.Equal(new[] { "Show", "Dismiss" }, xml.Descendants("action").Select(a => a.Attribute("content")!.Value));
     }
 
     [AvaloniaFact]
@@ -348,8 +380,46 @@ public class LeftoverPathTests : DialogTest
         var popup = ReminderPopup.Show("Reminder", "Call the bank", () => clicked = true);
         Pump();
         Assert.True(popup.IsVisible);
+        Assert.False(popup.ShowActivated); // doesn't take the keyboard from what the user is doing
         MouseDown(popup);
         Assert.True(clicked);
+        Assert.False(popup.IsVisible);
+        Assert.Empty(ReminderPopup.Shown);
+    }
+
+    [AvaloniaFact]
+    public void Reminder_popups_stay_until_closed_and_stack()
+    {
+        int clicks = 0;
+        var first = ReminderPopup.Show("Reminder", "Call the bank", () => clicks++);
+        var second = ReminderPopup.Show("2 reminders", "Call the bank, then pay the rent", () => clicks++);
+        Pump();
+        Assert.Equal(new Window[] { first, second }, ReminderPopup.Shown);
+        Assert.True(second.Position.Y > first.Position.Y); // under the first one
+        Assert.Equal(first.Position.X, second.Position.X);
+
+        UiHost.Wait(TimeSpan.FromMilliseconds(300));
+        Assert.True(first.IsVisible); // a reminder doesn't go away on its own
+
+        // the × closes it without running its action, and the one under it moves up
+        var close = Find<Button>(first, b => AutomationProperties.GetName(b) == "Close")!;
+        var top = first.Position.Y;
+        MouseDown(close);
+        Click(close);
+        Assert.False(first.IsVisible);
+        Assert.Equal(0, clicks);
+        Assert.Equal(top, second.Position.Y);
+        second.Close();
+        Pump();
+    }
+
+    [AvaloniaFact]
+    public void Other_notifications_close_on_their_own()
+    {
+        var popup = ReminderPopup.Show("PinList 9.0 is available", "Click here", () => { }, closeAfter: TimeSpan.FromMilliseconds(50));
+        Pump();
+        Assert.True(popup.IsVisible);
+        UiHost.Wait(TimeSpan.FromMilliseconds(400));
         Assert.False(popup.IsVisible);
     }
 

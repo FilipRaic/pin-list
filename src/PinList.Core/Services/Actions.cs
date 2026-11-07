@@ -429,10 +429,13 @@ public static class Actions
         index = Math.Clamp(index, 0, boards.Count - 1);
         if (index == from) return;
         boards.Move(from, index);
+        board.Position = null; // only this list gets a new position (BoardOrder), so moves on other devices stay
         PushUndo($"moving the list {Quote(board.Title)}", () =>
         {
             int now = boards.IndexOf(board);
-            if (now >= 0) boards.Move(now, Math.Min(from, boards.Count - 1));
+            if (now < 0) return;
+            boards.Move(now, Math.Min(from, boards.Count - 1));
+            board.Position = null;
         });
         Store.MarkDirty();
     }

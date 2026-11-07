@@ -129,6 +129,7 @@ public partial class PhoneView : UserControl
     {
         IsDesktop = desktop;
         _homeDrag.RightClickOpensMenu = _boardDrag.RightClickOpensMenu = desktop;
+        _homeDrag.DragWithMouse = _boardDrag.DragWithMouse = desktop; // reorder cards, categories and items with the mouse
         HomeTitle.Text = desktop ? "All lists" : "Lists";
         NewListCard.IsVisible = desktop;
         HomeBottomSpace.IsVisible = !desktop;

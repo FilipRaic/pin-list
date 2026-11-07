@@ -7,8 +7,10 @@ using Avalonia.Controls;
 namespace PinList;
 
 /// <summary>
-/// macOS: makes a widget window behave like a desktop widget. It shows on every Space, stays where it is when
-/// "Show Desktop" or Mission Control moves the other windows aside, and isn't part of Cmd+` window cycling.
+/// macOS: makes a widget window behave like a desktop widget. It stays on the desktop (Space) where it is, stays
+/// where it is when "Show Desktop" or Mission Control moves the other windows aside, and isn't part of Cmd+` window
+/// cycling. It doesn't join every Space: a full screen app is a Space of its own, and a widget on every Space was
+/// drawn on top of full screen apps.
 /// (The Dock icon and Cmd+Tab entry are left out by LSUIElement in the app's Info.plist.)
 /// </summary>
 [ExcludeFromCodeCoverage(Justification = "Objective-C calls on a real NSWindow; only runs on a Mac.")]
@@ -61,8 +63,9 @@ static class MacNative
             return;
         try
         {
-            var behavior = SendGetULong(h.Handle, sel_registerName("collectionBehavior"));
-            SendSetULong(h.Handle, sel_registerName("setCollectionBehavior:"), behavior | CanJoinAllSpaces | Stationary | IgnoresCycle);
+            // not on every Space (it would show on top of full screen apps), but unmoved by Show Desktop and Cmd+`
+            var behavior = SendGetULong(h.Handle, sel_registerName("collectionBehavior")) & ~CanJoinAllSpaces;
+            SendSetULong(h.Handle, sel_registerName("setCollectionBehavior:"), behavior | Stationary | IgnoresCycle);
         }
         catch (Exception ex) { Store.Log("Desktop widget behavior: " + ex.Message); }
     }

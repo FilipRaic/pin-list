@@ -19,6 +19,7 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     {
         _app = app;
         App.ThemeChanged += RaiseChanged;
+        ReminderSettings.Changed += RaiseChanged;
     }
 
     public event Action? Changed;
@@ -29,6 +30,7 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     public void Dispose()
     {
         App.ThemeChanged -= RaiseChanged;
+        ReminderSettings.Changed -= RaiseChanged;
         if (_syncService != null) _syncService.Changed -= RaiseChanged;
         if (_updates != null) _updates.Changed -= RaiseChanged;
         _syncService = null;
@@ -104,6 +106,18 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     {
         if (_app.UpdateCheck is { } updates) updates.Enabled = on;
     }
+
+    /// <summary>The last known answer; reading it also asks the system again (a change refreshes the page).</summary>
+    public string? ReminderProblem
+    {
+        get
+        {
+            ReminderSettings.Check();
+            return ReminderSettings.Problem;
+        }
+    }
+
+    public void OpenNotificationSettings() => ReminderSettings.Open();
 
     public string VersionText
     {

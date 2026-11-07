@@ -13,13 +13,30 @@ public sealed class FakeTray : ITrayIcon
     public event Action? RightClick;
     public event Action? NotificationClicked;
 
-    public void ShowNotification(string title, string text) => Notifications.Add((title, text));
+    Action? _reminderClick;
+
+    public void ShowNotification(string title, string text)
+    {
+        Notifications.Add((title, text));
+        _reminderClick = null;
+    }
+
+    public void ShowReminder(string title, string text, Action onClick)
+    {
+        Notifications.Add((title, text));
+        _reminderClick = onClick;
+    }
     public void SetMenu(IReadOnlyList<TrayEntry> entries) => Menu = entries;
     public void Dispose() => Disposed = true;
 
     public void ClickLeft() => LeftClick?.Invoke();
     public void ClickRight() => RightClick?.Invoke();
-    public void ClickNotification() => NotificationClicked?.Invoke();
+    /// <summary>Clicks the last notification: a reminder runs its own action, others raise NotificationClicked.</summary>
+    public void ClickNotification()
+    {
+        if (_reminderClick != null) _reminderClick();
+        else NotificationClicked?.Invoke();
+    }
 }
 
 /// <summary>Dialogs answered by the test. Every dialog that was shown is recorded.</summary>

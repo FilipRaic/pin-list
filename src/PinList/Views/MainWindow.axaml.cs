@@ -53,6 +53,8 @@ public partial class MainWindow : Window
             Store.Data.Archive.CollectionChanged -= OnCountsChanged;
         };
         Opened += (_, _) => StyleTitleBar();
+        // back from the system's settings (e.g. notifications): Settings shows what's set now
+        Activated += (_, _) => { if (Section == MainSection.Settings) Settings.Refresh(); };
         Store.Data.Boards.CollectionChanged += OnCountsChanged;
         Store.Data.Archive.CollectionChanged += OnCountsChanged;
 

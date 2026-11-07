@@ -50,6 +50,58 @@ public class DesktopSettingsHostTests : UiTest
     }
 
     [AvaloniaFact]
+    public void Reminder_settings_that_are_off_show_and_the_button_opens_the_system_settings()
+    {
+        var host = Host();
+        var realCheck = ReminderSettings.Check;
+        var realOpen = App.OpenUrl;
+        var opened = new List<string>();
+        int checks = 0, changes = 0;
+        ReminderSettings.Check = () => checks++;
+        App.OpenUrl = opened.Add;
+        host.Changed += () => changes++;
+        try
+        {
+            Assert.Null(host.ReminderProblem); // Windows: nothing to check
+            Assert.Equal(1, checks);           // reading it asks the system again
+
+            ReminderSettings.Report(ReminderSettings.Describe(2, 1, 2));
+            Assert.Equal("Reminders aren't kept in Notification Center.", host.ReminderProblem);
+            Assert.Equal(1, changes); // the page refreshes
+            ReminderSettings.Report(host.ReminderProblem);
+            Assert.Equal(1, changes); // the same answer again: no refresh (no loop)
+
+            host.OpenNotificationSettings();
+            Assert.Equal(new[] { "ms-settings:notifications" }, opened);
+            host.Dispose();
+            ReminderSettings.Report(null);
+            Assert.Equal(1, changes); // a closed page doesn't listen any more
+        }
+        finally
+        {
+            ReminderSettings.Check = realCheck;
+            App.OpenUrl = realOpen;
+            ReminderSettings.Report(null);
+        }
+    }
+
+    [AvaloniaFact]
+    public void Reminder_settings_texts_and_addresses()
+    {
+        Assert.Null(ReminderSettings.Describe(0, 1, 1)); // not asked yet
+        Assert.Null(ReminderSettings.Describe(2, 2, 2)); // all fine
+        Assert.Equal("Notifications are off for PinList, so reminders show in PinList's own window.", ReminderSettings.Describe(1, 2, 2));
+        Assert.Equal("Reminders go away after a few seconds (choose Persistent Alerts) and aren't kept in Notification Center.",
+            ReminderSettings.Describe(2, 1, 1));
+        Assert.Equal("Reminders don't show on the screen (choose Persistent Alerts).", ReminderSettings.Describe(3, 2, 0));
+
+        Assert.Equal("ms-settings:notifications", ReminderSettings.SettingsUrl(mac: false, 0));
+        Assert.Equal("x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=com.pinlist.app",
+            ReminderSettings.SettingsUrl(mac: true, 14));
+        Assert.Equal("x-apple.systempreferences:com.apple.preference.notifications", ReminderSettings.SettingsUrl(mac: true, 12));
+    }
+
+    [AvaloniaFact]
     public void A_build_without_sync_has_the_explanation()
     {
         var host = Host();

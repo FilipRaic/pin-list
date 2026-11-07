@@ -6,7 +6,7 @@ taskkill /im PinList.exe /f >nul 2>&1
 rem Start from an empty folder, so files from older builds don't pile up
 if exist publish rmdir /s /q publish
 echo Building PinList...
-dotnet publish src\PinList\PinList.csproj -c Release -f net10.0-windows -r win-x64 --self-contained false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+dotnet publish src\PinList\PinList.csproj -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained false -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 if errorlevel 1 (
   echo.
   echo Build failed. Is the .NET 10 SDK installed?  winget install Microsoft.DotNet.SDK.10

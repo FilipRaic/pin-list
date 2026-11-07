@@ -13,8 +13,11 @@ public interface ITrayIcon : IDisposable
     event Action? RightClick;
     event Action? NotificationClicked;
 
-    /// <summary>Shows a notification (reminders).</summary>
+    /// <summary>Shows a notification that goes away on its own (a new version). Clicking it raises NotificationClicked.</summary>
     void ShowNotification(string title, string text);
+
+    /// <summary>Shows a reminder. It stays on the screen until it's clicked (that runs <paramref name="onClick"/>) or closed.</summary>
+    void ShowReminder(string title, string text, Action onClick);
 
     /// <summary>
     /// The menu's entries, for platforms whose tray menu is native (macOS menu bar). On Windows the app shows its
@@ -62,6 +65,9 @@ public sealed class TrayIcon : ITrayIcon
 
     public void ShowNotification(string title, string text) =>
         _icon.ShowBalloonTip(10000, title, text, WinForms.ToolTipIcon.None);
+
+    /// <summary>A Windows notification that stays until it's dismissed (a balloon goes away after a few seconds).</summary>
+    public void ShowReminder(string title, string text, Action onClick) => WindowsToasts.ShowReminder(title, text, onClick);
 
     public void SetMenu(System.Collections.Generic.IReadOnlyList<TrayEntry> entries) { } // right click shows the app's menu
 

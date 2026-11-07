@@ -16,11 +16,11 @@ public class ChangeTrackerTests : StoreTestBase
     public void First_run_stamps_everything_once()
     {
         OneBoard();
-        // list, its category order, the category, its item order, 2 items
-        Assert.Equal(6, ChangeTracker.StampChanges(Data, T0));
+        // list, its category order, its place among the lists, the category, its item order, 2 items
+        Assert.Equal(7, ChangeTracker.StampChanges(Data, T0));
         Assert.Equal(0, ChangeTracker.StampChanges(Data, T0.AddMinutes(1)));
         Assert.Equal(32, Data.SyncInfo!.DeviceId.Length);
-        Assert.Equal(6, Data.SyncInfo.Counter);
+        Assert.Equal(7, Data.SyncInfo.Counter);
     }
 
     [Fact]
@@ -32,7 +32,7 @@ public class ChangeTrackerTests : StoreTestBase
         var item = b.Categories[0].Items[0];
         Assert.Equal(me, item.Sync!.Changed!.Device);
         Assert.Equal(item.Sync.Born, item.Sync.Changed);
-        Assert.Equal(6, b.Seen![me]);
+        Assert.Equal(7, b.Seen![me]);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class ChangeTrackerTests : StoreTestBase
         var b = OneBoard();
         Data.Archive.Add(new ArchivedItem { Text = "done", BoardId = b.Id });
         Data.Archive.Add(new ArchivedItem { Text = "orphan", BoardId = "gone" });
-        Assert.Equal(8, ChangeTracker.StampChanges(Data, T0));
+        Assert.Equal(9, ChangeTracker.StampChanges(Data, T0));
         Assert.Equal(Data.Archive[0].Sync!.Changed!.Counter, b.Seen![Data.SyncInfo!.DeviceId]);
     }
 

@@ -99,6 +99,11 @@ sealed class PhoneSettingsHost : ISettingsHost
         if (_view.UpdateCheck is { } updates) updates.Enabled = on;
     }
 
+    /// <summary>The phone's reminders are Android notifications; Android shows its own hints.</summary>
+    public string? ReminderProblem => null;
+
+    public void OpenNotificationSettings() { }
+
     public string VersionText
     {
         get

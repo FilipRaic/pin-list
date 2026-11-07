@@ -672,7 +672,8 @@ public class BoardMenuTests : UiTest
 
         a.DueDate = DateTime.Today.AddDays(-2);
         Pump();
-        Assert.Equal("Overdue", ToolTip.GetTip(chip));
+        Assert.Equal("2 days overdue", chip.Children.OfType<TextBlock>().Single().Text);
+        Assert.Equal($"Was due {DateText.Day(DateTime.Today.AddDays(-2))}", ToolTip.GetTip(chip));
         Assert.Contains("overdue", chip.Classes); // red
         Assert.Contains("overdue", NameOf(Row(w, a)));
     }

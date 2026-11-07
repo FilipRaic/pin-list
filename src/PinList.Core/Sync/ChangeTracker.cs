@@ -19,6 +19,7 @@ public static class ChangeTracker
     {
         var device = data.SyncInfo ??= new DeviceInfo { DeviceId = Guid.NewGuid().ToString("N") };
         int stamped = 0;
+        BoardOrder.Fix(data.Boards); // a list that was added or moved gets a position that fits its place
 
         void Check(SyncMeta? meta, string hash, Action<SyncMeta> set, SeenList? seen)
         {
@@ -39,6 +40,7 @@ public static class ChangeTracker
             var seen = b.Seen ??= new SeenList();
             Check(b.Sync, Fingerprint(b), m => b.Sync = m, seen);
             Check(b.OrderSync, OrderFingerprint(b), m => b.OrderSync = m, seen);
+            Check(b.PositionSync, PositionFingerprint(b), m => b.PositionSync = m, seen);
             // The on/off flag is only worth a stamp once the list was ever synced
             if (b.Synced || b.SyncedChanged != null)
                 Check(b.SyncedChanged, FlagHash(b.Synced), m => b.SyncedChanged = m, seen);
@@ -64,6 +66,10 @@ public static class ChangeTracker
 
     public static string OrderFingerprint(Board b) => Hash("board order", b.Categories.Select(c => c.Id).ToArray());
 
+    // Where the list is among all lists has its own stamp too: moving a list and renaming it are two changes.
+
+    public static string PositionFingerprint(Board b) => Hash("board position", b.Position);
+
     public static string OrderFingerprint(Category c) => Hash("category order", c.Items.Select(i => i.Id).ToArray());
 
     // The list a category or item is in is part of it: moving a category to another list must look like a change of
@@ -86,6 +92,7 @@ public static class ChangeTracker
     {
         (b.Sync ??= new SyncMeta()).Hash = Fingerprint(b);
         (b.OrderSync ??= new SyncMeta()).Hash = OrderFingerprint(b);
+        if (b.PositionSync != null) b.PositionSync.Hash = PositionFingerprint(b);
         if (b.Synced || b.SyncedChanged != null) (b.SyncedChanged ??= new SyncMeta()).Hash = FlagHash(b.Synced);
     }
 

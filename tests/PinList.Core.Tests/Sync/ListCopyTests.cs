@@ -43,7 +43,8 @@ public class ListCopyTests
     public void Per_device_fields_are_not_in_the_file()
     {
         var json = ListCopy.ToJson(SampleFile(out _));
-        foreach (var name in new[] { "\"width\"", "\"height\"", "\"locked\"", "\"theme\"", "1234" })
+        // ": 1234" is the widget's X as a number (a bare "1234" could also be part of a random id or hash)
+        foreach (var name in new[] { "\"width\"", "\"height\"", "\"locked\"", "\"theme\"", ": 1234" })
             Assert.DoesNotContain(name, json);
     }
 
@@ -99,7 +100,8 @@ public class ListCopyTests
         Assert.True(marker.ApplyTo(board, new()));
         Assert.False(board.Synced);
         Assert.Equal("mine", board.Title);
-        Assert.Equal(0, ChangeTracker.StampChanges(new AppData { Boards = { board }, SyncInfo = new DeviceInfo { DeviceId = "Z" } }, DateTime.UtcNow));
+        // the only new stamp is the list's place among the lists, which this list never had
+        Assert.Equal(1, ChangeTracker.StampChanges(new AppData { Boards = { board }, SyncInfo = new DeviceInfo { DeviceId = "Z" } }, DateTime.UtcNow));
     }
 
     [Fact]

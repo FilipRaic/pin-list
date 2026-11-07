@@ -65,6 +65,7 @@ public static class SyncMerge
         var orderWinner = Pick(mine.Board.OrderSync, theirs.Board.OrderSync, sm, st, out _);
         var (bw, bl) = orderWinner == Side.Mine ? (mine.Board, theirs.Board) : (theirs.Board, mine.Board);
         result.Board.OrderSync = bw.OrderSync.Clone();
+        (result.Board.Position, result.Board.PositionSync) = Position(mine.Board, theirs.Board, sm, st);
 
         // ---- Categories, items and archived items: each by id ----
         var catWinners = new Dictionary<string, Side>();
@@ -203,6 +204,19 @@ public static class SyncMerge
         if (t.ModifiedAt != m.ModifiedAt) return t.ModifiedAt > m.ModifiedAt ? Side.Theirs : Side.Mine;
         // same time: decide the same way on every device (both stamps exist here, or a side would cover the other)
         return string.CompareOrdinal(t.Changed!.Device, m.Changed!.Device) > 0 ? Side.Theirs : Side.Mine;
+    }
+
+    /// <summary>
+    /// Where the list is among all lists: the newest change wins. A copy from a PinList older than 2.6.0 has none, so
+    /// the other side's position stays.
+    /// </summary>
+    static (double?, SyncMeta?) Position(BoardFields m, BoardFields t, SeenList sm, SeenList st)
+    {
+        if (t.PositionSync == null) return (m.Position, m.PositionSync?.Clone());
+        if (m.PositionSync == null) return (t.Position, t.PositionSync.Clone());
+        return Pick(m.PositionSync, t.PositionSync, sm, st, out _) == Side.Mine
+            ? (m.Position, m.PositionSync.Clone())
+            : (t.Position, t.PositionSync.Clone());
     }
 
     /// <summary>A list flag (sync on/off, deleted): the newest change wins.</summary>

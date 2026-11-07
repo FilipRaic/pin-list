@@ -69,9 +69,10 @@ public class TodoItem : Observable
     [JsonIgnore] public bool HasDue => DueDate != null;
     [JsonIgnore] public bool IsOverdue => DueDate is { } d && d < DateTime.Today;
     [JsonIgnore] public bool IsDueToday => DueDate is { } d && d == DateTime.Today;
-    [JsonIgnore] public string DueText => DueDate is { } d ? DateText.Day(d) : "";
-    /// <summary>Tooltip of the due date: "Overdue", "Due today" or "Due date".</summary>
-    [JsonIgnore] public string DueHint => IsOverdue ? "Overdue" : IsDueToday ? "Due today" : "Due date";
+    /// <summary>The due date chip: "Today", "Tomorrow", "Fri 13 Nov", or how long it's overdue ("3 days overdue").</summary>
+    [JsonIgnore] public string DueText => DueDate is { } d ? (IsOverdue ? DateText.Overdue(d) : DateText.Day(d)) : "";
+    /// <summary>Tooltip of the due date: "Was due Wed 4 Nov", "Due today" or "Due date".</summary>
+    [JsonIgnore] public string DueHint => DueDate is { } d && IsOverdue ? $"Was due {DateText.Day(d)}" : IsDueToday ? "Due today" : "Due date";
 
     [JsonIgnore] public bool HasPendingReminder => ReminderAt != null && !ReminderShown;
     [JsonIgnore] public string ReminderText => ReminderAt is { } r ? DateText.DayAndTime(r) : "";
@@ -94,14 +95,17 @@ public class TodoItem : Observable
         Raise(nameof(AccessibleName));
     }
 
-    /// <summary>What a screen reader says for the item, e.g. "Send the invoice, due today, reminder Tomorrow 09:00".</summary>
+    /// <summary>
+    /// What a screen reader says for the item, e.g. "Send the invoice, due Today, reminder Tomorrow 09:00" or
+    /// "Renew passport, 2 days overdue, was due Thu 5 Nov".
+    /// </summary>
     [JsonIgnore]
     public string AccessibleName
     {
         get
         {
             var name = Text.Replace("\n", ", ");
-            if (DueDate != null) name += IsOverdue ? $", overdue, was due {DueText}" : $", due {DueText}";
+            if (DueDate is { } d) name += IsOverdue ? $", {DueText}, was due {DateText.Day(d)}" : $", due {DueText}";
             if (HasPendingReminder) name += $", reminder {ReminderText}";
             return name;
         }
@@ -192,6 +196,16 @@ public class Board : Observable
 
     /// <summary>For each device, the highest change counter this copy of the list contains.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SeenList? Seen { get; set; }
+
+    /// <summary>
+    /// Where the list is in the order of all lists (All lists on the desktop, Lists on the phone). Lists are sorted
+    /// by it, and sync sends it, so the order is the same on every device. Null until the list was first placed
+    /// (see BoardOrder).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public double? Position { get; set; }
+
+    /// <summary>Stamps of the last change of <see cref="Position"/> (separate, so moving a list never overrides a rename).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public SyncMeta? PositionSync { get; set; }
 
     string _title = "My list";
     public string Title { get => _title; set { if (Set(ref _title, value)) Raise(nameof(WindowTitle)); } }
@@ -318,6 +332,13 @@ public static class DateText
         if (d == t.AddDays(1)) return "Tomorrow";
         if (d == t.AddDays(-1)) return "Yesterday";
         return d.Year == t.Year ? d.ToString("ddd d MMM", C) : d.ToString("d MMM yyyy", C);
+    }
+
+    /// <summary>How long ago a due day was: "1 day overdue", "3 days overdue".</summary>
+    public static string Overdue(DateTime due, DateTime? today = null)
+    {
+        int days = Math.Max(1, ((today ?? DateTime.Today).Date - due.Date).Days);
+        return days == 1 ? "1 day overdue" : $"{days} days overdue";
     }
 
     public static string DayAndTime(DateTime d, DateTime? today = null) =>

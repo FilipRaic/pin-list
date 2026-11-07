@@ -70,6 +70,8 @@ public class UpdateUiTests : UiTest
         App.ShowReminders(new[] { w.Board.Categories[0].Items[0] });
         Tray.ClickNotification();
         Assert.Single(_opened);
+        App.OnNotificationClicked(); // a late click on the old notification: the reminder came after it
+        Assert.Single(_opened);
     }
 
     [AvaloniaFact]
