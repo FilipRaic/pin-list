@@ -3,6 +3,17 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.7.1] - 2026-11-08
+
+Small fixes for screen readers, and more tests.
+
+### Fixed
+- Screen readers no longer read a stray character in items with Windows line breaks (for example text pasted from another app). It happened in the item's spoken name, in the archive and in the *Undone: ...* announcement
+- **macOS:** the README explains the Keychain password prompt after an update. It is your Google sign-in, and **Always Allow** stops it until the next update
+
+### Changed
+- About 50 new tests, for the phone screens, the widgets, Settings, sync and the update check. CI now fails below 90 % of branches covered (was 92 %), so a small change doesn't fail the build by chance
+
 ## [2.7.0] - 2026-11-08
 
 A new version is easier to notice, and you see what's new in it.

@@ -104,7 +104,7 @@ public class TodoItem : Observable
     {
         get
         {
-            var name = Text.Replace("\n", ", ");
+            var name = Text.Replace("\r\n", "\n").Replace("\n", ", ");
             if (DueDate is { } d) name += IsOverdue ? $", {DueText}, was due {DateText.Day(d)}" : $", due {DueText}";
             if (HasPendingReminder) name += $", reminder {ReminderText}";
             return name;
@@ -282,7 +282,7 @@ public class ArchivedItem
     public override string ToString()
     {
         var list = string.IsNullOrWhiteSpace(BoardTitle) ? "" : $", list {BoardTitle}";
-        return $"{Text.Replace("\n", ", ")}, completed {CompletedAt:g}{list}, category {CategoryName}, added {ArchiveGroups.ShortDate(CreatedAt, DateTime.Now)}";
+        return $"{Text.Replace("\r\n", "\n").Replace("\n", ", ")}, completed {CompletedAt:g}{list}, category {CategoryName}, added {ArchiveGroups.ShortDate(CreatedAt, DateTime.Now)}";
     }
 }
 

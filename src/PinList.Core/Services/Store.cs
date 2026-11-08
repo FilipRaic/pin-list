@@ -260,13 +260,13 @@ public static class Store
         else File.Move(temp, path);
     }
 
+    /// <summary>Called before a sync merge removes anything: today's backup must exist first (spec 6.2).</summary>
+    public static void BackupBeforeSync() => DailyBackup();
+
     /// <summary>
     /// One copy of data.json per day, the last 7 are kept. Runs on start and after saving,
     /// so the backups stay current even if PinList runs for weeks without a restart.
     /// </summary>
-    /// <summary>Called before a sync merge removes anything: today's backup must exist first (spec 6.2).</summary>
-    public static void BackupBeforeSync() => DailyBackup();
-
     static void DailyBackup()
     {
         try

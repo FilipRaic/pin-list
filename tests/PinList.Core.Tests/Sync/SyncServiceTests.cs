@@ -856,6 +856,15 @@ public class SyncServiceTests : StoreTestBase
     }
 
     [Fact]
+    public void Cancelling_the_sign_in_is_not_an_error()
+    {
+        A.Auth.SignInError = new OperationCanceledException();
+        Assert.False(Await(A.Service.SignIn(CancellationToken.None)));
+        Assert.Null(A.Service.Account);
+        Assert.Empty(A.Messages); // the user cancelled it, there is nothing to tell
+    }
+
+    [Fact]
     public void Delete_cloud_data_offline_keeps_everything()
     {
         var b = Shared();

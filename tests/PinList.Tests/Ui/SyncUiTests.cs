@@ -64,6 +64,36 @@ public class SyncUiTests : UiTest
     }
 
     [AvaloniaFact]
+    public void Settings_say_whether_sync_never_ran_is_running_or_ran()
+    {
+        var s = UseFakeSync();
+        _cloud.Offline = true; // the first sync after signing in doesn't get through
+        SignIn();
+        Assert.True(UiHost.WaitUntil(() => !s.IsSyncing));
+        Assert.Equal("Not synced yet", Settings.Sync!.Status);
+
+        _cloud.Offline = false;
+        _cloud.Gate = new TaskCompletionSource();
+        var pass = s.SyncNow();
+        Assert.True(UiHost.WaitUntil(() => s.IsSyncing));
+        Assert.Equal("Syncing", Settings.Sync!.Status);
+
+        _cloud.Gate.SetResult();
+        _cloud.Gate = null;
+        Assert.True(UiHost.WaitUntil(() => pass.IsCompleted));
+        Assert.StartsWith("Synced ", Settings.Sync!.Status);
+    }
+
+    [AvaloniaFact]
+    public void Other_sync_problems_are_explained_in_their_own_words()
+    {
+        UseFakeSync();
+        var w = OpenNew(("A", new string[0]));
+        App.ExplainSyncProblem(w, "This list was saved by a newer PinList.").GetAwaiter().GetResult();
+        Assert.Equal("Sync problem: This list was saved by a newer PinList.", Dialogs.Shown.Single());
+    }
+
+    [AvaloniaFact]
     public void Fresh_install_has_no_sync_icon_and_settings_offer_sign_in()
     {
         var s = UseFakeSync();

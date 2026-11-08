@@ -61,6 +61,7 @@ For Macs with Apple Silicon (M1 or newer), macOS 12 or newer. A Mac app is a fol
    Then open PinList normally. (Alternatively: try to open it once, then **System Settings → Privacy & Security → Open Anyway**.)
 3. PinList lives in the **menu bar**, with a Dock icon only while the PinList window is open. On first start it opens the PinList window and adds itself to the login items. You can turn that off in **Settings**.
 4. Allow notifications when PinList asks – reminders use them. Set the alert style to **Persistent** (**Alerts** before macOS 15) so a reminder stays until you close it, and **Show in Notification Center** on to find it there later. PinList's **Settings** tells you when one of them is off.
+5. If you use Google sync, macOS may ask for your login password because *"PinList wants to use your confidential information stored in PinList in your keychain"*. This is your Google sign-in, which PinList keeps in the Keychain. Enter your password and click **Always Allow**. Since the app isn't signed with an Apple developer certificate, macOS sees each new version as a different app, so this comes back once after every update. If you click **Deny**, PinList can't read the sign-in and you have to sign in to Google again.
 
 If macOS says the app *"is damaged"*, sign it for your Mac and try again:
 
@@ -259,7 +260,7 @@ To see coverage:
 dotnet test PinList.Desktop.slnf -p:CollectCoverage=true -p:ExcludeByFile=**/obj/**%2c**/*.axaml
 ```
 
-CI fails if line coverage drops below 99 % or branch coverage below 92 %. The only code left out on purpose (`[ExcludeFromCodeCoverage]`) acts on the operating system itself: Win32 and macOS window calls, the real tray icon, opening Explorer/Finder, the system file pickers, the on-screen keyboard and the few words that differ between Windows and macOS (`OsText`).
+CI fails if line coverage drops below 99 % or branch coverage below 90 %. The only code left out on purpose (`[ExcludeFromCodeCoverage]`) acts on the operating system itself: Win32 and macOS window calls, the real tray icon, opening Explorer/Finder, the system file pickers, the on-screen keyboard and the few words that differ between Windows and macOS (`OsText`).
 
 The solution (`PinList.sln`) opens in Rider, Visual Studio or VS Code with the C# Dev Kit.
 
@@ -270,14 +271,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.7.0
-   git push origin master v2.7.0
+   git tag v2.7.1
+   git push origin master v2.7.1
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList.zip` and `PinList.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.7.0
-   git push -f origin v2.7.0
+   git tag -f v2.7.1
+   git push -f origin v2.7.1
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):

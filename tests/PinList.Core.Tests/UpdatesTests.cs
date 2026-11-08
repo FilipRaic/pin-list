@@ -331,4 +331,41 @@ public class UpdatesTests : StoreTestBase
         Assert.Single(ManualTimer.Created);
         Assert.True(timer.IsEnabled);
     }
+
+    [Fact]
+    public void Stopping_before_starting_does_nothing()
+    {
+        Make().Stop();
+        Assert.Empty(ManualTimer.Created);
+    }
+
+    [Fact]
+    public async Task The_GitHub_check_finds_a_newer_release()
+    {
+        var http = new FakeHttp();
+        http.Answer(HttpStatusCode.OK, Release());
+        Store.Data.Settings.CheckForUpdates = true;
+        var updates = Updates.ForGitHub(new HttpClient(http), new Version(2, 2, 0));
+
+        await updates.CheckNow();
+
+        Assert.Equal(new Version(2, 3, 0), updates.Available!.Version);
+        Assert.Equal(Downloads + "PinList.exe", updates.Available.ExeUrl);
+        Assert.Single(http.Requests);
+    }
+
+    [Fact]
+    public void A_file_without_a_download_address_is_skipped()
+    {
+        var info = Updates.Parse($$"""
+            {
+              "tag_name": "v2.3.0",
+              "assets": [
+                { "name": "PinList.exe" },
+                { "name": "PinList.exe", "browser_download_url": "{{Downloads}}PinList.exe" }
+              ]
+            }
+            """)!;
+        Assert.Equal(Downloads + "PinList.exe", info.ExeUrl);
+    }
 }

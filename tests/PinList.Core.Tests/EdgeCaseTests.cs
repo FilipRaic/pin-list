@@ -74,6 +74,91 @@ public class EdgeCaseTests : StoreTestBase
         Assert.NotEqual("", cat.Items[0].Id);
         Assert.Equal(("", ""), (data.Archive[0].CategoryId, data.Archive[0].BoardId));
     }
+
+    [Fact]
+    public void Showing_a_list_as_a_widget_again_can_be_undone()
+    {
+        var board = MakeBoard(("A", new[] { "a" }));
+        board.Widget = false;
+
+        Actions.SetWidget(board, true);
+        Assert.True(board.Widget);
+        Assert.True(Actions.Undo(out var what));
+        Assert.Equal("showing “Test” as a widget", what);
+        Assert.False(board.Widget);
+    }
+
+    [Fact]
+    public void Setting_the_same_due_day_again_changes_nothing()
+    {
+        var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];
+        Actions.SetDueDate(item, null); // none before, none now
+        Assert.False(Actions.CanUndo);
+
+        Actions.SetDueDate(item, new DateTime(2026, 11, 9, 8, 0, 0));
+        Actions.SetDueDate(item, new DateTime(2026, 11, 9, 17, 30, 0)); // the same day at another time
+        Assert.True(Actions.Undo());
+        Assert.Null(item.DueDate);
+        Assert.False(Actions.CanUndo);
+    }
+
+    [Fact]
+    public void Undoing_the_move_of_a_list_that_was_deleted_since_does_nothing()
+    {
+        var first = MakeBoard(("A", new[] { "a" }));
+        var second = MakeBoard(("B", new[] { "b" }));
+        Actions.MoveBoard(second, 0);
+        Actions.DeleteBoard(second);
+
+        Assert.True(Actions.Undo());
+        Assert.Equal(new[] { first }, Store.Data.Boards);
+    }
+
+    [Fact]
+    public void Undo_names_only_the_first_line_also_with_Windows_line_ends()
+    {
+        var item = MakeBoard(("A", new[] { "first\r\nsecond" })).Categories[0].Items[0];
+        Actions.Delete(item);
+        Assert.True(Actions.Undo(out var what));
+        Assert.Equal("deleting “first”", what);
+    }
+
+    [Fact]
+    public void A_save_that_was_never_scheduled_is_not_pending()
+    {
+        int saves = 0;
+        var saver = new DebouncedSaveScheduler(() => saves++);
+        Assert.False(saver.CancelPending());
+
+        saver.Schedule();
+        Assert.True(saver.CancelPending());
+        Assert.False(saver.CancelPending()); // cancelled already
+        Assert.Equal(0, saves);
+    }
+
+    [Fact]
+    public void Missing_settings_and_archive_load_as_empty()
+    {
+        var data = Store.Parse("""{ "boards": [], "settings": null, "archive": null }""", out _);
+        Assert.NotNull(data.Settings);
+        Assert.Equal("System", data.Settings.Theme);
+        Assert.Empty(data.Archive);
+    }
+
+    [Fact]
+    public void Import_keeps_the_synced_list_here_instead_of_its_copy_in_the_file()
+    {
+        var synced = MakeBoard(("A", new[] { "mine" }));
+        synced.Synced = true;
+        var imported = new AppData();
+        imported.Boards.Add(new Board { Id = synced.Id, Title = "Old copy" });
+        imported.Boards.Add(new Board { Title = "Other" });
+
+        Store.ReplaceAll(imported);
+
+        Assert.Same(synced, Store.Data.Boards[0]);
+        Assert.Equal(new[] { "Test", "Other" }, Store.Data.Boards.Select(b => b.Title));
+    }
 }
 
 public class EdgeCaseModelTests
@@ -94,6 +179,14 @@ public class EdgeCaseModelTests
 
     [Fact]
     public void No_time_text_is_not_a_time() => Assert.False(DateText.TryParseTime(null, out _));
+
+    [Fact]
+    public void Windows_line_ends_read_as_one_line()
+    {
+        Assert.Equal("first, second", new TodoItem { Text = "first\r\nsecond" }.AccessibleName);
+        var archived = new ArchivedItem { Text = "first\r\nsecond", CategoryName = "Work" };
+        Assert.StartsWith("first, second, completed ", archived.ToString());
+    }
 
     [Theory]
     [InlineData(2)]

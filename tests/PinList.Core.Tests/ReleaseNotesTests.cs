@@ -78,4 +78,26 @@ public class ReleaseNotesTests
         Assert.Equal(new[] { new NoteSpan("a b") }, ReleaseNotes.Spans("a ****b"));
         Assert.Empty(ReleaseNotes.Spans("**"));
     }
+
+    [Fact]
+    public void Italic_inside_bold_is_its_own_span()
+    {
+        Assert.Equal(new[]
+        {
+            new NoteSpan("a", Bold: true),
+            new NoteSpan("b", Bold: true, Italic: true),
+            new NoteSpan("c", Bold: true),
+        }, ReleaseNotes.Spans("**a*b*c**"));
+    }
+
+    [Fact]
+    public void Brackets_without_an_address_stay_as_they_are() =>
+        Assert.Equal("[just brackets]", string.Concat(ReleaseNotes.Spans("[just brackets]").Select(s => s.Text)));
+
+    [Fact]
+    public void A_dash_on_its_own_is_text_not_a_bullet()
+    {
+        var block = Assert.Single(ReleaseNotes.Parse("-"));
+        Assert.Equal((NoteKind.Text, "-"), (block.Kind, block.Plain));
+    }
 }
