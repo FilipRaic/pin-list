@@ -17,7 +17,8 @@ public partial class ConfirmDialog : Window
     /// <summary>For the XAML previewer only.</summary>
     public ConfirmDialog() : this("", "", Array.Empty<(string, DialogButtonKind)>(), 0) { }
 
-    internal ConfirmDialog(string title, string message, (string text, DialogButtonKind kind)[] buttons, int defaultIndex)
+    internal ConfirmDialog(string title, string message, (string text, DialogButtonKind kind)[] buttons, int defaultIndex,
+                           Control? extra = null)
     {
         InitializeComponent();
         Look.GrayscaleText(this);
@@ -27,6 +28,12 @@ public partial class ConfirmDialog : Window
         Title = title;
         AutomationProperties.SetHelpText(this, message);
         if (A11y.TextScale != 1.0) Scaler.LayoutTransform = new ScaleTransform(A11y.TextScale, A11y.TextScale);
+        if (extra != null)
+        {
+            Width = 460; // room for a longer text
+            Extra.Content = extra;
+            Extra.IsVisible = true;
+        }
         Width *= A11y.TextScale;
         MessageText.IsVisible = !string.IsNullOrEmpty(message);
 
@@ -57,6 +64,9 @@ public partial class ConfirmDialog : Window
     /// <summary>The buttons (tests click them).</summary>
     internal Panel ButtonPanel => Buttons;
 
+    /// <summary>What's below the message, if anything (tests look at it).</summary>
+    internal Control? ExtraContent => Extra.Content as Control;
+
     /// <summary>Shows the dialog; returns the index of the clicked button, or -1 for Esc.</summary>
     public static async Task<int> Choose(Window? owner, string title, string message, int defaultIndex,
                                          params (string text, DialogButtonKind kind)[] buttons)
@@ -64,6 +74,24 @@ public partial class ConfirmDialog : Window
         var dlg = new ConfirmDialog(title, message, buttons, defaultIndex);
         await DialogHost.Run(dlg, owner);
         return dlg._choice;
+    }
+
+    /// <summary>A new version and what's new in it. Returns true for Get it, false for Later or Esc.</summary>
+    public static async Task<bool> ShowUpdate(Window? owner, UpdateInfo update)
+    {
+        var notes = ReleaseNotesView.Build(update.Notes, 13);
+        var extra = notes == null ? null : new ScrollViewer
+        {
+            Content = notes,
+            MaxHeight = 340,
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            Padding = new Thickness(0, 0, 12, 0), // room for the scroll bar
+        };
+        var dlg = new ConfirmDialog($"PinList {update.Version} is available",
+            notes == null ? "Get it opens the download page." : "What's new:",
+            new[] { ("Later", DialogButtonKind.Normal), ("Get it", DialogButtonKind.Accent) }, 1, extra);
+        await DialogHost.Run(dlg, owner);
+        return dlg._choice == 1;
     }
 }
 

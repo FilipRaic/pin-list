@@ -56,10 +56,13 @@
                                    Margin="12,2,0,14"/>
                         <Button x:Name="NavSettings" DockPanel.Dock="Bottom" Classes="nav" Click="Nav_Click" Tag="Settings"
                                 AutomationProperties.Name="Settings">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <local:LineIcon Data="{DynamicResource Line.Settings}"/>
-                                <TextBlock Text="Settings"/>
-                            </StackPanel>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <local:LineIcon Data="{DynamicResource Line.Settings}" Margin="0,0,10,0"/>
+                                <TextBlock Grid.Column="1" Text="Settings"/>
+                                <!-- a new version is out -->
+                                <Ellipse x:Name="UpdateDot" Grid.Column="2" Classes="updatedot" IsVisible="False"
+                                         VerticalAlignment="Center" Margin="0,0,2,0"/>
+                            </Grid>
                         </Button>
                         <StackPanel>
                             <Button x:Name="NavLists" Classes="nav" Click="Nav_Click" Tag="Lists" AutomationProperties.Name="All lists">

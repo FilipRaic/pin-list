@@ -387,7 +387,7 @@ public class AppTests : UiTest
             Assert.Contains("Tray icon: no status bar", File.ReadAllText(Path.Combine(UiHost.DataDir, "log.txt")));
 
             // things that would use the tray don't fail without one
-            var updates = new Updates(_ => Task.FromResult<UpdateInfo?>(new UpdateInfo(new Version(9, 0, 0), "https://example.com", null)), new Version(2, 0, 0));
+            var updates = new Updates(_ => Task.FromResult<UpdateInfo?>(new UpdateInfo(new Version(9, 0, 0))), new Version(2, 0, 0));
             App.UseUpdates(updates);
             updates.Enabled = true;
             await updates.CheckNow();

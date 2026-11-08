@@ -48,6 +48,12 @@ public interface ISettingsHost
     /// <summary>"You're on 2.4.0, the newest" or "PinList 2.5.0 is out".</summary>
     string VersionText { get; }
 
+    /// <summary>
+    /// Opens the download of the newer version (a Get it button next to Check for updates). Null while there is
+    /// none, and on the phone, which has its own bar for it at the top of Settings.
+    /// </summary>
+    Action? GetUpdate { get; }
+
     Task Export();
     Task Import();
 

@@ -154,7 +154,7 @@ jobs:
       - name: Build PinList.app
         run: |
           bash scripts/package-mac.sh "${GITHUB_REF_NAME#v}" release
-          cd release && shasum -a 256 PinList-mac-arm64.zip > PinList-mac-arm64.zip.sha256
+          cd release && shasum -a 256 PinList.zip > PinList.zip.sha256
 
       - uses: actions/upload-artifact@v7
         with:
@@ -197,8 +197,8 @@ jobs:
           rm "$RUNNER_TEMP/pinlist.keystore"
 
           mkdir -p release
-          cp out/com.pinlist.app-Signed.apk release/PinList-android.apk
-          cd release && sha256sum PinList-android.apk > PinList-android.apk.sha256
+          cp out/com.pinlist.app-Signed.apk release/PinList.apk
+          cd release && sha256sum PinList.apk > PinList.apk.sha256
 
       - uses: actions/upload-artifact@v7
         with:
@@ -232,9 +232,9 @@ jobs:
           files: |
             release/PinList.exe
             release/PinList.exe.sha256
-            release/PinList-mac-arm64.zip
-            release/PinList-mac-arm64.zip.sha256
-            release/PinList-android.apk
-            release/PinList-android.apk.sha256
+            release/PinList.zip
+            release/PinList.zip.sha256
+            release/PinList.apk
+            release/PinList.apk.sha256
           fail_on_unmatched_files: true
           body_path: ${{ runner.temp }}/release-notes.md

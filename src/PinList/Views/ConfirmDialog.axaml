@@ -14,6 +14,8 @@
                 <StackPanel>
                     <TextBlock x:Name="TitleText" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock x:Name="MessageText" TextWrapping="Wrap" Foreground="{DynamicResource Text3}" LineHeight="19"/>
+                    <!-- More below the message (what's new in a version) -->
+                    <ContentControl x:Name="Extra" IsVisible="False" Margin="0,12,0,0"/>
                     <!-- Buttons are added from code -->
                     <StackPanel x:Name="Buttons" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"/>
                 </StackPanel>

@@ -15,6 +15,9 @@ public interface IDialogs
     /// <summary>Returns the index of the clicked button, or -1 for Esc.</summary>
     Task<int> Choose(Window? owner, string title, string message, int defaultIndex, params (string text, DialogButtonKind kind)[] buttons);
 
+    /// <summary>A new version and what's new in it. Returns true for Get it.</summary>
+    Task<bool> ShowUpdate(Window? owner, UpdateInfo update);
+
     Task<DateTime?> PickDueDate(Window owner, DateTime? current);
     Task<DateTime?> PickReminder(Window owner, DateTime? current, DateTime? dueDate);
 
@@ -36,6 +39,8 @@ public sealed class AppDialogs : IDialogs
 {
     public Task<int> Choose(Window? owner, string title, string message, int defaultIndex, params (string text, DialogButtonKind kind)[] buttons) =>
         ConfirmDialog.Choose(owner, title, message, defaultIndex, buttons);
+
+    public Task<bool> ShowUpdate(Window? owner, UpdateInfo update) => ConfirmDialog.ShowUpdate(owner, update);
 
     public Task<DateTime?> PickDueDate(Window owner, DateTime? current) => DateDialog.PickDueDate(owner, current);
 

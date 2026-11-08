@@ -7,16 +7,14 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Avalonia.VisualTree;
 
 namespace PinList;
 
 /// <summary>
 /// PinList's own notification in the top right corner of the screen, for macOS when it doesn't allow PinList's
-/// notifications (and for the notice about a new version there). Clicking it runs its action and closes it, the ×
-/// only closes it. A reminder stays until it's clicked or closed, other notices go away on their own. Several are
-/// stacked under each other.
+/// notifications. Clicking it runs its action and closes it, the × only closes it. It stays until it's clicked or
+/// closed. Several are stacked under each other.
 /// </summary>
 static class ReminderPopup
 {
@@ -29,8 +27,8 @@ static class ReminderPopup
     /// <summary>The notifications on the screen now, top first (tests look at them).</summary>
     internal static IReadOnlyList<Window> Shown => Open;
 
-    /// <param name="closeAfter">Closes it after this time; null keeps it until the user clicks or closes it.</param>
-    public static Window Show(string title, string text, Action onClick, TimeSpan? closeAfter = null)
+    /// <summary>Shows a notification. It stays until the user clicks or closes it.</summary>
+    public static Window Show(string title, string text, Action onClick)
     {
         var body = new StackPanel { Spacing = 4, Margin = new Thickness(0, 0, 28, 0) };
         body.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = 14 });
@@ -95,13 +93,6 @@ static class ReminderPopup
         };
         w.Opened += (_, _) => Native.MakeToolWindow(w);
         w.SizeChanged += (_, _) => Arrange();
-        if (closeAfter is { } after)
-        {
-            var timer = new DispatcherTimer { Interval = after };
-            timer.Tick += (_, _) => { timer.Stop(); w.Close(); };
-            w.Opened += (_, _) => timer.Start();
-            w.Closed += (_, _) => timer.Stop();
-        }
 
         Open.Add(w);
         Arrange();

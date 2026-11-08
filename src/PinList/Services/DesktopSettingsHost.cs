@@ -130,6 +130,8 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
         }
     }
 
+    public Action? GetUpdate => _app.UpdateCheck?.Available != null ? _app.GetUpdate : null;
+
     public Task Export() => _app.ExportData(null);
     public Task Import() => _app.ImportData(null);
 

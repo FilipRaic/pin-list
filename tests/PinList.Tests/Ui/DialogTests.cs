@@ -73,6 +73,40 @@ public class ConfirmDialogTests : DialogTest
     }
 
     [AvaloniaFact]
+    public void A_new_version_shows_what_s_new_and_Get_it_returns_true()
+    {
+        var update = new UpdateInfo(new Version(2, 7, 0), Notes: "### Added\n- **New** thing");
+        bool result = Run<bool, ConfirmDialog>(() => new AppDialogs().ShowUpdate(null, update), d =>
+        {
+            Assert.Equal("PinList 2.7.0 is available", d.Title);
+            Assert.Equal("What's new:", Named<TextBlock>(d, "MessageText").Text);
+            Assert.Equal(460, d.Width);
+            var notes = Assert.IsType<ScrollViewer>(d.ExtraContent);
+            Assert.Contains("releasenotes", Assert.IsType<StackPanel>(notes.Content).Classes);
+            var b = Buttons(d);
+            Assert.Equal(new object[] { "Later", "Get it" }, b.Select(x => x.Content!));
+            Assert.True(b[1].IsDefault);
+            Click(b[1]);
+        });
+        Assert.True(result);
+    }
+
+    [AvaloniaFact]
+    public void A_new_version_without_notes_and_Later_returns_false()
+    {
+        var update = new UpdateInfo(new Version(2, 7, 0));
+        bool later = Run<bool, ConfirmDialog>(() => ConfirmDialog.ShowUpdate(null, update), d =>
+        {
+            Assert.Equal("Get it opens the download page.", Named<TextBlock>(d, "MessageText").Text);
+            Assert.Null(d.ExtraContent);
+            Assert.False(Named<ContentControl>(d, "Extra").IsVisible);
+            Click(Buttons(d)[0]);
+        });
+        Assert.False(later);
+        Assert.False(Run<bool, ConfirmDialog>(() => ConfirmDialog.ShowUpdate(null, update), d => Press(d, Key.Escape)));
+    }
+
+    [AvaloniaFact]
     public void Opens_over_its_owner_and_hides_an_empty_message()
     {
         var owner = OpenNew(("A", new string[0]));
