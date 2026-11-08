@@ -517,4 +517,21 @@
         <Setter Property="Padding" Value="8,4"/>
         <Setter Property="MaxWidth" Value="420"/>
     </Style>
+
+    <!-- What's new in a version (the update popup) -->
+    <Style Selector="StackPanel.releasenotes TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="StackPanel.releasenotes TextBlock.noteheading">
+        <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- The dot on Settings while a new version is out -->
+    <Style Selector="Ellipse.updatedot">
+        <Setter Property="Width" Value="8"/>
+        <Setter Property="Height" Value="8"/>
+        <Setter Property="Fill" Value="{DynamicResource Accent}"/>
+    </Style>
 </Styles>

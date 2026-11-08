@@ -112,7 +112,6 @@ public partial class App : Application
     readonly List<BoardWindow> _windows = new();
     readonly Reminders _reminders = new();
     Updates? _updates;
-    bool _lastNotificationIsUpdate;
     static bool _errorLoggingHooked;
 
     internal IReadOnlyList<BoardWindow> OpenWindows => _windows;
@@ -244,7 +243,6 @@ public partial class App : Application
         System.Net.NetworkInformation.NetworkChange.NetworkAvailabilityChanged -= OnNetworkChange;
         UseSync(null);
         UseUpdates(null);
-        _lastNotificationIsUpdate = false;
 #if WINDOWS
         SystemEvents.SessionEnding -= OnSessionEnding;
         SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
@@ -292,10 +290,18 @@ public partial class App : Application
     void OnNetworkChange(object? sender, System.Net.NetworkInformation.NetworkAvailabilityEventArgs e) =>
         OnNetworkAvailabilityChanged(sender, e.IsAvailable);
 
-    /// <summary>The network came back: sync now instead of waiting for the next try (spec 5.2).</summary>
+    /// <summary>
+    /// The network came back: sync now instead of waiting for the next try (spec 5.2), and look for a new version
+    /// again if the last look failed (e.g. PinList started before the computer was online).
+    /// </summary>
     internal void OnNetworkAvailabilityChanged(object? sender, bool available)
     {
-        if (available) Dispatcher.UIThread.Post(() => _ = SyncService.Current?.SyncNow());
+        if (!available) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _ = SyncService.Current?.SyncNow();
+            _ = _updates?.RetryIfFailed();
+        });
     }
 
     /// <summary>Replaces the sync service (on start, on exit, and in tests).</summary>
@@ -393,18 +399,30 @@ public partial class App : Application
         OnUpdatesChanged();
     }
 
-    /// <summary>A new version or the setting changed: the tray menu follows.</summary>
-    void OnUpdatesChanged() => _tray?.SetMenu(TrayMenuEntries());
-
-    /// <summary>A new version, found for the first time: a notification that opens its download page.</summary>
-    void OnUpdateFound(UpdateInfo update)
+    /// <summary>A new version or the setting changed: the tray menu and the dot on Settings follow.</summary>
+    void OnUpdatesChanged()
     {
-        _lastNotificationIsUpdate = true;
-        _tray?.ShowNotification($"PinList {update.Version} is available", "Click here to open the download page.");
+        _tray?.SetMenu(TrayMenuEntries());
+        _main?.RefreshUpdateDot();
     }
 
-    /// <summary>Opens the download page of the new version (or of the latest release).</summary>
-    internal void OpenUpdatePage() => OpenUrl(_updates?.Available?.PageUrl ?? Updates.ReleasesPage);
+    /// <summary>A new version, found for the first time: a dialog with what's new in it, to get it now or later.</summary>
+    void OnUpdateFound(UpdateInfo update) => _ = ShowUpdate(update);
+
+    internal async Task ShowUpdate(UpdateInfo update)
+    {
+        if (await Dialogs.Current.ShowUpdate(null, update)) GetUpdate();
+    }
+
+    /// <summary>
+    /// Downloads the new version for this computer in the browser (PinList.exe or, on a Mac, PinList.zip). Without
+    /// that file in the release, or without a new version, it opens the Download section of PinList's website.
+    /// </summary>
+    internal void GetUpdate()
+    {
+        var update = _updates?.Available;
+        OpenUrl((OsText.IsMac ? update?.MacUrl : update?.ExeUrl) ?? Updates.DownloadsPage);
+    }
 
     /// <summary>Asked once (on the first start of a version with the update check), until it's answered.</summary>
     internal async Task AskAboutUpdates()
@@ -412,7 +430,8 @@ public partial class App : Application
         if (_updates is not { Enabled: null } updates) return;
         int choice = await Dialogs.Current.Choose(null, "Check for updates?",
             "PinList can look for a new version about once a day and tell you when there is one. " +
-            "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent.\n\n" +
+            "It only asks GitHub for the number of the latest version and what's new in it. " +
+            "Nothing about you or your lists is sent.\n\n" +
             "You can change this later with Check for updates in Settings.", 1,
             ("No", DialogButtonKind.Normal), ("Yes", DialogButtonKind.Accent));
         if (choice >= 0) updates.Enabled = choice == 1; // closed without answering: asked again on the next start
@@ -420,7 +439,7 @@ public partial class App : Application
 
     /// <summary>"Get PinList x.y.z" at the top of the tray menu, while a newer version is available.</summary>
     IEnumerable<TrayEntry> UpdateEntries() => _updates?.Available is { } u
-        ? new[] { new TrayEntry($"Get PinList {u.Version}", OpenUpdatePage), TrayEntry.Separator }
+        ? new[] { new TrayEntry($"Get PinList {u.Version}", GetUpdate), TrayEntry.Separator }
         : Array.Empty<TrayEntry>();
 
     // ================= Errors =================
@@ -696,7 +715,6 @@ public partial class App : Application
     internal void ShowReminders(IReadOnlyList<TodoItem> due)
     {
         if (_tray == null) return;
-        _lastNotificationIsUpdate = false;
         var (title, text) = Reminders.Describe(due);
         _tray.ShowReminder(title, text, () => ShowReminderItems(due));
     }
@@ -707,14 +725,6 @@ public partial class App : Application
         ShowAllBoards();
         var item = due.FirstOrDefault(i => Store.Locate(i) != null);
         if (item != null) BoardWindow.Highlight(item);
-    }
-
-    /// <summary>Clicking the notification about a new version opens its download page.</summary>
-    internal void OnNotificationClicked()
-    {
-        if (!_lastNotificationIsUpdate) return;
-        _lastNotificationIsUpdate = false;
-        OpenUpdatePage();
     }
 
     // ================= Export and import =================
@@ -809,7 +819,6 @@ public partial class App : Application
         }
         _tray.LeftClick += ShowAllBoards;
         _tray.RightClick += () => ShowTrayMenu();
-        _tray.NotificationClicked += OnNotificationClicked;
         _tray.SetMenu(TrayMenuEntries());
     }
 
@@ -874,7 +883,7 @@ public partial class App : Application
         var menu = new ContextMenu { Placement = PlacementMode.TopEdgeAlignedLeft };
         if (_updates?.Available is { } update)
         {
-            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", OpenUpdatePage, icon: "Line.Download"));
+            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", GetUpdate, icon: "Line.Download"));
             menu.Items.Add(new Separator());
         }
         menu.Items.Add(CreateMenuItem("All lists", ShowListsWindow, icon: "Line.Grid"));

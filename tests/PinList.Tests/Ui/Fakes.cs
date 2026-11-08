@@ -2,7 +2,7 @@ using Avalonia.Controls;
 
 namespace PinList.Tests;
 
-/// <summary>Tray icon that records notifications and lets tests "click" it.</summary>
+/// <summary>Tray icon that records reminders and lets tests "click" them.</summary>
 public sealed class FakeTray : ITrayIcon
 {
     public readonly List<(string title, string text)> Notifications = new();
@@ -11,15 +11,8 @@ public sealed class FakeTray : ITrayIcon
 
     public event Action? LeftClick;
     public event Action? RightClick;
-    public event Action? NotificationClicked;
 
     Action? _reminderClick;
-
-    public void ShowNotification(string title, string text)
-    {
-        Notifications.Add((title, text));
-        _reminderClick = null;
-    }
 
     public void ShowReminder(string title, string text, Action onClick)
     {
@@ -31,12 +24,8 @@ public sealed class FakeTray : ITrayIcon
 
     public void ClickLeft() => LeftClick?.Invoke();
     public void ClickRight() => RightClick?.Invoke();
-    /// <summary>Clicks the last notification: a reminder runs its own action, others raise NotificationClicked.</summary>
-    public void ClickNotification()
-    {
-        if (_reminderClick != null) _reminderClick();
-        else NotificationClicked?.Invoke();
-    }
+    /// <summary>Clicks the last reminder.</summary>
+    public void ClickNotification() => _reminderClick?.Invoke();
 }
 
 /// <summary>Dialogs answered by the test. Every dialog that was shown is recorded.</summary>
@@ -46,6 +35,8 @@ public sealed class FakeDialogs : IDialogs
 
     /// <summary>Answer for Choose (gets the title; returns the button index). Default: Esc.</summary>
     public Func<string, int> ChooseAnswer = _ => -1;
+    /// <summary>Answer for ShowUpdate: true is Get it. Default: Later.</summary>
+    public bool UpdateAnswer;
     public DateTime? DueDateAnswer;
     public DateTime? ReminderAnswer;
     public string? SaveFileAnswer;
@@ -55,6 +46,7 @@ public sealed class FakeDialogs : IDialogs
     {
         Shown.Clear();
         ChooseAnswer = _ => -1;
+        UpdateAnswer = false;
         DueDateAnswer = ReminderAnswer = null;
         SaveFileAnswer = OpenFileAnswer = null;
     }
@@ -63,6 +55,12 @@ public sealed class FakeDialogs : IDialogs
     {
         Shown.Add($"{title}: {message}");
         return Task.FromResult(ChooseAnswer(title));
+    }
+
+    public Task<bool> ShowUpdate(Window? owner, UpdateInfo update)
+    {
+        Shown.Add($"update: {update.Version}");
+        return Task.FromResult(UpdateAnswer);
     }
 
     public Task<DateTime?> PickDueDate(Window owner, DateTime? current)

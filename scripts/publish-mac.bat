@@ -1,5 +1,5 @@
 @echo off
-rem Builds PinList.app for Apple Silicon on Windows into publish\mac\PinList-mac-arm64.zip (see publish-mac.ps1).
+rem Builds PinList.app for Apple Silicon on Windows into publish\mac\PinList.zip (see publish-mac.ps1).
 rem On the Mac it still needs one Terminal command to sign it, printed at the end.
 cd /d "%~dp0.."
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0publish-mac.ps1"

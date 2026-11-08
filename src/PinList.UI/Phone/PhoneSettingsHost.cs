@@ -114,6 +114,8 @@ sealed class PhoneSettingsHost : ISettingsHost
         }
     }
 
+    public Action? GetUpdate => null; // the bar at the top of Settings
+
     public Task Export() => _view.Export();
     public Task Import() => _view.Import();
 

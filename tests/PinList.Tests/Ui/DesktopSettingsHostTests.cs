@@ -244,7 +244,7 @@ public class DesktopSettingsHostTests : UiTest
         Await(none.CheckNow());
         Assert.Equal("You're on 2.4.0, the newest", host.VersionText);
 
-        var found = UseUpdates(new UpdateInfo(new Version(2, 5, 0), "https://example.com/page", null));
+        var found = UseUpdates(new UpdateInfo(new Version(2, 5, 0)));
         found.Enabled = true;
         Await(found.CheckNow());
         Assert.Equal("PinList 2.5.0 is out", host.VersionText);

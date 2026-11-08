@@ -137,7 +137,7 @@ public partial class PhoneTests
         Assert.True(UiHost.WaitUntil(() => host.VersionText == "You're on 2.4.0, the newest"));
         Assert.True(changes > 0);
 
-        var found = new Updates(_ => Task.FromResult<UpdateInfo?>(new UpdateInfo(new Version(2, 5, 0), "https://example.com", null)), new Version(2, 4, 0));
+        var found = new Updates(_ => Task.FromResult<UpdateInfo?>(new UpdateInfo(new Version(2, 5, 0))), new Version(2, 4, 0));
         _view.UpdateCheck = found;
         found.Enabled = true;
         WaitFor(found.CheckNow());

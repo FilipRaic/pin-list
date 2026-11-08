@@ -11,10 +11,6 @@ public interface ITrayIcon : IDisposable
 {
     event Action? LeftClick;
     event Action? RightClick;
-    event Action? NotificationClicked;
-
-    /// <summary>Shows a notification that goes away on its own (a new version). Clicking it raises NotificationClicked.</summary>
-    void ShowNotification(string title, string text);
 
     /// <summary>Shows a reminder. It stays on the screen until it's clicked (that runs <paramref name="onClick"/>) or closed.</summary>
     void ShowReminder(string title, string text, Action onClick);
@@ -44,13 +40,11 @@ public sealed class TrayIcon : ITrayIcon
 
     public event Action? LeftClick;
     public event Action? RightClick;
-    public event Action? NotificationClicked;
 
     public TrayIcon(System.Drawing.Icon icon, bool visible = true)
     {
         _icon = new WinForms.NotifyIcon { Icon = icon, Text = "PinList", Visible = visible };
         _icon.MouseUp += (_, e) => OnMouseUp(e.Button);
-        _icon.BalloonTipClicked += (_, _) => NotificationClicked?.Invoke();
     }
 
     /// <summary>
@@ -62,9 +56,6 @@ public sealed class TrayIcon : ITrayIcon
         if (button == WinForms.MouseButtons.Left) LeftClick?.Invoke();
         else if (button == WinForms.MouseButtons.Right) RightClick?.Invoke();
     }
-
-    public void ShowNotification(string title, string text) =>
-        _icon.ShowBalloonTip(10000, title, text, WinForms.ToolTipIcon.None);
 
     /// <summary>A Windows notification that stays until it's dismissed (a balloon goes away after a few seconds).</summary>
     public void ShowReminder(string title, string text, Action onClick) => WindowsToasts.ShowReminder(title, text, onClick);

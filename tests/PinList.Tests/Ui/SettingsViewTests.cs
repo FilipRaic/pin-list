@@ -24,6 +24,7 @@ sealed class FakeSettingsHost : ISettingsHost
     public int NotificationSettingsOpened;
     public void OpenNotificationSettings() => NotificationSettingsOpened++;
     public string VersionText { get; set; } = "You're on 2.4.0, the newest";
+    public Action? GetUpdate { get; set; }
     public int Exports, Imports, FolderOpens, Exits;
     public Task Export() { Exports++; return Task.CompletedTask; }
     public Task Import() { Imports++; return Task.CompletedTask; }
@@ -189,6 +190,24 @@ public class SettingsViewTests : UiTest
         Click(open);
         Click(ButtonNamed(view, "Exit"));
         Assert.Equal((1, 1, 1, 1), (_host.Exports, _host.Imports, _host.FolderOpens, _host.Exits));
+    }
+
+    [AvaloniaFact]
+    public void Get_it_shows_next_to_Check_for_updates_while_a_new_version_is_out()
+    {
+        _host.UpdatesOn = true;
+        _host.VersionText = "PinList 2.5.0 is out";
+        _host.GetUpdate = () => _ran.Add("get");
+        var view = Show();
+        var get = ButtonNamed(view, "Get it");
+        Assert.Equal("Get the new version", AutomationProperties.GetName(get));
+        Assert.Contains("accent", get.Classes);
+        Click(get);
+        Assert.Equal(new[] { "get" }, _ran);
+
+        _host.GetUpdate = null;
+        view.Refresh();
+        Assert.DoesNotContain(FindAll<Button>(view), b => b.Content as string == "Get it");
     }
 
     [AvaloniaFact]

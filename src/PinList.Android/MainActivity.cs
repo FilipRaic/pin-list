@@ -35,6 +35,8 @@ public class MainActivity : AvaloniaMainActivity
         base.OnResume();
         AndroidGoogleAuth.CurrentActivity = this;
         _ = SyncService.Current?.SyncNow(); // back in the app: get what changed elsewhere (spec 9.9)
+        // and look for a new version again if the last look couldn't reach GitHub (offline, GitHub down)
+        _ = (Avalonia.Application.Current as PhoneApp)?.View?.UpdateCheck?.RetryIfFailed();
     }
 
     protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)

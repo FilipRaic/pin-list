@@ -1,4 +1,4 @@
-# Builds PinList.app for Apple Silicon on Windows and zips it into publish\mac\PinList-mac-arm64.zip.
+# Builds PinList.app for Apple Silicon on Windows and zips it into publish\mac\PinList.zip.
 # The same as scripts/package-mac.sh, except the signature: that needs a Mac. After unzipping on the Mac, run
 #   codesign --force --deep --sign - PinList.app && xattr -cr PinList.app
 # Uses only what Windows has: dotnet, System.Drawing (icon sizes) and tar.exe (a zip that keeps macOS permissions).
@@ -11,7 +11,7 @@ $work = Join-Path $env:TEMP "pinlist-mac-build"
 $out = Join-Path $repo "publish\mac"
 if (Test-Path $work) { Remove-Item $work -Recurse -Force }
 # The old zip goes first, so a failed build never leaves an outdated one that looks new
-$oldZip = Join-Path $out "PinList-mac-arm64.zip"
+$oldZip = Join-Path $out "PinList.zip"
 if (Test-Path $oldZip) { Remove-Item $oldZip }
 
 Write-Host "Building PinList $version for macOS (Apple Silicon)..."
@@ -77,11 +77,11 @@ $lines.Insert(1, "PinList.app type=dir mode=0755")
 [IO.File]::WriteAllLines("$work\files.mtree", $lines)
 
 # Zipped in the temp folder and moved when complete, so a half-written zip (a closed window) never lands in publish\mac
-& "$env:SystemRoot\System32\tar.exe" --format zip -cf "$work\PinList-mac-arm64.zip" "@files.mtree"
+& "$env:SystemRoot\System32\tar.exe" --format zip -cf "$work\PinList.zip" "@files.mtree"
 if ($LASTEXITCODE -ne 0) { throw "Zipping failed." }
 New-Item -ItemType Directory -Force $out | Out-Null
-$zip = Join-Path $out "PinList-mac-arm64.zip"
-Move-Item "$work\PinList-mac-arm64.zip" $zip -Force
+$zip = Join-Path $out "PinList.zip"
+Move-Item "$work\PinList.zip" $zip -Force
 Set-Location $repo
 Remove-Item $work -Recurse -Force
 

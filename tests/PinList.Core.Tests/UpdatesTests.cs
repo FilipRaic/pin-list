@@ -9,16 +9,17 @@ namespace PinList.Tests;
 public class UpdatesTests : StoreTestBase
 {
     const string Repo = "https://github.com/FilipRaic/pin-list/";
+    const string Downloads = Repo + "releases/download/v2.3.0/";
 
     static string Release(string tag = "v2.3.0", bool draft = false, bool prerelease = false,
-                          string page = Repo + "releases/tag/v2.3.0",
-                          string apk = Repo + "releases/download/v2.3.0/PinList-android.apk") => $$"""
+                          string apk = Downloads + "PinList.apk", string apkName = "PinList.apk") => $$"""
         {
           "tag_name": "{{tag}}", "draft": {{(draft ? "true" : "false")}}, "prerelease": {{(prerelease ? "true" : "false")}},
-          "html_url": "{{page}}",
+          "html_url": "{{Repo}}releases/tag/v2.3.0",
           "assets": [
-            { "name": "PinList.exe", "browser_download_url": "{{Repo}}releases/download/v2.3.0/PinList.exe" },
-            { "name": "PinList-android.apk", "browser_download_url": "{{apk}}" }
+            { "name": "PinList.exe", "browser_download_url": "{{Downloads}}PinList.exe" },
+            { "name": "PinList.zip", "browser_download_url": "{{Downloads}}PinList.zip" },
+            { "name": "{{apkName}}", "browser_download_url": "{{apk}}" }
           ]
         }
         """;
@@ -39,7 +40,7 @@ public class UpdatesTests : StoreTestBase
     }
 
     readonly Script _github = new();
-    static UpdateInfo Info(string version) => new(Version.Parse(version), Repo + "releases/tag/v" + version, null);
+    static UpdateInfo Info(string version) => new(Version.Parse(version), ExeUrl: Repo + "releases/download/v" + version + "/PinList.exe");
     Updates Make(string current = "2.2.0.0") => new(_github.Latest, Version.Parse(current));
 
     // ================= Reading GitHub's answer =================
@@ -59,27 +60,46 @@ public class UpdatesTests : StoreTestBase
     public void Other_tags_are_not_versions(string? tag) => Assert.Null(Updates.ParseVersion(tag));
 
     [Fact]
-    public void A_release_gives_its_version_page_and_apk()
+    public void A_release_gives_its_version_and_the_download_of_each_app()
     {
         var info = Updates.Parse(Release())!;
         Assert.Equal(new Version(2, 3, 0), info.Version);
-        Assert.Equal(Repo + "releases/tag/v2.3.0", info.PageUrl);
-        Assert.Equal(Repo + "releases/download/v2.3.0/PinList-android.apk", info.ApkUrl);
+        Assert.Equal(Downloads + "PinList.exe", info.ExeUrl);
+        Assert.Equal(Downloads + "PinList.zip", info.MacUrl);
+        Assert.Equal(Downloads + "PinList.apk", info.ApkUrl);
+        Assert.Null(info.Notes); // no release notes
     }
+
+    [Fact]
+    public void Files_with_other_names_are_not_downloads()
+    {
+        var info = Updates.Parse(Release(apk: Downloads + "PinList-android.apk", apkName: "PinList-android.apk"))!;
+        Assert.Null(info.ApkUrl);
+    }
+
+    [Theory]
+    [InlineData("\"  ### Added\\n- New  \"", "### Added\n- New")]
+    [InlineData("\"   \"", null)]
+    [InlineData("7", null)]
+    public void A_release_gives_its_notes(string body, string? notes) =>
+        Assert.Equal(notes, Updates.Parse($$"""{ "tag_name": "v2.3.0", "body": {{body}} }""")!.Notes);
 
     [Fact]
     public void Links_outside_PinList_s_repository_are_not_used()
     {
-        var info = Updates.Parse(Release(page: "https://example.com/pinlist", apk: "https://example.com/PinList-android.apk"))!;
-        Assert.Equal(Updates.ReleasesPage, info.PageUrl);
+        var info = Updates.Parse(Release(apk: "https://example.com/PinList.apk"))!;
         Assert.Null(info.ApkUrl);
+        Assert.NotNull(info.ExeUrl);
     }
 
-    [Fact]
-    public void A_release_without_links_still_has_the_releases_page()
+    [Theory]
+    [InlineData("""{ "tag_name": "v2.3.0", "assets": [ 7, { "name": 3 } ] }""")]
+    [InlineData("""{ "tag_name": "v2.3.0" }""")]
+    public void A_release_without_files_has_no_downloads(string json)
     {
-        var info = Updates.Parse("""{ "tag_name": "v2.3.0", "assets": [ 7, { "name": 3 } ] }""")!;
-        Assert.Equal(Updates.ReleasesPage, info.PageUrl);
+        var info = Updates.Parse(json)!;
+        Assert.Null(info.ExeUrl);
+        Assert.Null(info.MacUrl);
         Assert.Null(info.ApkUrl);
     }
 
@@ -122,7 +142,43 @@ public class UpdatesTests : StoreTestBase
         Assert.Null(await Updates.Latest(new HttpClient(http), CancellationToken.None));
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    [InlineData(HttpStatusCode.Forbidden)] // too many requests
+    public async Task An_error_from_GitHub_is_a_failed_check(HttpStatusCode status)
+    {
+        var http = new FakeHttp();
+        http.Answer(status, """{ "message": "Unavailable" }""");
+        await Assert.ThrowsAsync<HttpRequestException>(() => Updates.Latest(new HttpClient(http), CancellationToken.None));
+    }
+
     // ================= Checking =================
+
+    [Fact]
+    public async Task A_failed_check_is_tried_again_and_a_working_one_is_not()
+    {
+        Store.Data.Settings.CheckForUpdates = true;
+        var updates = Make();
+        var found = new List<UpdateInfo>();
+        updates.Found += found.Add;
+
+        await updates.RetryIfFailed(); // nothing failed yet: GitHub isn't asked
+        Assert.Equal(0, _github.Asked);
+
+        _github.Answers.Enqueue(() => throw new HttpRequestException("offline"));
+        await updates.CheckNow();
+        Assert.True(updates.LastCheckFailed);
+        Assert.Empty(found);
+
+        _github.Answers.Enqueue(() => Info("2.3.0")); // the network is back
+        await updates.RetryIfFailed();
+        Assert.False(updates.LastCheckFailed);
+        Assert.Equal(new Version(2, 3, 0), Assert.Single(found).Version);
+
+        await updates.RetryIfFailed(); // it worked: not asked again until the next daily check
+        Assert.Equal(2, _github.Asked);
+    }
 
     [Fact]
     public async Task Nothing_is_asked_until_the_user_said_yes()

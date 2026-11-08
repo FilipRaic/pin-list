@@ -1,5 +1,5 @@
 @echo off
-rem Builds the Android app, signed with the release key, into publish\android\PinList-android.apk.
+rem Builds the Android app, signed with the release key, into publish\android\PinList.apk.
 rem Asks for the keystore password while it runs (hidden, never saved or shown), unless PINLIST_KEYSTORE_PASSWORD is set.
 rem Usage: scripts\publish-android.bat [path\to\keystore]   (default: pinlist.keystore in the repo folder)
 setlocal
@@ -36,8 +36,8 @@ if errorlevel 1 (
 )
 
 if not exist "publish\android" mkdir "publish\android"
-copy /y "%BUILD%\com.pinlist.app-Signed.apk" "publish\android\PinList-android.apk" >nul
+copy /y "%BUILD%\com.pinlist.app-Signed.apk" "publish\android\PinList.apk" >nul
 rmdir /s /q "%BUILD%"
 echo.
-echo Done: %cd%\publish\android\PinList-android.apk
+echo Done: %cd%\publish\android\PinList.apk
 pause

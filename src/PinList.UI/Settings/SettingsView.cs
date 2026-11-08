@@ -250,7 +250,11 @@ public class SettingsView : UserControl
         }
         hasUpdateRow = _host.UpdatesOn != null;
         if (_host.UpdatesOn is { } updates)
-            rows.Add(SwitchRow("Check for updates", _host.VersionText, updates, _host.SetUpdates));
+        {
+            var get = _host.GetUpdate is { } run ? SmallButton("Get it", run, accent: true) : null;
+            if (get != null) AutomationProperties.SetName(get, "Get the new version");
+            rows.Add(SwitchRow("Check for updates", _host.VersionText, updates, _host.SetUpdates, get));
+        }
         if (rows.Count == 0) rows.Add(Cell(Muted("Nothing to set here on this device.")));
         return Group("General", rows);
     }
@@ -344,7 +348,8 @@ public class SettingsView : UserControl
     }
 
     /// <summary>A label (and a line of smaller text under it) with a switch on the right.</summary>
-    Border SwitchRow(string label, string? sub, bool isOn, Action<bool> changed)
+    /// <summary>A row with a switch on its right, and <paramref name="button"/> (if any) before the switch.</summary>
+    Border SwitchRow(string label, string? sub, bool isOn, Action<bool> changed, Button? button = null)
     {
         var toggle = new ToggleSwitch { IsChecked = isOn, OnContent = "", OffContent = "", MinWidth = 0 };
         AutomationProperties.SetName(toggle, label);
@@ -352,7 +357,10 @@ public class SettingsView : UserControl
         Control left = Label(label);
         if (sub != null)
             left = new StackPanel { Spacing = 2, Children = { Label(label), Muted(sub) } };
-        return Row(left, toggle);
+        if (button == null) return Row(left, toggle);
+        button.VerticalAlignment = VerticalAlignment.Center;
+        var right = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { button, toggle } };
+        return Row(left, right);
     }
 
     static StackPanel Buttons(IEnumerable<Button> buttons)

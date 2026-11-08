@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Specialized;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -61,6 +62,17 @@ public partial class MainWindow : Window
         ApplyLook();
         ShowSection(MainSection.Lists);
         UpdateCounts();
+        RefreshUpdateDot();
+    }
+
+    /// <summary>A dot on Settings while a newer version is out.</summary>
+    internal void RefreshUpdateDot()
+    {
+        var available = App.Instance.UpdateCheck?.Available;
+        UpdateDot.IsVisible = available != null;
+        string? text = available != null ? $"PinList {available.Version} is available" : null;
+        ToolTip.SetTip(NavSettings, text);
+        AutomationProperties.SetName(NavSettings, text != null ? "Settings, " + text : "Settings");
     }
 
     /// <summary>Shows one section and marks it in the sidebar.</summary>

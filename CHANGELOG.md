@@ -3,6 +3,21 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.7.0] - 2026-11-08
+
+A new version is easier to notice, and you see what's new in it.
+
+### Changed
+- When PinList finds a new version, it shows a window with what's new in it (the release notes), with **Get it** and **Later**. On the phone it's a sheet from the bottom instead of a bar that went away after a few seconds, on Windows and macOS it's a dialog instead of a notification. It shows once for each version
+- **Get it** downloads the new version for your device right away: **PinList.exe** on Windows, **PinList.zip** on a Mac, **PinList.apk** on Android. Before, the desktop opened the GitHub release page. If a release doesn't have that file, it opens the Download section of the website
+- While a new version is out, **Settings** has a dot (in the bottom bar on the phone, in the sidebar of the PinList window on the desktop), and on the desktop the **Check for updates** row has a **Get it** button
+- **Android:** the first start question about updates has a short title (*Check for updates?*) with the explanation under it, instead of a long title that was cut off, and two clear buttons: **Don't check**, and **Check for updates** below it
+- The privacy policy says that the update check also reads the release notes of the latest version, and that the switch is in **Settings** (effective 8 November 2026)
+- The downloads have shorter names: **PinList.apk** (was *PinList-android.apk*) and **PinList.zip** (was *PinList-mac-arm64.zip*, still for Macs with Apple Silicon). The Mac app comes zipped because it's a folder. Links to the old names don't work for new versions. PinList 2.6.0 and older on Android open the release page instead of downloading the APK directly
+
+### Fixed
+- A look for a new version that couldn't reach GitHub (no internet yet when PinList starts with the computer, or GitHub down) is tried again when the network comes back (desktop) or when you open PinList again (phone), instead of a day later. An error answer from GitHub no longer counts as *no new version*
+
 ## [2.6.0] - 2026-11-07
 
 Drag lists into order on the desktop too, and the order syncs. Reminders stay until you've seen them.

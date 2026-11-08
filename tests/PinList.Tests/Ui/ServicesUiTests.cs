@@ -277,7 +277,6 @@ public class TrayIconTests : UiTest
         var events = new List<string>();
         tray.LeftClick += () => events.Add("left");
         tray.RightClick += () => events.Add("right");
-        tray.NotificationClicked += () => events.Add("notification");
 
         tray.OnMouseUp(WinForms.MouseButtons.Left);
         tray.OnMouseUp(WinForms.MouseButtons.Right);
@@ -287,12 +286,8 @@ public class TrayIconTests : UiTest
         var icon = (WinForms.NotifyIcon)typeof(TrayIcon).GetField("_icon", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(tray)!;
         typeof(WinForms.NotifyIcon).GetMethod("OnMouseUp", BindingFlags.NonPublic | BindingFlags.Instance)!
             .Invoke(icon, new object[] { new WinForms.MouseEventArgs(WinForms.MouseButtons.Left, 1, 0, 0, 0) });
-        typeof(WinForms.NotifyIcon).GetMethod("OnBalloonTipClicked", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .Invoke(icon, null);
-
-        tray.ShowNotification("PinList 9.0 is available", "Click here to open the download page.");
         tray.SetMenu(Array.Empty<TrayEntry>()); // Windows shows the app's own menu instead
-        Assert.Equal(new[] { "left", "right", "left", "notification" }, events);
+        Assert.Equal(new[] { "left", "right", "left" }, events);
 
         // a reminder is a Windows notification that stays until it's dismissed
         var sent = new List<(string id, string title, string text)>();
@@ -411,16 +406,6 @@ public class LeftoverPathTests : DialogTest
         Assert.Equal(top, second.Position.Y);
         second.Close();
         Pump();
-    }
-
-    [AvaloniaFact]
-    public void Other_notifications_close_on_their_own()
-    {
-        var popup = ReminderPopup.Show("PinList 9.0 is available", "Click here", () => { }, closeAfter: TimeSpan.FromMilliseconds(50));
-        Pump();
-        Assert.True(popup.IsVisible);
-        UiHost.Wait(TimeSpan.FromMilliseconds(400));
-        Assert.False(popup.IsVisible);
     }
 
     [AvaloniaFact]

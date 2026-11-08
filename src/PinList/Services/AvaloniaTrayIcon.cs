@@ -21,7 +21,6 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
 
     public event Action? LeftClick;
     public event Action? RightClick { add { } remove { } } // the menu bar menu opens by itself
-    public event Action? NotificationClicked;
 
     public AvaloniaTrayIcon()
     {
@@ -82,9 +81,6 @@ public sealed class AvaloniaTrayIcon : ITrayIcon
             menu.Items.Add(item);
         }
     }
-
-    public void ShowNotification(string title, string text) =>
-        ReminderPopup.Show(title, text, () => NotificationClicked?.Invoke(), closeAfter: TimeSpan.FromSeconds(10));
 
     /// <summary>A macOS notification, or PinList's own popup when macOS doesn't allow notifications. Both stay until closed.</summary>
     public void ShowReminder(string title, string text, Action onClick)

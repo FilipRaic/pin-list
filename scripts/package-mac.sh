@@ -29,6 +29,6 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/PinList.icns"
 codesign --force --deep --sign - "$APP"
 
 mkdir -p "$OUT"
-(cd "$WORK" && ditto -c -k --keepParent PinList.app PinList-mac-arm64.zip)
-mv "$WORK/PinList-mac-arm64.zip" "$OUT/"
-echo "Built $OUT/PinList-mac-arm64.zip"
+(cd "$WORK" && ditto -c -k --keepParent PinList.app PinList.zip)
+mv "$WORK/PinList.zip" "$OUT/"
+echo "Built $OUT/PinList.zip"

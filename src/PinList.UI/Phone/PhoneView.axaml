@@ -78,6 +78,40 @@
             <Setter Property="Opacity" Value="0.9"/>
         </Style>
 
+        <!-- Text above the buttons of a sheet (the first start question about updates) -->
+        <Style Selector="TextBlock.sheettext">
+            <Setter Property="Foreground" Value="{DynamicResource Text2}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- The two buttons at the bottom of a sheet (Later / Get it of a new version) -->
+        <Style Selector="Button.sheetbutton">
+            <Setter Property="Background" Value="{DynamicResource Hover}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="{StaticResource R.Card}"/>
+            <Setter Property="Padding" Value="20,14"/>
+            <Setter Property="FontSize" Value="{StaticResource T.PhoneBody}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="VerticalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.sheetbutton.accent">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+        </Style>
+        <Style Selector="Button.sheetbutton:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.sheetbutton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Hover}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text1}"/>
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Button.sheetbutton.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.sheetbutton.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+        </Style>
+
         <!-- Cards and rows: lift while held or dragged, slide when the list is reordered.
              PhoneDrag grows the lifted one (LiftScale) and keeps it under the finger. -->
         <Style Selector="Border.card, local|AccessibleRow.row">
@@ -289,7 +323,12 @@
                     </Button>
                     <Button x:Name="TabSettings" Grid.Column="2" Classes="tab" Click="Tab_Click" Tag="Settings" AutomationProperties.Name="Settings">
                         <StackPanel>
-                            <Border Classes="tabpill"><local:LineIcon Data="{DynamicResource Line.Settings}"/></Border>
+                            <Panel>
+                                <Border Classes="tabpill"><local:LineIcon Data="{DynamicResource Line.Settings}"/></Border>
+                                <!-- a new version is out -->
+                                <Ellipse x:Name="UpdateDot" Classes="updatedot" IsVisible="False" HorizontalAlignment="Right"
+                                         VerticalAlignment="Top" Margin="0,4,16,0"/>
+                            </Panel>
                             <TextBlock Text="Settings" FontSize="12" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                         </StackPanel>
                     </Button>

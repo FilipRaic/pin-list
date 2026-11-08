@@ -49,7 +49,9 @@ PinList is a single exe – put it anywhere (e.g. `%LOCALAPPDATA%\Programs\PinLi
 Get-FileHash .\PinList.exe -Algorithm SHA256   # compare with PinList.exe.sha256
 ```
 
-### macOS – `PinList-mac-arm64.zip`
+### macOS – `PinList.zip`
+
+For Macs with Apple Silicon (M1 or newer), macOS 12 or newer. A Mac app is a folder, so it comes zipped.
 
 1. Unzip it and move **PinList.app** to *Applications*.
 2. The app isn't notarized by Apple (that needs a paid developer account), so macOS blocks it at first. Open **Terminal** and run:
@@ -66,9 +68,9 @@ If macOS says the app *"is damaged"*, sign it for your Mac and try again:
 codesign --force --deep --sign - /Applications/PinList.app
 ```
 
-To check the download: `shasum -a 256 PinList-mac-arm64.zip` and compare with `PinList-mac-arm64.zip.sha256`.
+To check the download: `shasum -a 256 PinList.zip` and compare with `PinList.zip.sha256`.
 
-### Android – `PinList-android.apk`
+### Android – `PinList.apk`
 
 1. Download the APK on the phone (or copy it there) and open it.
 2. Allow your browser or file manager to *install unknown apps* when Android asks.
@@ -80,10 +82,15 @@ Updates install over the old version and keep your lists.
 
 ### Updating
 
-On first start PinList asks whether it may check for updates. If you say yes, it asks GitHub about once a day for the number of the latest release (nothing about you or your lists is sent, see the [privacy policy](https://filipraic.github.io/pin-list/privacy)). When a new version is out:
+On first start PinList asks whether it may check for updates. If you say yes, it asks GitHub about once a day for the number and the release notes of the latest release (nothing about you or your lists is sent, see the [privacy policy](https://filipraic.github.io/pin-list/privacy)). When a new version is out:
 
-- **Windows and macOS:** a notification says so, and the tray / menu bar menu gets **Get PinList x.y.z** at the top. Both open the release page. Download the new file and replace the old one.
-- **Android:** a bar with **Get it** appears, and **Settings** gets **Get PinList x.y.z** at the top. Both download the new APK in your browser. Open it to install it over the old version.
+- **Everywhere:** PinList shows what's new in it once, with **Get it** and **Later**, and **Settings** gets a dot until you update.
+- **Windows and macOS:** the tray / menu bar menu gets **Get PinList x.y.z** at the top, and **Settings → Check for updates** a **Get it** button. **Get it** downloads the new `PinList.exe` (Windows) or `PinList.zip` (Mac) in your browser. Replace the old one with it.
+- **Android:** **Settings** gets **Get PinList x.y.z** at the top. **Get it** downloads the new `PinList.apk` in your browser. Open it to install it over the old version.
+
+If a release doesn't have the file for your device, **Get it** opens the [Download](https://filipraic.github.io/pin-list/#download) section of the website instead.
+
+If the check can't reach GitHub (no internet yet, GitHub down), it tries again when the network comes back (desktop) or when you open PinList again (phone).
 
 Change your answer at any time with **Check for updates** in **Settings** (on the desktop and on the phone).
 
@@ -115,7 +122,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | Export / import | **Settings → Your data → Export** saves all lists and the archive to a file. **Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
 | Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit (*Quit PinList* on a Mac). |
 | Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import and the data folder. |
-| Updates | When a new version is out, the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
+| Updates | When a new version is out, PinList shows what's new in it, Settings gets a dot and the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
 Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete list** to delete the list. Shutting down or restarting the computer closes PinList without asking.
 
@@ -134,7 +141,7 @@ Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from deskt
 | Archive | The **Archive** tab. Completed items are grouped by day. Tap one to restore or delete it. |
 | Theme, export / import | The **Settings** tab. |
 | Google sync | **Settings → Google Drive sync** to sign in, then **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
-| Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, **Settings → Get PinList x.y.z** downloads it. |
+| Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, a sheet shows what's new in it, the Settings tab gets a dot and **Settings → Get PinList x.y.z** downloads it. |
 
 ## Sync
 
@@ -222,8 +229,8 @@ scripts\publish.bat
 |---|---|
 | `scripts\run.bat` | Runs the Windows app in Debug mode (`dotnet run`) while you're developing |
 | `scripts\publish.bat` | Empties `publish\`, builds a Release exe into `publish\PinList.exe` and starts it |
-| `scripts\publish-android.bat` | Builds the Android APK signed with the release key into `publish\android\PinList-android.apk`. Asks for the keystore password (hidden, never saved). Optional argument: the keystore path (default `pinlist.keystore` in the repo folder) |
-| `scripts\publish-mac.bat` | On Windows: builds `PinList.app` for Apple Silicon into `publish\mac\PinList-mac-arm64.zip`, like `package-mac.sh` but without the signature (that needs a Mac). After unzipping on the Mac, run `codesign --force --deep --sign - PinList.app && xattr -cr PinList.app` once |
+| `scripts\publish-android.bat` | Builds the Android APK signed with the release key into `publish\android\PinList.apk`. Asks for the keystore password (hidden, never saved). Optional argument: the keystore path (default `pinlist.keystore` in the repo folder) |
+| `scripts\publish-mac.bat` | On Windows: builds `PinList.app` for Apple Silicon into `publish\mac\PinList.zip`, like `package-mac.sh` but without the signature (that needs a Mac). After unzipping on the Mac, run `codesign --force --deep --sign - PinList.app && xattr -cr PinList.app` once |
 | `scripts/package-mac.sh` | On a Mac: builds `PinList.app` and zips it (`bash scripts/package-mac.sh 2.2.0`) |
 
 Both `.bat` scripts close a running PinList first, because only one instance can run at a time. Debug and Release builds share the same data.
@@ -263,14 +270,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props) – the one version for every app (Android's version code follows from it) – and add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md) – it becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.6.0
-   git push origin master v2.6.0
+   git tag v2.7.0
+   git push origin master v2.7.0
    ```
-3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList-mac-arm64.zip` and `PinList-android.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
+3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList.zip` and `PinList.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.6.0
-   git push -f origin v2.6.0
+   git tag -f v2.7.0
+   git push -f origin v2.7.0
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. To create it (once – keep the file and password safe, a lost key means users must uninstall to update):
@@ -300,6 +307,7 @@ pin-list/
 │  ├─ Models/               Board → Category → TodoItem, ArchivedItem, Settings, AppData
 │  ├─ Services/             Actions (every change + undo), Store (data.json, backups, export/import),
 │  │                        Reminders, Updates (the daily check for a new version on GitHub),
+│  │                        ReleaseNotes (reads a version's notes for the update popup),
 │  │                        BoardOrder (the synced order of the lists), WallClockConverter (times in data.json)
 │  ├─ Sync/                 Google Drive sync: SyncService, SyncMerge (merge engine), ChangeTracker (stamps),
 │  │                        ListCopy (cloud files), DriveCloudStore, GoogleOAuth, LoopbackSignIn, SyncState

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -318,11 +319,20 @@ public partial class PhoneView : UserControl
     internal void AskAboutUpdates()
     {
         if (_updates is not { Enabled: null } updates) return;
-        ShowSheet("PinList can look for a new version about once a day and tell you when there is one. " +
-                  "It only asks GitHub for the number of the latest version. Nothing about you or your lists is sent. " +
-                  "You can change this later in Settings.",
-            new SheetOption("Check for updates", () => updates.Enabled = true, Icon: "Line.Download"),
-            new SheetOption("Don't check", () => updates.Enabled = false));
+        var text = new TextBlock
+        {
+            Text = "PinList can look for a new version about once a day and tell you when there is one. " +
+                   "It only asks GitHub for the number of the latest version and what's new in it. " +
+                   "Nothing about you or your lists is sent. You can change this later in Settings.",
+            FontSize = 14,
+            LineHeight = 14 * 1.4,
+            Margin = new Thickness(22, 4, 22, 10),
+        };
+        text.Classes.Add("sheettext");
+        // "Check for updates" is too long for half the width: the buttons go under each other
+        ShowButtonSheet("Check for updates?", text, stacked: true,
+            SheetButton("Don't check", null, () => updates.Enabled = false),
+            SheetButton("Check for updates", "Line.Download", () => updates.Enabled = true));
     }
 
     /// <summary>The update check or its setting changed: Settings shows the new state.</summary>
@@ -332,27 +342,91 @@ public partial class PhoneView : UserControl
         _settingsHost?.RaiseChanged();
     }
 
-    /// <summary>"Get PinList x.y" at the top of Settings, while a newer version is out.</summary>
+    /// <summary>
+    /// While a newer version is out: "Get PinList x.y" at the top of Settings, and a dot on the Settings tab.
+    /// </summary>
     void RefreshUpdateRow()
     {
         var available = _updates?.Available;
         UpdateRow.IsVisible = available != null;
+        UpdateDot.IsVisible = available != null;
         if (available != null) UpdateRow.Content = $"Get PinList {available.Version}";
+        AutomationProperties.SetName(TabSettings, available != null ? $"Settings, PinList {available.Version} is available" : "Settings");
     }
 
     void UpdateRow_Click(object? sender, RoutedEventArgs e) => OpenUpdate();
 
-    /// <summary>A new version, found for the first time: a bar that offers it.</summary>
-    void OnUpdateFound(UpdateInfo update) =>
-        ShowSnackbar($"PinList {update.Version} is available", "Get it", OpenUpdate,
-            $"PinList {update.Version} is available. Get it from the button, or later in Settings.",
-            TimeSpan.FromSeconds(10));
+    /// <summary>A new version, found for the first time: a sheet with what's new in it, to get it now or later.</summary>
+    void OnUpdateFound(UpdateInfo update)
+    {
+        string title = $"PinList {update.Version} is available";
+        var notes = ReleaseNotesView.Build(update.Notes, 14);
+        var body = notes == null ? null : new ScrollViewer
+        {
+            Content = notes,
+            MaxHeight = 320,
+            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+            Padding = new Thickness(22, 4, 22, 10),
+        };
+        ShowButtonSheet(title, body, stacked: false,
+            SheetButton("Later", null, () => { }),
+            SheetButton("Get it", "Line.Download", OpenUpdate));
+        A11y.Announce(this, $"{title}. Get it now, or later in Settings.");
+    }
 
-    /// <summary>Downloads the new version's APK in the browser (or opens its release page).</summary>
+    /// <summary>
+    /// A sheet with <paramref name="body"/> (text, release notes) above two buttons: <paramref name="quiet"/> and the
+    /// main one, filled with the accent color like New list. Side by side with the main one on the right, or
+    /// <paramref name="stacked"/> under each other with the main one at the bottom (for longer labels).
+    /// </summary>
+    void ShowButtonSheet(string title, Control? body, bool stacked, Button quiet, Button main)
+    {
+        main.Classes.Add("accent");
+        Panel buttons;
+        if (stacked)
+            buttons = new StackPanel { Spacing = 10, Children = { quiet, main } };
+        else
+        {
+            Grid.SetColumn(main, 2);
+            buttons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,12,*"), Children = { quiet, main } };
+        }
+        buttons.Margin = new Thickness(22, 10, 22, 0);
+
+        var panel = new StackPanel();
+        if (body != null) panel.Children.Add(body);
+        panel.Children.Add(buttons);
+        ShowSheetContent(title, panel);
+    }
+
+    /// <summary>A button of the row at the bottom of a sheet: closes the sheet, then runs <paramref name="run"/>.</summary>
+    Button SheetButton(string text, string? icon, Action run)
+    {
+        object content = text;
+        if (icon != null)
+            content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 10,
+                Children =
+                {
+                    new LineIcon { Data = (Avalonia.Media.Geometry)Application.Current!.FindResource(icon)!, Width = 20, Height = 20 },
+                    new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center },
+                },
+            };
+        var button = new Button { Content = content };
+        button.Classes.Add("sheetbutton");
+        AutomationProperties.SetName(button, text);
+        button.Click += (_, _) => { HideSheet(); run(); };
+        return button;
+    }
+
+    /// <summary>
+    /// Downloads the new version's APK in the browser. Without an APK in the release, it opens the Download section
+    /// of PinList's website.
+    /// </summary>
     void OpenUpdate()
     {
-        var update = _updates?.Available;
-        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, update?.ApkUrl ?? update?.PageUrl ?? Updates.ReleasesPage);
+        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, _updates?.Available?.ApkUrl ?? Updates.DownloadsPage);
     }
 
     internal void ShowHome()
@@ -1100,8 +1174,8 @@ public partial class PhoneView : UserControl
     /// <summary>Messages from PinList.Core (e.g. "the data file was damaged, the backup was loaded").</summary>
     public void ShowMessageForStore(string message) => ShowMessage(message);
 
-    /// <summary>The bar at the bottom, with an optional button (Undo, Get it), for a few seconds.</summary>
-    void ShowSnackbar(string message, string? button, Action? action, string announcement, TimeSpan? time = null)
+    /// <summary>The bar at the bottom, with an optional button (Undo), for a few seconds.</summary>
+    void ShowSnackbar(string message, string? button, Action? action, string announcement)
     {
         SnackbarText.Text = message;
         UndoButton.Content = button;
@@ -1109,7 +1183,6 @@ public partial class PhoneView : UserControl
         _snackbarAction = action;
         Snackbar.IsVisible = true;
         _snackTimer.Stop();
-        _snackTimer.Interval = time ?? TimeSpan.FromSeconds(5);
         _snackTimer.Start();
         A11y.Announce(this, announcement);
     }
