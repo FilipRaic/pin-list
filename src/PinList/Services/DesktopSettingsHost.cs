@@ -67,8 +67,9 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
             if (sync.Account is not { } account)
                 return new SyncSummary(null, "", null, new[] { new SettingsAction("Sign in with Google", () => _ = _app.SignIn(null)) });
 
-            string status = sync.IsSyncing ? "Syncing" : $"Synced {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}";
-            if (sync.LastSyncUtc == null && !sync.IsSyncing) status = "Not synced yet";
+            string status = sync.IsSyncing ? "Syncing"
+                : sync.LastSyncUtc == null ? "Not synced yet"
+                : $"Synced {SyncIcon.Ago(sync.LastSyncUtc, DateTime.UtcNow)}";
             string? problem = sync.NeedsSignIn ? "Google signed you out. Sign in again to keep syncing." : null;
             var actions = new List<SettingsAction>();
             if (sync.NeedsSignIn) actions.Add(new SettingsAction("Sign in again", () => _ = _app.SignIn(null)));

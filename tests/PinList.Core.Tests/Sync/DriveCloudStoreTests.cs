@@ -177,4 +177,12 @@ public class DriveCloudStoreTests
         var ex = await Assert.ThrowsAsync<CloudException>(() => Store().List(Ct));
         Assert.Equal(CloudError.Offline, ex.Kind);
     }
+
+    [Fact]
+    public async Task An_empty_JSON_answer_is_an_error()
+    {
+        _http.Answer(HttpStatusCode.OK, "null");
+        var ex = await Assert.ThrowsAsync<CloudException>(() => Store().List(Ct));
+        Assert.Equal(CloudError.Offline, ex.Kind);
+    }
 }

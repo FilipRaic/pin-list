@@ -28,6 +28,10 @@ public class DateTextTests
     [InlineData("12345")]
     [InlineData("noon")]
     [InlineData("1:2:3")]
+    [InlineData("a:30")]
+    [InlineData("9:3a")]
+    [InlineData("-1")]
+    [InlineData("9:-5")]
     public void Rejects_invalid_times(string text) => Assert.False(DateText.TryParseTime(text, out _));
 
     [Fact]
@@ -93,6 +97,17 @@ public class DueHintTests
         Assert.Equal("Was due Yesterday", new TodoItem { DueDate = DateTime.Today.AddDays(-1) }.DueHint);
         Assert.Equal("Due today", new TodoItem { DueDate = DateTime.Today }.DueHint);
         Assert.Equal("Due date", new TodoItem { DueDate = DateTime.Today.AddDays(3) }.DueHint);
+    }
+
+    [Fact]
+    public void An_item_without_a_due_date_is_neither_overdue_nor_due_today()
+    {
+        var item = new TodoItem();
+        Assert.False(item.HasDue);
+        Assert.False(item.IsOverdue);
+        Assert.False(item.IsDueToday);
+        Assert.Equal("", item.DueText);
+        Assert.Equal("Due date", item.DueHint);
     }
 
     [Fact]

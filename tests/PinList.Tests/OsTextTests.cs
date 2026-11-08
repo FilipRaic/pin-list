@@ -42,6 +42,15 @@ public class OsTextTests
         Assert.Equal("Return adds the item · Shift+Return starts a new line", OnMac(true, () => OsText.AddItemTip));
     }
 
+    [Theory]
+    [InlineData("Up", "⌥↑")]
+    [InlineData("Down", "⌥↓")]
+    [InlineData("Left", "⌥←")]
+    [InlineData("Right", "⌥→")]
+    [InlineData("Home", "⌥Home")]
+    public void Option_shortcuts_use_arrow_symbols_on_a_Mac(string key, string shown) =>
+        Assert.Equal(shown, OnMac(true, () => OsText.Alt(key)));
+
     [Fact]
     public void Cmd_and_the_Mac_delete_key_only_count_on_a_Mac()
     {

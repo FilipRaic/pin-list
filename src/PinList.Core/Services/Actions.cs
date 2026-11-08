@@ -64,10 +64,13 @@ public static class Actions
         UndoChanged?.Invoke();
     }
 
+    static readonly char[] LineBreaks = { '\r', '\n' };
+
     /// <summary>Text in quotes, shortened to its first line and 60 characters.</summary>
     static string Quote(string text)
     {
-        var line = text.Split('\n')[0];
+        int end = text.IndexOfAny(LineBreaks);
+        var line = end < 0 ? text : text[..end];
         if (line.Length > 60) line = line[..60] + "…";
         return $"“{line}”";
     }
