@@ -3,6 +3,16 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.8.1] - 2026-11-09
+
+The feedback form shows your system correctly.
+
+### Fixed
+- **Send feedback** filled in Windows 11 as *Microsoft Windows 10.0*, because Windows 11 still reports version 10.0. It now says *Windows 11* (or *Windows 10*) with the release and build, like *Windows 11 26H2 (build 26300.9711)*. A Mac shows *macOS 15.1*
+
+### Changed
+- **Android:** the feedback form also gets the Android version and the phone's model, like *Android 15 (Xiaomi 23078PND5G)* (was only *Android*), which helps with problems that only some phones have. You can still change or clear it before sending. The privacy policy says so
+
 ## [2.8.0] - 2026-11-09
 
 Send feedback from the app, a light mode for the website, and no more *00:00* for new reminders.

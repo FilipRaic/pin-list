@@ -140,8 +140,19 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     public void OpenDataFolder() => App.OpenFolder(Store.Dir);
 
     public void SendFeedback() =>
-        App.OpenUrl(Feedback.Url(_app.UpdateCheck?.Current ?? typeof(App).Assembly.GetName().Version!,
-            System.Runtime.InteropServices.RuntimeInformation.OSDescription));
+        App.OpenUrl(Feedback.Url(_app.UpdateCheck?.Current ?? typeof(App).Assembly.GetName().Version!, SystemName()));
+
+    /// <summary>The system for the feedback form, like "Windows 11 26H2 (build 26300.9711)" or "macOS 15.1".</summary>
+    static string SystemName()
+    {
+#if WINDOWS
+        return WindowsSettings.SystemName();
+#else
+        return OperatingSystem.IsMacOS()
+            ? Feedback.MacName(Environment.OSVersion.Version)
+            : System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+#endif
+    }
 
     public string? ExitText => OsText.Exit;
     public void Exit() => _app.ExitApp();
