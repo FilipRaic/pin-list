@@ -139,6 +139,10 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     public bool HasDataFolder => true;
     public void OpenDataFolder() => App.OpenFolder(Store.Dir);
 
+    public void SendFeedback() =>
+        App.OpenUrl(Feedback.Url(_app.UpdateCheck?.Current ?? typeof(App).Assembly.GetName().Version!,
+            System.Runtime.InteropServices.RuntimeInformation.OSDescription));
+
     public string? ExitText => OsText.Exit;
     public void Exit() => _app.ExitApp();
 }

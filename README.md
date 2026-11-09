@@ -25,6 +25,7 @@ To-do lists pinned to your desktop – on **Windows** and **macOS** – and in y
 - **One look everywhere.** The Inter font and the same colors, corners and icons on Windows, macOS and Android. Dark, light or pastel lists, optional transparency, menus that follow the system light/dark setting. Each category has its own color, shown as a readable shade on every list color.
 - **Optional Google Drive sync.** Sign in with Google and choose which lists sync between your PCs, Macs and phone. Changes are merged item by item, also after days offline, and nothing you deleted comes back. Your lists go only to a hidden folder in **your own** Google Drive – see [Sync](#sync).
 - **Update notices (optional).** On first start PinList asks whether it may check for new versions. If you say yes, it looks about once a day and tells you when one is out – see [Updating](#updating).
+- **Feedback.** **Settings → Send feedback** opens the [feedback page](https://filipraic.github.io/pin-list/feedback) with your PinList version filled in. Send it by email (no account needed) or as a GitHub issue.
 - **Your data is safe.** Every change is saved right away to a local JSON file, with atomic writes and daily backups. Export and import your lists at any time – also to move them between a PC, a Mac and a phone.
 
 ## Requirements
@@ -105,7 +106,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | Multi-line item | **Shift+Enter** starts a new line (when adding and when editing). |
 | Complete an item | Click the circle. Click again within ~1 s to cancel. |
 | Edit | Double-click the text. **Enter** saves, **Esc** cancels. |
-| Due date / reminder | Right-click an item → **Add due date** or **Add reminder**. Overdue dates turn red and say how long they're overdue (*3 days overdue*), today's are highlighted. A reminder is a system notification that stays on the screen until you dismiss it. Clicking it (or **Show** on Windows) shows the item while PinList runs. On macOS this needs the alert style that stays (**Persistent** since macOS 15, **Alerts** before), which PinList asks for, and **Show in Notification Center** to keep it in the sidebar (System Settings → Notifications → PinList). macOS doesn't let an app change these, so when one is off, **Settings** shows a *Reminders* row that says what's off, with a button to that page. If notifications are off for PinList, it shows its own small window instead, which also stays until closed. A reminder is removed from the item once it rang. Reminders missed while PinList wasn't running are shown when it starts. |
+| Due date / reminder | Right-click an item → **Add due date** or **Add reminder**. Pick a quick choice, or a day and a time. Overdue dates turn red and say how long they're overdue (*3 days overdue*), today's are highlighted. A reminder is a system notification that stays on the screen until you dismiss it. Clicking it (or **Show** on Windows) shows the item while PinList runs. On macOS this needs the alert style that stays (**Persistent** since macOS 15, **Alerts** before), which PinList asks for, and **Show in Notification Center** to keep it in the sidebar (System Settings → Notifications → PinList). macOS doesn't let an app change these, so when one is off, **Settings** shows a *Reminders* row that says what's off, with a button to that page. If notifications are off for PinList, it shows its own small window instead, which also stays until closed. A reminder is removed from the item once it rang. Reminders missed while PinList wasn't running are shown when it starts. |
 | Delete | Click an item or category (it gets highlighted) and press **Delete**. PinList asks first (Ctrl+Z still brings it back). Not archived. Emptying an item's text deletes it too, after asking. |
 | Undo | **Ctrl+Z** undoes the last change – in any widget or in the archive (one undo history for the whole app, the last 50 changes). |
 | Reorder | Drag an item or a category header – within a widget or to another one. The list scrolls when you drag near its edge. |
@@ -122,7 +123,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | Sync a list | **⋯ → Sync this list** (signs in with Google first if needed). See [Sync](#sync). |
 | Export / import | **Settings → Your data → Export** saves all lists and the archive to a file. **Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
 | Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit (*Quit PinList* on a Mac). |
-| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import and the data folder. |
+| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import, the data folder and **Send feedback**. |
 | Updates | When a new version is out, PinList shows what's new in it, Settings gets a dot and the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
 Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from desktop** to hide one, or **⋯ → Delete list** to delete the list. Shutting down or restarting the computer closes PinList without asking.
@@ -140,7 +141,7 @@ Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Remove from deskt
 | Reorder | Press and hold, then drag – cards on the first screen, items and categories in a list. Hold near the top or bottom edge to scroll. The order of the cards syncs. |
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
 | Archive | The **Archive** tab. Completed items are grouped by day. Tap one to restore or delete it. |
-| Theme, export / import | The **Settings** tab. |
+| Theme, export / import, feedback | The **Settings** tab. |
 | Google sync | **Settings → Google Drive sync** to sign in, then **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
 | Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, a sheet shows what's new in it, the Settings tab gets a dot and **Settings → Get PinList x.y.z** downloads it. |
 
@@ -299,7 +300,9 @@ Every push and pull request to `master` is also built (warnings count as errors)
 ```
 pin-list/
 ├─ .github/                 CI (build + tests, releases) and Dependabot
-├─ docs/                    the website on GitHub Pages: index.html, privacy.html, data-format.html and site.css,
+├─ docs/                    the website on GitHub Pages: index.html, privacy.html, data-format.html, site.css and
+│                           feedback.html (+ feedback.js, the form relayed to email by FormSubmit),
+│                           theme.js (the light / dark switch, dark by default),
 │                           plus the social preview image (social-preview.html is its source)
 ├─ scripts/                 run.bat, publish.bat, publish-android.bat, publish-mac.bat (+ .ps1), package-mac.sh
 ├─ Version.props            the version of every app
@@ -309,7 +312,8 @@ pin-list/
 │  ├─ Services/             Actions (every change + undo), Store (data.json, backups, export/import),
 │  │                        Reminders, Updates (the daily check for a new version on GitHub),
 │  │                        ReleaseNotes (reads a version's notes for the update popup),
-│  │                        BoardOrder (the synced order of the lists), WallClockConverter (times in data.json)
+│  │                        BoardOrder (the synced order of the lists), WallClockConverter (times in data.json),
+│  │                        Feedback (the address of the feedback form)
 │  ├─ Sync/                 Google Drive sync: SyncService, SyncMerge (merge engine), ChangeTracker (stamps),
 │  │                        ListCopy (cloud files), DriveCloudStore, GoogleOAuth, LoopbackSignIn, SyncState
 │  └─ Platform/             timers and work areas the apps provide

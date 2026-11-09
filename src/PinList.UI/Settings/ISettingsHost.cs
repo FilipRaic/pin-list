@@ -60,6 +60,9 @@ public interface ISettingsHost
     bool HasDataFolder { get; }
     void OpenDataFolder();
 
+    /// <summary>Opens the feedback form on the website in the browser.</summary>
+    void SendFeedback();
+
     /// <summary>OsText.Exit on the desktop, null on the phone.</summary>
     string? ExitText { get; }
     void Exit();

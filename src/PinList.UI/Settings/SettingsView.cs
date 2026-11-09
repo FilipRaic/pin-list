@@ -75,6 +75,7 @@ public class SettingsView : UserControl
         if (Sync() is { } sync) Page.Children.Add(sync);
         Page.Children.Add(General(out bool hasUpdateRow));
         Page.Children.Add(YourData());
+        Page.Children.Add(Help());
         if (Footer(hasUpdateRow) is { } footer) Page.Children.Add(footer);
     }
 
@@ -284,6 +285,11 @@ public class SettingsView : UserControl
         }
         return Group("Your data", rows);
     }
+
+    Control Help() =>
+        Group("Help", Phone
+            ? TapRow("Send feedback", _host.SendFeedback)
+            : Row(Label("Found a bug or have an idea?"), Buttons(new[] { SmallButton("Send feedback", _host.SendFeedback) })));
 
     Control? Footer(bool hasUpdateRow)
     {

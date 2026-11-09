@@ -30,6 +30,8 @@ sealed class FakeSettingsHost : ISettingsHost
     public Task Import() { Imports++; return Task.CompletedTask; }
     public bool HasDataFolder { get; set; } = true;
     public void OpenDataFolder() => FolderOpens++;
+    public int FeedbackOpens;
+    public void SendFeedback() => FeedbackOpens++;
     public string? ExitText { get; set; } = "Exit";
     public void Exit() => Exits++;
     public event Action? Changed;
@@ -190,6 +192,10 @@ public class SettingsViewTests : UiTest
         Click(open);
         Click(ButtonNamed(view, "Exit"));
         Assert.Equal((1, 1, 1, 1), (_host.Exports, _host.Imports, _host.FolderOpens, _host.Exits));
+
+        Assert.Contains("Found a bug or have an idea?", Texts(view));
+        Click(ButtonNamed(view, "Send feedback"));
+        Assert.Equal(1, _host.FeedbackOpens);
     }
 
     [AvaloniaFact]
@@ -266,13 +272,18 @@ public class SettingsViewTests : UiTest
         Assert.True(export.FontSize > plainSize);
         Assert.Contains("setrow", export.Classes); // on the phone an action is a whole row you tap
         Assert.True(export.Bounds.Height >= 48);
+        var feedback = ButtonNamed(view, "Send feedback");
+        Assert.Contains("setrow", feedback.Classes);
+        Click(feedback);
+        Assert.Equal(1, _host.FeedbackOpens);
     }
 
     [AvaloniaFact]
     public void Rows_of_a_group_have_a_line_between_them()
     {
         var view = Show();
-        var data = FindAll<Border>(view).Where(b => b.Classes.Contains("group")).Last(); // Your data
+        var groups = FindAll<Border>(view).Where(b => b.Classes.Contains("group")).ToList();
+        var data = groups[^2]; // Your data (Help is the last group)
         Assert.Single(FindAll<Border>(data), b => b.Classes.Contains("divider")); // "Back up or move your lists" and "Data folder"
         Assert.Contains("Back up or move your lists", Texts(data));
     }

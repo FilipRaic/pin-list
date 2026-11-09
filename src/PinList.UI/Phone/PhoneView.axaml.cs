@@ -52,6 +52,13 @@ public partial class PhoneView : UserControl
     [ExcludeFromCodeCoverage(Justification = "Opens the phone's browser; tests replace it.")]
     static async Task SystemOpenUrl(TopLevel top, string url) => await top.Launcher.LaunchUriAsync(new Uri(url));
 
+    /// <summary>Opens the feedback form on the website (from Settings).</summary>
+    internal void SendFeedback()
+    {
+        var version = _updates?.Current ?? typeof(PhoneView).Assembly.GetName().Version!;
+        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, Feedback.Url(version, "Android"));
+    }
+
     /// <summary>Asks for a file to import (the system file picker). Tests replace it.</summary>
     public static Func<TopLevel, Task<Stream?>> PickImportFile { get; set; } = SystemImportPicker;
 
@@ -1055,7 +1062,13 @@ public partial class PhoneView : UserControl
         var chips = new WrapPanel();
         var cal = new Calendar { SelectedDate = day, DisplayDate = day, FirstDayOfWeek = DayOfWeek.Monday, HorizontalAlignment = HorizontalAlignment.Center };
         cal.BlackoutDates.Add(new CalendarDateRange(DateTime.MinValue, today.AddDays(-1)));
-        var time = new TextBox { Text = initial?.ToString("HH:mm") ?? "", PlaceholderText = "Time, e.g. 9:30", IsVisible = reminder };
+        // a reminder being changed has its time filled in, a new one starts empty (not 00:00 from the due date)
+        var time = new TextBox
+        {
+            Text = reminder && item.HasPendingReminder ? item.ReminderAt!.Value.ToString("HH:mm") : "",
+            PlaceholderText = "Time, e.g. 9:30",
+            IsVisible = reminder,
+        };
         Avalonia.Automation.AutomationProperties.SetName(time, "Time");
         var error = new TextBlock { IsVisible = false, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
         error.Bind(TextBlock.ForegroundProperty, error.GetResourceObservable("Danger"));
