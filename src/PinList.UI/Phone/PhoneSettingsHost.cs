@@ -122,6 +122,8 @@ sealed class PhoneSettingsHost : ISettingsHost
     public bool HasDataFolder => false;
     public void OpenDataFolder() { }
 
+    public void SendFeedback() => _view.SendFeedback();
+
     public string? ExitText => null;
     public void Exit() { }
 }

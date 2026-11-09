@@ -57,6 +57,27 @@ public partial class PhoneTests
     }
 
     [AvaloniaFact]
+    public void Settings_host_send_feedback_opens_the_form_in_the_browser()
+    {
+        Show();
+        var host = SettingsHost();
+        var real = PhoneView.OpenUrl;
+        var opened = new List<string>();
+        PhoneView.OpenUrl = (_, url) => { opened.Add(url); return Task.CompletedTask; };
+        try
+        {
+            host.SendFeedback(); // no update check: the app's own version
+            var version = typeof(PhoneView).Assembly.GetName().Version!.ToString(3);
+            Assert.Equal($"https://filipraic.github.io/pin-list/feedback?v={version}&os=Android", opened[0]);
+
+            _view.UpdateCheck = new Updates(_ => Task.FromResult<UpdateInfo?>(null), new Version(2, 2, 0));
+            host.SendFeedback();
+            Assert.Equal("https://filipraic.github.io/pin-list/feedback?v=2.2.0&os=Android", opened[1]);
+        }
+        finally { PhoneView.OpenUrl = real; }
+    }
+
+    [AvaloniaFact]
     public void Settings_host_explains_a_phone_without_sync()
     {
         _phoneAuth.IsAvailable = false;

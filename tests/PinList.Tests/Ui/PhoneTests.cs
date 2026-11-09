@@ -1251,14 +1251,18 @@ public partial class PhoneTests : UiTest
         Choose("Add reminder");
         Assert.DoesNotContain(FindAll<Button>(_view.SheetPanel!), x => x.Content as string == "This evening");
         Assert.Equal(new DateTime(2030, 6, 24), FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate); // starts on the due day
+        Assert.Equal("", FindAll<TextBox>(_view.SheetPanel!).Single().Text); // a new reminder's time is empty, not 00:00
         Choose_Chip("Tomorrow 9:00");
         Assert.Equal(new DateTime(2030, 6, 18, 9, 0, 0), item.ReminderAt);
 
         LongPress(PhoneRow(item));
         Choose("Change reminder");
         Assert.Equal("Change reminder", _view.SheetTitleText);
-        Assert.Equal("09:00", FindAll<TextBox>(_view.SheetPanel!).Single().Text);
-        Assert.True(_view.GoBack());
+        var time = FindAll<TextBox>(_view.SheetPanel!).Single();
+        Assert.Equal("09:00", time.Text); // the time being changed is filled in
+        FindAll<Calendar>(_view.SheetPanel!).Single().SelectedDate = new DateTime(2030, 6, 19);
+        Press(time, Key.Enter);
+        Assert.Equal(new DateTime(2030, 6, 19, 9, 0, 0), item.ReminderAt);
 
         PhoneView.Clock = () => new DateTime(2030, 6, 12, 10, 15, 0); // Wednesday morning
         LongPress(PhoneRow(item));

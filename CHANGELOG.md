@@ -3,6 +3,19 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.8.0] - 2026-11-09
+
+Send feedback from the app, a light mode for the website, and no more *00:00* for new reminders.
+
+### Added
+- **Send feedback** in **Settings** (under *Help*) opens the new [feedback page](https://filipraic.github.io/pin-list/feedback) on the website. Report a bug, suggest an idea or ask a question by email (no account needed, your email only if you want a reply) or as a GitHub issue. The PinList version and your system are filled in, and you can change or clear them before sending. PinList itself sends nothing
+- The website has a **Feedback** link at the top of every page
+- The website has a light / dark switch at the top right of every page. It starts dark and remembers your choice in the browser
+
+### Changed
+- A new reminder starts with an empty time box (before, an item with a due date had *00:00* in it). Changing a reminder still shows its time
+- The privacy policy has a section about feedback: what is sent, by whom (FormSubmit relays the emails) and what it's used for (effective 9 November 2026)
+
 ## [2.7.1] - 2026-11-08
 
 Small fixes for screen readers, and more tests.

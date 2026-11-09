@@ -50,6 +50,41 @@ public class DesktopSettingsHostTests : UiTest
     }
 
     [AvaloniaFact]
+    public void Send_feedback_opens_the_form_with_the_version_and_the_system()
+    {
+        UseUpdates();
+        var host = Host();
+        var realOpen = App.OpenUrl;
+        var opened = new List<string>();
+        App.OpenUrl = opened.Add;
+        try
+        {
+            host.SendFeedback();
+            var url = Assert.Single(opened);
+            Assert.StartsWith("https://filipraic.github.io/pin-list/feedback?v=2.4.0&os=", url);
+            Assert.True(url.Length > "https://filipraic.github.io/pin-list/feedback?v=2.4.0&os=".Length);
+        }
+        finally { App.OpenUrl = realOpen; }
+    }
+
+    [AvaloniaFact]
+    public void Send_feedback_without_an_update_check_uses_the_app_version()
+    {
+        App.UseUpdates(null); // a build without the check
+        var host = Host();
+        var realOpen = App.OpenUrl;
+        var opened = new List<string>();
+        App.OpenUrl = opened.Add;
+        try
+        {
+            host.SendFeedback();
+            var version = typeof(App).Assembly.GetName().Version!.ToString(3);
+            Assert.StartsWith($"https://filipraic.github.io/pin-list/feedback?v={version}&os=", Assert.Single(opened));
+        }
+        finally { App.OpenUrl = realOpen; }
+    }
+
+    [AvaloniaFact]
     public void Reminder_settings_that_are_off_show_and_the_button_opens_the_system_settings()
     {
         var host = Host();

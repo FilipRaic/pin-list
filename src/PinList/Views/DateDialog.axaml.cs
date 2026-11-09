@@ -23,7 +23,8 @@ public partial class DateDialog : Window
     /// <summary>For the XAML previewer only.</summary>
     public DateDialog() : this("", null, false) { }
 
-    DateDialog(string title, DateTime? initial, bool withTime)
+    /// <param name="time">The time of the reminder being changed, filled in. A new reminder starts with an empty box.</param>
+    DateDialog(string title, DateTime? initial, bool withTime, DateTime? time = null)
     {
         InitializeComponent();
         Look.GrayscaleText(this);
@@ -43,7 +44,7 @@ public partial class DateDialog : Window
         if (withTime)
         {
             TimeRow.IsVisible = true;
-            TimeBox.Text = initial?.ToString("HH:mm") ?? "";
+            TimeBox.Text = time?.ToString("HH:mm") ?? "";
         }
 
         PointerPressed += (_, e) =>
@@ -94,7 +95,7 @@ public partial class DateDialog : Window
     /// <summary>Returns the picked reminder time, or null if cancelled.</summary>
     public static Task<DateTime?> PickReminder(Window owner, DateTime? current, DateTime? dueDate)
     {
-        var dlg = new DateDialog(current == null ? "Add reminder" : "Change reminder", current ?? dueDate, withTime: true);
+        var dlg = new DateDialog(current == null ? "Add reminder" : "Change reminder", current ?? dueDate, withTime: true, current);
         var now = Clock();
         dlg.AddQuick("In 1 hour", () => TrimSeconds(Clock().AddHours(1)));
         if (now.Hour < 17) dlg.AddQuick("This evening", () => Clock().Date.AddHours(18));

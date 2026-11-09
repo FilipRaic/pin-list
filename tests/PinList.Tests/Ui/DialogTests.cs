@@ -326,11 +326,25 @@ public class DateDialogTests : DialogTest
         var result = PickReminder(new DateTime(2030, 6, 14, 8, 30, 0), null, d =>
         {
             Assert.Equal("Change reminder", d.Title);
-            Assert.Equal("08:30", d.Time.Text);
+            Assert.Equal("08:30", d.Time.Text); // the time being changed is filled in
             d.Time.Text = "17.45";
             Click(Named<Button>(d, "SaveButton"));
         });
         Assert.Equal(new DateTime(2030, 6, 14, 17, 45, 0), result);
+    }
+
+    [AvaloniaFact]
+    public void A_new_reminder_starts_with_an_empty_time_and_needs_one()
+    {
+        var result = PickReminder(null, new DateTime(2030, 6, 20), d =>
+        {
+            Assert.Equal("", d.Time.Text ?? ""); // not 00:00 from the due date
+            Assert.Equal("e.g. 9:30 or 17:00", d.Time.PlaceholderText);
+            d.ClickSave();
+            Assert.Equal("Enter a time like 9:30 or 17:00.", d.Error.Text);
+            Cancel(d);
+        });
+        Assert.Null(result);
     }
 
     [AvaloniaFact]

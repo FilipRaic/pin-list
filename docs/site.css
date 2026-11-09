@@ -1,5 +1,5 @@
-/* Styles of the PinList pages on GitHub Pages (index.html, privacy.html, data-format.html).
-   Colors follow the app (src/PinList.UI/Themes.cs) and the social preview. */
+/* Styles of the PinList pages on GitHub Pages (index.html, privacy.html, data-format.html, feedback.html).
+   Colors follow the app (src/PinList.UI/Themes.cs) and the social preview. Dark by default, theme.js switches to light. */
 
 :root {
     --bg: #0c0f14;
@@ -15,20 +15,19 @@
     color-scheme: dark;
 }
 
-@media (prefers-color-scheme: light) {
-    :root {
-        --bg: #f3f6f9;
-        --surface: #ffffff;
-        --text: #27313d;
-        --strong: #121a24;
-        --muted: #5c6774;
-        --rule: #dde3ea;
-        --accent: #0a74a8;
-        --on-accent: #ffffff;
-        --code-bg: #e8eef4;
-        --glow: rgba(96, 205, 255, .22);
-        color-scheme: light;
-    }
+/* Dark is the default, the switch at the top right (theme.js) turns this on */
+:root[data-theme="light"] {
+    --bg: #f3f6f9;
+    --surface: #ffffff;
+    --text: #27313d;
+    --strong: #121a24;
+    --muted: #5c6774;
+    --rule: #dde3ea;
+    --accent: #0a74a8;
+    --on-accent: #ffffff;
+    --code-bg: #e8eef4;
+    --glow: rgba(96, 205, 255, .22);
+    color-scheme: light;
 }
 
 * {
@@ -104,7 +103,6 @@ main {
 header.site {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 16px;
     flex-wrap: wrap;
     padding-top: 22px;
@@ -136,6 +134,35 @@ header.site {
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
+    margin-left: auto;
+}
+
+/* the light / dark switch, right of the nav: a sun in dark mode, a moon in light mode */
+.theme-toggle {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+}
+
+.theme-toggle:hover {
+    color: var(--strong);
+    border-color: var(--muted);
+}
+
+.theme-toggle .moon,
+:root[data-theme="light"] .theme-toggle .sun {
+    display: none;
+}
+
+:root[data-theme="light"] .theme-toggle .moon {
+    display: block;
 }
 
 .site-nav a {
@@ -697,7 +724,216 @@ td:first-child code {
     }
 }
 
+/* ---------- Feedback form ---------- */
+
+.feedback,
+.thanks {
+    max-width: 40em;
+    padding: 24px;
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    background: var(--surface);
+}
+
+.feedback[hidden],
+.thanks[hidden],
+.field[hidden] {
+    display: none;
+}
+
+.feedback fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.feedback legend {
+    padding: 0;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-size: .95rem;
+    font-weight: 500;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: .95rem;
+    font-weight: 500;
+}
+
+.field .opt {
+    font-weight: 400;
+}
+
+.field input,
+.field textarea {
+    font: inherit;
+    font-weight: 400;
+    color: var(--strong);
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 10px 12px;
+    resize: vertical;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* the kind of feedback: pills */
+.kinds label,
+.seg label {
+    cursor: pointer;
+}
+
+.kinds input,
+.seg input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.kinds span {
+    display: inline-block;
+    margin: 0 6px 6px 0;
+    padding: 6px 14px;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.kinds input:checked + span {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* "Send via": two segments */
+.feedback .via {
+    margin-top: 18px;
+}
+
+.seg {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    max-width: 24em;
+    padding: 4px;
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    background: var(--bg);
+}
+
+.seg span {
+    display: block;
+    padding: 7px 12px;
+    border-radius: 8px;
+    text-align: center;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.seg input:checked + span {
+    background: var(--surface);
+    color: var(--strong);
+    box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.kinds input:focus-visible + span,
+.seg input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* spam trap, hidden from people */
+.honey {
+    position: absolute;
+    left: -9999px;
+}
+
+.form-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin-top: 24px;
+}
+
+.form-end .button {
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.form-end .button:disabled {
+    opacity: .6;
+    cursor: default;
+}
+
+.status {
+    flex: 1 1 16em;
+    margin: 0;
+    color: var(--muted);
+    font-size: .95rem;
+}
+
+.status.error {
+    color: #ff8a80;
+}
+
+.thanks h2 {
+    margin: 0 0 8px;
+    font: 600 2.1rem/1.1 "Barlow Condensed", Barlow, sans-serif;
+    color: var(--strong);
+}
+
+.thanks p {
+    margin: 0 0 10px;
+}
+
+.feedback-notes {
+    margin-top: 28px;
+    color: var(--muted);
+    font-size: .95rem;
+}
+
+:root[data-theme="light"] .status.error {
+    color: #b3261e;
+}
+
 @media (max-width: 560px) {
+    /* the switch stays on the logo's line, the nav gets a line of its own */
+    .theme-toggle {
+        order: 1;
+        margin-left: auto;
+    }
+
+    .site-nav {
+        order: 2;
+        flex-basis: 100%;
+        gap: 0;
+        margin-left: -8px;
+    }
+
+    .site-nav a {
+        padding: 6px 8px;
+    }
+
+    .feedback,
+    .thanks {
+        padding: 18px 16px;
+    }
+
     header.site,
     footer.site,
     main {
