@@ -61,8 +61,9 @@ public class DesktopSettingsHostTests : UiTest
         {
             host.SendFeedback();
             var url = Assert.Single(opened);
-            Assert.StartsWith("https://filipraic.github.io/pin-list/feedback?v=2.4.0&os=", url);
-            Assert.True(url.Length > "https://filipraic.github.io/pin-list/feedback?v=2.4.0&os=".Length);
+            // "Windows 10" or "Windows 11" with the build, not "Microsoft Windows 10.0"
+            Assert.StartsWith("https://filipraic.github.io/pin-list/feedback?v=2.4.0&os=Windows%201", url);
+            Assert.Contains("%28build%20", url);
         }
         finally { App.OpenUrl = realOpen; }
     }

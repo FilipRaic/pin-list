@@ -71,10 +71,15 @@ public partial class PhoneTests
             Assert.Equal($"https://filipraic.github.io/pin-list/feedback?v={version}&os=Android", opened[0]);
 
             _view.UpdateCheck = new Updates(_ => Task.FromResult<UpdateInfo?>(null), new Version(2, 2, 0));
+            PhoneApp.SystemName = "Android 15 (Pixel 9)"; // set by the Android app
             host.SendFeedback();
-            Assert.Equal("https://filipraic.github.io/pin-list/feedback?v=2.2.0&os=Android", opened[1]);
+            Assert.Equal("https://filipraic.github.io/pin-list/feedback?v=2.2.0&os=Android%2015%20%28Pixel%209%29", opened[1]);
         }
-        finally { PhoneView.OpenUrl = real; }
+        finally
+        {
+            PhoneView.OpenUrl = real;
+            PhoneApp.SystemName = "Android";
+        }
     }
 
     [AvaloniaFact]

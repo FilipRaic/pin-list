@@ -56,7 +56,7 @@ public partial class PhoneView : UserControl
     internal void SendFeedback()
     {
         var version = _updates?.Current ?? typeof(PhoneView).Assembly.GetName().Version!;
-        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, Feedback.Url(version, "Android"));
+        if (TopLevel.GetTopLevel(this) is { } top) _ = OpenUrl(top, Feedback.Url(version, PhoneApp.SystemName));
     }
 
     /// <summary>Asks for a file to import (the system file picker). Tests replace it.</summary>

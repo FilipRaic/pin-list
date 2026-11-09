@@ -37,6 +37,9 @@ public class PhoneApp : Application
     /// <summary>The phone's name in sync messages and files (manufacturer and model).</summary>
     public static string DeviceName { get; set; } = "Android phone";
 
+    /// <summary>The system for the feedback form, like "Android 15 (Xiaomi 23078PND5G)". Set by the platform.</summary>
+    public static string SystemName { get; set; } = "Android";
+
     /// <summary>
     /// Sign-in or a list's sync switch changed (Android plans or cancels its background sync then).
     /// </summary>
