@@ -114,26 +114,26 @@
         </div>
         <p>The folder contains:</p>
         <ul>
-            <li><code>data.json</code> – all widgets, categories, items, the archive and settings.</li>
-            <li><code>backups/data-YYYY-MM-DD.json</code> – one copy per day, the last 7 are kept.</li>
-            <li><code>backups/before-import-YYYY-MM-DD-HHMMSS.json</code> – a copy taken before an import replaced
+            <li><code>data.json</code>: all widgets, categories, items, the archive and settings.</li>
+            <li><code>backups/data-YYYY-MM-DD.json</code>: one copy per day, the last 7 are kept.</li>
+            <li><code>backups/before-import-YYYY-MM-DD-HHMMSS.json</code>: a copy taken before an import replaced
                 everything.
             </li>
-            <li><code>data.vN.json</code> – a copy of a file from a newer PinList (version N), kept before this version
+            <li><code>data.vN.json</code>: a copy of a file from a newer PinList (version N), kept before this version
                 saves over it.
             </li>
-            <li><code>data.json.corrupt-…</code> – a damaged file that couldn't be read (the latest backup was loaded
+            <li><code>data.json.corrupt-…</code>: a damaged file that couldn't be read (the latest backup was loaded
                 instead).
             </li>
-            <li><code>log.txt</code> / <code>log.old.txt</code> – errors and notes, at most about 1 MB each. Sync writes
+            <li><code>log.txt</code> / <code>log.old.txt</code>: errors and notes, at most about 1 MB each. Sync writes
                 one line for every object a
                 merge removes or overrides (ids only, never item text).
             </li>
-            <li><code>sync-state.json</code> – Google sync's own state (from 2.1.0, only after signing in, see <a
+            <li><code>sync-state.json</code>: Google sync's own state (from 2.1.0, only after signing in, see <a
                     href="#sync">Sync</a>). Not exported
                 and not backed up.
             </li>
-            <li><code>google-token.dat</code> – Windows only: the Google sign-in (refresh token), encrypted for the
+            <li><code>google-token.dat</code>: Windows only, the Google sign-in (refresh token), encrypted for the
                 Windows user with DPAPI.
                 Deleted when signing out. macOS keeps it in the login Keychain (service <code>PinList</code>, account
                 <code>google-refresh-token</code>), Android keeps no token (Google Play services does).
@@ -531,7 +531,7 @@
                 <tr>
                     <td><code>categoryId</code>, <code>categoryName</code>, <code>categoryColor</code></td>
                     <td>string</td>
-                    <td>The category it was in (<code>categoryId</code> is empty if unknown) – restoring puts it back
+                    <td>The category it was in (<code>categoryId</code> is empty if unknown). Restoring puts it back
                         there, or into the first category if that one is gone
                     </td>
                 </tr>
@@ -591,10 +591,9 @@
         <p>A <code>Stamp</code> is <code>{ "device": "&lt;device id&gt;", "counter": &lt;number&gt; }</code>: the device
             that made the change and the value of
             its change counter then. Counters only go up, so a stamp is never used twice.</p>
-        <p>Synced fields (what the fingerprint covers): list – title, style, transparent, category – name, color,
-            collapsed,
-            its list item – text, created, due date, reminder, reminder shown, its
-            category and list archived item – all its fields. The order of a list's categories and of a category's
+        <p>Synced fields (what the fingerprint covers). A list: title, style, transparent. A category: name, color,
+            collapsed, its list. An item: text, created, due date, reminder, reminder shown, its category and list.
+            An archived item: all its fields. The order of a list's categories and of a category's
             items
             has its own <code>SyncMeta</code> (<code>orderSync</code>), so reordering (also adding or removing a child)
             on one device and renaming on
@@ -632,7 +631,7 @@
             Each device writes only its own files, so two devices never write the same file.</p>
         <h3 id="cloud-files">Cloud files</h3>
         <ul>
-            <li><code>w-&lt;listId&gt;.&lt;deviceId&gt;.json</code> – this device's latest copy of one synced list:</li>
+            <li><code>w-&lt;listId&gt;.&lt;deviceId&gt;.json</code>: this device's latest copy of one synced list:</li>
         </ul>
         <div class="table-wrap">
             <table>
@@ -693,7 +692,7 @@
             the list was
             deleted (<code>deleted: true</code>).</p>
         <ul>
-            <li><code>reset.json</code> – <code>{ "device": "&lt;deviceId&gt;", "at": "&lt;UTC time&gt;" }</code>, left
+            <li><code>reset.json</code>: <code>{ "device": "&lt;deviceId&gt;", "at": "&lt;UTC time&gt;" }</code>, left
                 after <em>Sign out and delete cloud data</em>. Other
                 devices that see it turn their synced lists into local lists.
             </li>

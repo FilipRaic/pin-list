@@ -358,7 +358,7 @@ public partial class App : Application
     internal async Task SignOutAndDeleteCloudData(Window? owner)
     {
         if (await Dialogs.Ask(owner, "Delete PinList's cloud data?",
-                "This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", "Delete"))
+                "Removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", "Delete"))
             await SyncService.Current!.SignOut(true);
     }
 
@@ -374,7 +374,7 @@ public partial class App : Application
             return;
         }
         await Dialogs.Info(owner, "Sync problem", problem == "Can't reach Google Drive."
-            ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this device until it works again."
+            ? "Can't reach Google Drive. PinList keeps trying. Your changes are saved on this device."
             : problem);
     }
 
@@ -429,10 +429,8 @@ public partial class App : Application
     {
         if (_updates is not { Enabled: null } updates) return;
         int choice = await Dialogs.Current.Choose(null, "Check for updates?",
-            "PinList can look for a new version about once a day and tell you when there is one. " +
-            "It only asks GitHub for the number of the latest version and what's new in it. " +
-            "Nothing about you or your lists is sent.\n\n" +
-            "You can change this later with Check for updates in Settings.", 1,
+            "PinList can check GitHub for a new version about once a day. " +
+            "Nothing about you or your lists is sent. You can change this in Settings.", 1,
             ("No", DialogButtonKind.Normal), ("Yes", DialogButtonKind.Accent));
         if (choice >= 0) updates.Enabled = choice == 1; // closed without answering: asked again on the next start
     }
@@ -769,8 +767,8 @@ public partial class App : Application
         int archived = imported.Archive.Count;
         string message =
             $"{Plural(lists, "list")} with {Plural(items, "item")}, and {Plural(archived, "completed item")} in the archive.\n\n" +
-            "Add them next to your current lists, or replace everything you have now? " +
-            "Replacing keeps a copy of your current lists in the backups folder.";
+            "Add them to your lists, or replace everything? " +
+            "Replacing keeps a copy of your lists in the backups folder.";
         if (Store.HasSyncedBoards)
             message += "\n\nSynced lists aren't replaced.";
         if (fileVersion > AppData.CurrentVersion)

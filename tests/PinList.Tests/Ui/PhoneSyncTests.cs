@@ -76,7 +76,7 @@ public partial class PhoneTests
         Assert.True(UiHost.WaitUntil(() => _phoneCloud.Calls > calls));
 
         Click(SettingsButton("Sign out and delete cloud data"));
-        Assert.Equal("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", _view.SheetTitleText);
+        Assert.Equal("Removes PinList's data from Google Drive for all your devices. Your lists stay on every device.", _view.SheetTitleText);
         Choose("Cancel");
         Assert.NotNull(_view.Sync!.Account);
         Click(SettingsButton("Sign out and delete cloud data"));
@@ -162,7 +162,7 @@ public partial class PhoneTests
         for (int i = 0; i < 5; i++) Await(_view.Sync.SyncNow());
         Pump();
         Click(HeaderSyncBtn());
-        Assert.Equal("Can't reach Google Drive. PinList keeps trying, and your changes stay on this phone until it works again.", _view.SheetTitleText);
+        Assert.Equal("Can't reach Google Drive. PinList keeps trying. Your changes are saved on this phone.", _view.SheetTitleText);
         Choose("OK");
         _phoneCloud.Offline = false;
 

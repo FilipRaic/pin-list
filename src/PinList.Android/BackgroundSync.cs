@@ -83,11 +83,18 @@ public sealed class SyncWorker : Worker
         catch (Exception ex)
         {
             Store.Log("Background sync failed: " + ex.Message);
+            WidgetSync.Done(context, null);
             return Result.InvokeRetry()!;
         }
 
         // a reminder set on another device also rings here, even if PinList is never opened
-        if (result.Changed) Alarms.ScheduleNext(context);
+        if (result.Changed)
+        {
+            Alarms.ScheduleNext(context);
+            ListWidgetProvider.RefreshAll(context); // and shows on the home screen widgets
+        }
+
+        WidgetSync.Done(context, result.Status); // a widget's sync button started this: say how it went
 
         switch (result.Status)
         {

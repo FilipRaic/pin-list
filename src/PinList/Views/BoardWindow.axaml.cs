@@ -478,15 +478,15 @@ public partial class BoardWindow : Window
         int items = 0;
         foreach (var c in Board.Categories) items += c.Items.Count;
         string msg = items > 0
-            ? $"This deletes the list with {Board.Categories.Count} categories and {items} items. Items are not moved to the archive."
-            : "This deletes the list.";
+            ? $"Deletes the list with its {Board.Categories.Count} categories and {items} items. They don't go to the archive."
+            : "Deletes the list.";
         if (Board.Synced) msg += " It will also be deleted from your other devices.";
         string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this list?" : $"Delete \"{Board.Title}\"?";
         if (Board.Synced)
         {
             // deleting a synced list deletes it everywhere, which often isn't what's meant: offer to only remove the widget
             int choice = await Dialogs.Current.Choose(this, title, msg, 1, ("Cancel", DialogButtonKind.Normal),
-                ("Remove from desktop instead", DialogButtonKind.Normal), ("Delete", DialogButtonKind.Danger));
+                ("Hide widget instead", DialogButtonKind.Normal), ("Delete", DialogButtonKind.Danger));
             if (choice == 1) RemoveFromDesktop();
             if (choice != 2) return;
         }
@@ -502,7 +502,7 @@ public partial class BoardWindow : Window
     void RemoveFromDesktop()
     {
         Actions.SetWidget(Board, false);
-        A11y.Announce(this, $"Removed from the desktop. Open it again from All lists. {OsText.Undo} undoes.");
+        A11y.Announce(this, $"Widget hidden. It's still in All lists. {OsText.Undo} undoes.");
     }
 
     // ================= Items =================

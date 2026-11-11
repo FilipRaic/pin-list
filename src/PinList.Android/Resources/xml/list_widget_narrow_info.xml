@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The home screen widget 2 cells wide and 3 high when placed (NarrowListWidgetProvider). Everything else is
+    the same as list_widget_info.xml. Before Android 12 the size comes from minWidth and minHeight
+    (110dp is 2 cells, 180dp is 3).
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:minWidth="110dp"
+                    android:minHeight="180dp"
+                    android:minResizeWidth="110dp"
+                    android:minResizeHeight="110dp"
+                    android:targetCellWidth="2"
+                    android:targetCellHeight="3"
+                    android:resizeMode="horizontal|vertical"
+                    android:updatePeriodMillis="0"
+                    android:initialLayout="@layout/list_widget"
+                    android:previewLayout="@layout/list_widget_preview"
+                    android:configure="com.pinlist.app.ChooseListActivity"
+                    android:widgetFeatures="reconfigurable"
+                    android:widgetCategory="home_screen"
+                    android:description="@string/widget_narrow_description"/>

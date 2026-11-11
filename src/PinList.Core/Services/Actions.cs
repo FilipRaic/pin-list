@@ -32,7 +32,7 @@ public static class Actions
     {
         if (board.Widget == widget) return;
         board.Widget = widget;
-        PushUndo(widget ? $"showing {Quote(board.Title)} as a widget" : $"removing {Quote(board.Title)} from the desktop", () =>
+        PushUndo(widget ? $"showing {Quote(board.Title)} as a widget" : $"hiding the widget of {Quote(board.Title)}", () =>
         {
             board.Widget = !widget;
             WidgetChanged?.Invoke(board);

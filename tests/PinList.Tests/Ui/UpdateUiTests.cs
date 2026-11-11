@@ -40,7 +40,7 @@ public class UpdateUiTests : UiTest
         var updates = UseUpdates();
 
         await App.AskAboutUpdates(); // closed without an answer: still not decided
-        Assert.StartsWith("Check for updates?: PinList can look for a new version", Assert.Single(Dialogs.Shown));
+        Assert.StartsWith("Check for updates?: PinList can check GitHub for a new version", Assert.Single(Dialogs.Shown));
         Assert.Null(updates.Enabled);
 
         Dialogs.ChooseAnswer = _ => 0; // No
@@ -124,8 +124,8 @@ public class UpdateUiTests : UiTest
         _latest = new UpdateInfo(new Version(2, 3, 0), ExeUrl: Exe);
         updates.Enabled = true;
         Assert.True(UiHost.WaitUntil(() => dot.IsVisible));
-        Assert.Equal("Settings, PinList 2.3.0 is available", Avalonia.Automation.AutomationProperties.GetName(nav));
-        Assert.Equal("PinList 2.3.0 is available", ToolTip.GetTip(nav));
+        Assert.Equal("Settings, PinList 2.3.0 is out", Avalonia.Automation.AutomationProperties.GetName(nav));
+        Assert.Equal("PinList 2.3.0 is out", ToolTip.GetTip(nav));
 
         Assert.True(UiHost.WaitUntil(() => FindAll<Button>(main.Settings).Any(b => b.Content as string == "Get it")));
         Click(FindAll<Button>(main.Settings).First(b => b.Content as string == "Get it"));
@@ -260,7 +260,7 @@ public class PhoneUpdateTests : UiTest
         Assert.True(_view.SheetOpen);
         Assert.Equal("Check for updates?", _view.SheetTitleText);
         var text = FindAll<TextBlock>(_view.SheetPanel!).Single(t => t.Classes.Contains("sheettext"));
-        Assert.StartsWith("PinList can look for a new version about once a day", text.Text);
+        Assert.StartsWith("PinList can check GitHub for a new version about once a day", text.Text);
 
         // under each other, the main one at the bottom and filled
         Assert.Equal(new[] { "Don't check", "Check for updates" }, Options());
@@ -273,7 +273,7 @@ public class PhoneUpdateTests : UiTest
         Choose("Check for updates");
         Assert.True(updates.Enabled);
         Assert.True(UiHost.WaitUntil(() => _view.SheetOpen));
-        Assert.Equal("PinList 2.3.0 is available", _view.SheetTitleText);
+        Assert.Equal("PinList 2.3.0 is out", _view.SheetTitleText);
         Assert.Equal(new[] { "Later", "Get it" }, Options()); // side by side, Get it on the right and filled
         var buttons = SheetButtons();
         Assert.All(buttons, b => Assert.Contains("sheetbutton", b.Classes));
@@ -282,7 +282,7 @@ public class PhoneUpdateTests : UiTest
         Assert.Equal(new[] { 0, 2 }, buttons.Select(Grid.GetColumn));
         Assert.Single(FindAll<LineIcon>(buttons[1])); // the download icon
         Assert.True(Named<Avalonia.Controls.Shapes.Ellipse>(_view, "UpdateDot").IsVisible);
-        Assert.Equal("Settings, PinList 2.3.0 is available",
+        Assert.Equal("Settings, PinList 2.3.0 is out",
             Avalonia.Automation.AutomationProperties.GetName(Named<Button>(_view, "TabSettings")));
 
         Choose("Get it");

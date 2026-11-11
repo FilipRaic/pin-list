@@ -18,6 +18,8 @@ public class MainApplication : AvaloniaAndroidApplication<PhoneApp>
         PhoneApp.DataDir = FilesDir!.AbsolutePath;
         PhoneApp.ShowNotification = (title, text) => Notifications.Show(this, title, text);
         PhoneApp.Saved = () => Alarms.ScheduleNext(this);
+        // home screen widgets show what was just saved: a change in the app, on a widget or from a sync
+        Store.Saved += () => ListWidgetProvider.RefreshAll(this);
         PhoneApp.SyncSettingsChanged = () => BackgroundSync.Update(this);
         // Google sync (also for background runs, when no screen was ever opened): sign-in through Play services,
         // and the phone's name for sync messages

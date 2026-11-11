@@ -11,7 +11,7 @@ using Xunit;
 namespace PinList.Tests;
 
 /// <summary>
-/// The "All lists" section of the PinList window: every list as a card (the phone's first screen), each with an On desktop switch. A list that
+/// The "All lists" section of the PinList window: every list as a card (the phone's first screen), each with a Widget switch. A list that
 /// isn't a widget on this computer can still be opened and edited there.
 /// </summary>
 public class MainWindowTests : UiTest
@@ -99,6 +99,9 @@ public class MainWindowTests : UiTest
         var lists = Lists();
         var toggle = WidgetSwitch(lists, board);
         Assert.True(toggle.IsChecked);
+        Assert.Equal("Widget", toggle.OnContent);
+        Assert.Equal("Widget", toggle.OffContent);
+        Assert.Equal("Show as a widget", Avalonia.Automation.AutomationProperties.GetName(toggle));
 
         toggle.IsChecked = false;
         Pump();
@@ -117,8 +120,9 @@ public class MainWindowTests : UiTest
     public void Undo_brings_a_removed_widget_back()
     {
         var w = OpenNew(("A", new[] { "a" }));
-        ChooseFromMenu(WidgetMenu(w), "Remove from desktop");
+        ChooseFromMenu(WidgetMenu(w), "Hide widget");
         Assert.False(w.Board.Widget);
+        Assert.Equal($"Widget hidden. It's still in All lists. {OsText.Undo} undoes.", A11y.LastAnnouncement);
         Assert.DoesNotContain(App.OpenWindows, x => x.Board == w.Board);
         Assert.True(Actions.Undo(out _));
         Pump();
@@ -345,7 +349,7 @@ public class MainWindowTests : UiTest
     {
         var w = OpenNew(("A", new[] { "a" }));
         Assert.Single(App.OpenWindows);
-        ChooseFromMenu(WidgetMenu(w), "Remove from desktop");
+        ChooseFromMenu(WidgetMenu(w), "Hide widget");
         Assert.Empty(App.OpenWindows);
         Assert.True(App.MainWindow?.IsVisible);
     }

@@ -95,6 +95,7 @@ public partial class PhoneView : UserControl
             e.Container.IsHitTestVisible = !header; // day headings are not rows to tap
         };
         SetupSheet();
+        _highlightTimer.Tick += (_, _) => EndHighlight();
 
         _homeDrag = new PhoneDrag(HomeScreen, HomeScroller, o => o is Board)
         {
@@ -131,7 +132,7 @@ public partial class PhoneView : UserControl
 
     /// <summary>
     /// The "All lists" section of the desktop's PinList window: right click opens the menus that a long press opens on
-    /// the phone, cards get an "On desktop" switch, and there is no bottom bar (the window has its own sidebar).
+    /// the phone, cards get a "Widget" switch, and there is no bottom bar (the window has its own sidebar).
     /// </summary>
     public PhoneView(bool desktop) : this()
     {
@@ -293,7 +294,7 @@ public partial class PhoneView : UserControl
                 new SheetOption("Not now", () => { }));
         else
             ShowSheet(state.Problem == "Can't reach Google Drive."
-                    ? "Can't reach Google Drive. PinList keeps trying, and your changes stay on this phone until it works again."
+                    ? "Can't reach Google Drive. PinList keeps trying. Your changes are saved on this phone."
                     : state.Problem!,
                 new SheetOption("OK", () => { }));
     }
@@ -328,9 +329,8 @@ public partial class PhoneView : UserControl
         if (_updates is not { Enabled: null } updates) return;
         var text = new TextBlock
         {
-            Text = "PinList can look for a new version about once a day and tell you when there is one. " +
-                   "It only asks GitHub for the number of the latest version and what's new in it. " +
-                   "Nothing about you or your lists is sent. You can change this later in Settings.",
+            Text = "PinList can check GitHub for a new version about once a day. " +
+                   "Nothing about you or your lists is sent. You can change this in Settings.",
             FontSize = 14,
             LineHeight = 14 * 1.4,
             Margin = new Thickness(22, 4, 22, 10),
@@ -358,7 +358,7 @@ public partial class PhoneView : UserControl
         UpdateRow.IsVisible = available != null;
         UpdateDot.IsVisible = available != null;
         if (available != null) UpdateRow.Content = $"Get PinList {available.Version}";
-        AutomationProperties.SetName(TabSettings, available != null ? $"Settings, PinList {available.Version} is available" : "Settings");
+        AutomationProperties.SetName(TabSettings, available != null ? $"Settings, PinList {available.Version} is out" : "Settings");
     }
 
     void UpdateRow_Click(object? sender, RoutedEventArgs e) => OpenUpdate();
@@ -366,7 +366,7 @@ public partial class PhoneView : UserControl
     /// <summary>A new version, found for the first time: a sheet with what's new in it, to get it now or later.</summary>
     void OnUpdateFound(UpdateInfo update)
     {
-        string title = $"PinList {update.Version} is available";
+        string title = $"PinList {update.Version} is out";
         var notes = ReleaseNotesView.Build(update.Notes, 14);
         var body = notes == null ? null : new ScrollViewer
         {
@@ -496,6 +496,63 @@ public partial class PhoneView : UserControl
         SlideInBoard();
     }
 
+    /// <summary>How long an item opened from outside (a tap on a home screen widget) stays highlighted.</summary>
+    public static TimeSpan HighlightTime { get; set; } = TimeSpan.FromSeconds(1.5);
+
+    readonly DispatcherTimer _highlightTimer = new();
+    TodoItem? _highlighted;
+
+    /// <summary>
+    /// Shows the list, as a tap on a home screen widget asks for. With the id of an item in it, the item's category
+    /// is expanded and the item is scrolled into view and highlighted for <see cref="HighlightTime"/>. A list that
+    /// no longer exists shows the cards. An open menu is closed and text being typed is saved first.
+    /// Without a screen yet (PinList was started by the tap) it waits for the screen: a list shown before that has
+    /// its rows measured against nothing, and some of them then stay without their text.
+    /// </summary>
+    public void OpenItem(string boardId, string? itemId)
+    {
+        if (TopLevel.GetTopLevel(this) == null)
+        {
+            _openWhenShown = (boardId, itemId);
+            return;
+        }
+        CommitEdits();
+        HideSheet();
+        EndHighlight();
+        var board = Store.Data.Boards.FirstOrDefault(b => b.Id == boardId);
+        if (board == null)
+        {
+            ShowHome();
+            return;
+        }
+        if (!ReferenceEquals(board, _board)) ShowBoard(board);
+
+        var cat = board.Categories.FirstOrDefault(c => c.Items.Any(i => i.Id == itemId));
+        if (cat == null) return;
+        var item = cat.Items.First(i => i.Id == itemId);
+        if (cat.Collapsed)
+        {
+            cat.Collapsed = false;
+            Store.MarkDirty();
+        }
+        item.IsActive = true;
+        _highlighted = item;
+        _highlightTimer.Interval = HighlightTime;
+        _highlightTimer.Start();
+        // the row exists after the next layout (the list was just shown, or its category just expanded)
+        Dispatcher.UIThread.Post(() => Root.GetVisualDescendants().OfType<AccessibleRow>()
+            .FirstOrDefault(r => ReferenceEquals(r.Tag, item))?.BringIntoView(), DispatcherPriority.Loaded);
+    }
+
+    (string boardId, string? itemId)? _openWhenShown;
+
+    void EndHighlight()
+    {
+        _highlightTimer.Stop();
+        if (_highlighted != null) _highlighted.IsActive = false;
+        _highlighted = null;
+    }
+
     void ApplyBoardLook(Board board)
     {
         var style = Themes.Get(board.Style);
@@ -561,7 +618,7 @@ public partial class PhoneView : UserControl
 
     /// <summary>"Sign out and delete cloud data" asks first, in a sheet.</summary>
     void ConfirmDeleteCloudData(Action delete) =>
-        ShowSheet("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
+        ShowSheet("Removes PinList's data from Google Drive for all your devices. Your lists stay on every device.",
             new SheetOption("Delete", delete, Danger: true, Icon: "Line.Delete"),
             new SheetOption("Cancel", () => { }));
 
@@ -590,6 +647,12 @@ public partial class PhoneView : UserControl
         _backSource.AddHandler(TopLevel.BackRequestedEvent, OnBackRequested);
         _inputPane = _backSource.InputPane;
         if (_inputPane != null) _inputPane.StateChanged += OnInputPaneChanged; // none in tests
+        if (_openWhenShown is { } open)
+        {
+            _openWhenShown = null;
+            // after the first layout, so the list's rows get the screen's real width
+            Dispatcher.UIThread.Post(() => OpenItem(open.boardId, open.itemId), DispatcherPriority.Loaded);
+        }
     }
 
     // The on-screen keyboard: the screen ends above it, so what's typed (and Save) stays visible.
@@ -616,7 +679,7 @@ public partial class PhoneView : UserControl
     void Card_Tapped(object? sender, TappedEventArgs e)
     {
         if (_homeDrag.SuppressTap) return;
-        if (e.Source is Visual v && v.FindAncestorOfType<ToggleSwitch>(includeSelf: true) != null) return; // the On desktop switch
+        if (e.Source is Visual v && v.FindAncestorOfType<ToggleSwitch>(includeSelf: true) != null) return; // the Widget switch
         ShowBoard((Board)((Control)sender!).Tag!);
     }
 
@@ -1167,7 +1230,7 @@ public partial class PhoneView : UserControl
             new SheetOption("Restore", () =>
             {
                 var done = Actions.Restore(new[] { a });
-                if (done.Count == 0) ShowMessage("There is no category to restore into. Add a category to a list first.");
+                if (done.Count == 0) ShowMessage("No category to restore into. Add one to a list first.");
                 else if (done[0].category.Id != a.CategoryId)
                     ShowUndo($"\"{a.CategoryName}\" no longer exists, so it went to \"{done[0].category.Name}\"");
                 else ShowUndo("Restored");
@@ -1259,9 +1322,10 @@ public partial class PhoneView : UserControl
 
         int lists = imported.Boards.Count, items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
         ShowSheet($"Import {lists} list{(lists == 1 ? "" : "s")} with {items} item{(items == 1 ? "" : "s")}?" +
+                  " Replacing keeps a copy of your lists." +
                   (Store.HasSyncedBoards ? " Synced lists aren't replaced." : ""),
-            new SheetOption("Add next to mine", () => { Store.Merge(imported); ShowMessage("Imported"); }, Icon: "Line.Import"),
-            new SheetOption("Replace everything (a copy of mine is kept)", () =>
+            new SheetOption("Add to my lists", () => { Store.Merge(imported); ShowMessage("Imported"); }, Icon: "Line.Import"),
+            new SheetOption("Replace everything", () =>
             {
                 try
                 {

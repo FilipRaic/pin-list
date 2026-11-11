@@ -43,7 +43,7 @@ static class ReminderSettings
     public static string? Describe(long status, long center, long style)
     {
         if (status == 0) return null;
-        if (status == 1) return "Notifications are off for PinList, so reminders show in PinList's own window.";
+        if (status == 1) return "Notifications are off, so reminders show in PinList's own window.";
         var parts = new List<string>();
         if (style == 0) parts.Add("don't show on the screen (choose Persistent Alerts)");
         else if (style == 1) parts.Add("go away after a few seconds (choose Persistent Alerts)");

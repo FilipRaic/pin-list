@@ -4,4 +4,12 @@
   <style name="PinListTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
     <item name="android:windowBackground">@android:color/black</item>
   </style>
+  <!-- The small screens a home screen widget opens over the launcher: the add box and the list chooser -->
+  <style name="PinListDialogTheme" parent="Theme.AppCompat.DayNight.Dialog.MinWidth">
+    <item name="windowNoTitle">true</item>
+    <!-- the screens draw their own rounded card in the app's colors (WidgetSheet) -->
+    <item name="android:windowBackground">@android:color/transparent</item>
+  </style>
+  <!-- Handles a tap on the widget and closes again at once, without showing anything -->
+  <style name="PinListInvisibleTheme" parent="@android:style/Theme.NoDisplay"/>
 </resources>

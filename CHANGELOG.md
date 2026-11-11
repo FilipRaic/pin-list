@@ -3,6 +3,25 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.9.0] - 2026-11-11
+
+Lists on the Android home screen, shorter texts in the app, and tidier docs.
+
+### Added
+- **Android: home screen widgets.** Put a list on the home screen, one widget per list, as many as you like. The widget has the list's own color. It comes in two sizes, 3 × 3 cells and a narrow 2 × 3, and both can be resized after placing
+- On the widget, tap a circle to complete an item (**Undo** shows for a few seconds), tap a category to collapse or expand it, and tap **+** to add items in a small box that stays open for the next one. Tapping an item's text opens it in PinList, and the arrow opens the list
+- A widget shows what you change on the phone right away. Changes from other devices arrive like on the phone itself: within about 20 seconds while PinList is open, about every 15 minutes while it's closed. On a synced list the widget has a sync button for right now, and changing something on the widget syncs too
+- The sync button says what happens in a short message over the home screen: *Syncing*, then *Synced*, or that you're offline or what went wrong. The button is faded while the sync runs
+- The box that adds items and the screen that asks for the list look like the app's own menus: its colors, in the theme chosen in Settings, with the categories as a row of chips
+- If a widget's list is deleted, the widget says so and offers **Choose a list**
+- **Android:** a tap on a widget's item opens PinList on that item and highlights it for a moment. PinList waits for its screen before it shows the list, so no rows come up without their text
+
+### Changed
+- **⋯ → Remove from desktop** is now **Hide widget**, and the **On desktop** switch in All lists is now **Widget**. The delete question offers **Hide widget instead**
+- Shorter texts across the app: the update question, the import question (**Add to my lists**, **Replace everything**), the sync messages, the sign-in window, the archive and a few screen reader announcements. They say the same in fewer words
+- A new version is announced as *PinList x.y.z is out* everywhere (the popup said *is available*)
+- The README and the website were tightened: shorter sentences, less repetition, and the home screen widget is described. The install headings in the README lost their dash, and the website's *Install steps* links follow
+
 ## [2.8.1] - 2026-11-09
 
 The feedback form shows your system correctly.

@@ -50,7 +50,7 @@ public partial class BoardWindow
         menu.Items.Add(Item("Settings", App.Instance.ShowSettings, icon: "Line.Settings"));
         menu.Items.Add(new Separator());
 
-        menu.Items.Add(Item("Remove from desktop", RemoveFromDesktop, icon: "Line.RemoveFromDesktop"));
+        menu.Items.Add(Item("Hide widget", RemoveFromDesktop, icon: "Line.RemoveFromDesktop"));
         menu.Items.Add(Item("Delete list", DeleteThisBoard, icon: "Line.Delete", danger: true));
         Open(menu, MenuBtn);
     }

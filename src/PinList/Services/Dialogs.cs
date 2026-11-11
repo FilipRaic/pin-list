@@ -28,7 +28,7 @@ public interface IDialogs
     Task<string?> OpenFile(Window? owner, string title);
 
     /// <summary>
-    /// "Waiting for Google sign-in in your browser… [Cancel]" while <paramref name="signIn"/> runs; Cancel cancels
+    /// "Finish signing in to Google in your browser. [Cancel]" while <paramref name="signIn"/> runs; Cancel cancels
     /// its token. Returns what the sign-in returned.
     /// </summary>
     Task<bool> WaitForSignIn(Window? owner, Func<System.Threading.CancellationToken, Task<bool>> signIn);

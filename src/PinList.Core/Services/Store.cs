@@ -186,8 +186,8 @@ public static class Store
         try { if (!File.Exists(copy)) File.Copy(FilePath, copy); }
         catch (Exception ex) { Log("Could not keep a copy of the newer file: " + ex.Message); }
 
-        Notify("Your lists were saved by a newer version of PinList. They were loaded, but details only the newer " +
-               $"version knows about may be lost. A copy of the original file was kept as {Path.GetFileName(copy)}.", false);
+        Notify("Your lists come from a newer PinList. They were loaded, but some newer details may be lost. " +
+               $"The original file was kept as {Path.GetFileName(copy)}.", false);
         return data;
     }
 

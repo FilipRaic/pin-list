@@ -133,7 +133,7 @@ public class StoreTests : StoreTestBase
 
         Assert.True(Store.Load());
         Assert.Single(Store.Data.Boards);
-        Assert.Contains(Messages, m => m.message.Contains("newer version"));
+        Assert.Contains(Messages, m => m.message.Contains("Your lists come from a newer PinList."));
         Assert.True(File.Exists(Path.Combine(Dir, $"data.v{AppData.CurrentVersion + 1}.json")));
     }
 

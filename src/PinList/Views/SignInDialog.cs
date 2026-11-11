@@ -11,7 +11,7 @@ static class SignInDialog
     public static async Task<bool> Run(Window? owner, Func<CancellationToken, Task<bool>> signIn)
     {
         using var cancel = new CancellationTokenSource();
-        var dlg = new ConfirmDialog("Google sign-in", "Waiting for Google sign-in in your browser…",
+        var dlg = new ConfirmDialog("Google sign-in", "Finish signing in to Google in your browser.",
             new[] { ("Cancel", DialogButtonKind.Normal) }, 0)
         {
             Topmost = false, // the user signs in in the browser meanwhile; this window mustn't cover it
