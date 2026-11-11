@@ -625,7 +625,7 @@ public sealed class SyncService
                 s.DeletedLists.Add(id);
                 s.Markers[FileName(id, data.SyncInfo!.DeviceId)] = ListCopy.ToJson(result);
                 Store.Log($"Sync: list {id} was deleted on {theirs.DeviceName}; kept here as local list {newId}.");
-                Message($"“{local.Title}” was deleted on another device. Your recent changes on this device were kept in a list that stays on this device.");
+                Message($"“{local.Title}” was deleted on another device. Your recent changes were kept here as a local list.");
                 return true;
             }
             Store.BackupBeforeSync();

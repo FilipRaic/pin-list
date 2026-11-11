@@ -348,7 +348,7 @@ public class ArchiveViewTests : UiTest
         Store.Data.Boards.Remove(board);
         var a = OpenArchive();
         Click(RowButton(a, a.Shown[0], "restore"));
-        Assert.Equal("There is no category to restore into. Add a category to a widget first.", Status(a).Text);
+        Assert.Equal("No category to restore into. Add one to a list first.", Status(a).Text);
 
         List(a).SelectedItems!.Clear();
         Press(List(a), Key.Enter); // nothing selected: nothing happens

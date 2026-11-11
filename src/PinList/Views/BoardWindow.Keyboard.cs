@@ -350,7 +350,7 @@ public partial class BoardWindow
         if (!ShortcutsAllowed()) return false;
         if (Board.Locked)
         {
-            A11y.Announce(this, "The list is locked. Unlock it to move or resize.");
+            A11y.Announce(this, "Locked. Unlock to move or resize.");
             return true;
         }
 

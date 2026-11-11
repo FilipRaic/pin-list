@@ -695,7 +695,7 @@ public class BoardWindowTests : UiTest
         w.Board.Title = "Work";
         Click(Named<Button>(w, "MenuBtn"));
         ChooseFromMenu(w.LastMenu!, "Delete list"); // Esc
-        Assert.Contains("Delete \"Work\"?: This deletes the list with 2 categories and 2 items. Items are not moved to the archive.", Dialogs.Shown);
+        Assert.Contains("Delete \"Work\"?: Deletes the list with its 2 categories and 2 items. They don't go to the archive.", Dialogs.Shown);
         Assert.True(w.IsVisible);
 
         Dialogs.ChooseAnswer = _ => 1;
@@ -715,6 +715,6 @@ public class BoardWindowTests : UiTest
         var w = Open(board);
         Click(Named<Button>(w, "MenuBtn"));
         ChooseFromMenu(w.LastMenu!, "Delete list");
-        Assert.Contains("Delete this list?: This deletes the list.", Dialogs.Shown);
+        Assert.Contains("Delete this list?: Deletes the list.", Dialogs.Shown);
     }
 }

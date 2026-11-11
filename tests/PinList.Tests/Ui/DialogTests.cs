@@ -78,7 +78,7 @@ public class ConfirmDialogTests : DialogTest
         var update = new UpdateInfo(new Version(2, 7, 0), Notes: "### Added\n- **New** thing");
         bool result = Run<bool, ConfirmDialog>(() => new AppDialogs().ShowUpdate(null, update), d =>
         {
-            Assert.Equal("PinList 2.7.0 is available", d.Title);
+            Assert.Equal("PinList 2.7.0 is out", d.Title);
             Assert.Equal("What's new:", Named<TextBlock>(d, "MessageText").Text);
             Assert.Equal(460, d.Width);
             var notes = Assert.IsType<ScrollViewer>(d.ExtraContent);

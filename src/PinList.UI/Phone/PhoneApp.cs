@@ -61,6 +61,21 @@ public class PhoneApp : Application
 
     Updates? _updates;
 
+    /// <summary>The app whose screen exists (set by <see cref="Start"/>).</summary>
+    internal static PhoneApp? Running { get; set; }
+
+    static (string boardId, string? itemId)? _openRequest;
+
+    /// <summary>
+    /// Opens a list, and an item in it if given (a tap on a home screen widget). Right away when the screen exists,
+    /// otherwise as soon as it does.
+    /// </summary>
+    public static void Open(string boardId, string? itemId)
+    {
+        if (Running?.View is { } view) view.OpenItem(boardId, itemId);
+        else _openRequest = (boardId, itemId);
+    }
+
     public PhoneView? View { get; private set; }
     public Reminders? ReminderService { get; private set; }
 
@@ -108,6 +123,12 @@ public class PhoneApp : Application
         if (!Store.Load()) Store.SaveNow(); // first start: no lists yet, the cards screen says how to begin
         ApplyTheme();
         View.Reload();
+        Running = this;
+        if (_openRequest is { } open)
+        {
+            _openRequest = null;
+            View.OpenItem(open.boardId, open.itemId);
+        }
 
         StartSync();
         StartUpdates();

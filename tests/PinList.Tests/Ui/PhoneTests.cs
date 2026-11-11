@@ -814,7 +814,7 @@ public partial class PhoneTests : UiTest
         Store.Data.Boards.Clear(); // nowhere to restore to
         _view.ShowArchivedMenu(Store.Data.Archive[0]);
         Choose("Restore");
-        Assert.Contains("no category", _view.SnackbarMessage);
+        Assert.Equal("No category to restore into. Add one to a list first.", _view.SnackbarMessage);
         Assert.True(_view.GoBack());
     }
 
@@ -888,7 +888,7 @@ public partial class PhoneTests : UiTest
             var json = Store.ExportJson();
             PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
             Await(_view.Import());
-            Assert.Equal("Import 1 list with 1 item? Synced lists aren't replaced.", _view.SheetTitleText);
+            Assert.Equal("Import 1 list with 1 item? Replacing keeps a copy of your lists. Synced lists aren't replaced.", _view.SheetTitleText);
         }
         finally { PhoneView.PickImportFile = realImport; }
     }
@@ -911,14 +911,14 @@ public partial class PhoneTests : UiTest
 
             PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
             Await(_view.Import());
-            Assert.Equal("Import 1 list with 1 item?", _view.SheetTitleText);
-            Choose("Add next to mine");
+            Assert.Equal("Import 1 list with 1 item? Replacing keeps a copy of your lists.", _view.SheetTitleText);
+            Choose("Add to my lists");
             Assert.Equal(2, Store.Data.Boards.Count);
             Assert.Equal(2, _view.CardList.Count);
 
             PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
             Await(_view.Import());
-            Choose("Replace everything (a copy of mine is kept)");
+            Choose("Replace everything");
             Assert.Single(Store.Data.Boards);
             Assert.Single(_view.CardList);
 
@@ -954,8 +954,8 @@ public partial class PhoneTests : UiTest
             PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
             _view.ShowBoard(mine);
             Await(_view.Import());
-            Assert.Equal("Import 2 lists with 2 items?", _view.SheetTitleText);
-            Choose("Replace everything (a copy of mine is kept)");
+            Assert.Equal("Import 2 lists with 2 items? Replacing keeps a copy of your lists.", _view.SheetTitleText);
+            Choose("Replace everything");
             Assert.Null(_view.OpenBoard); // the open board is gone: back to the cards
             Assert.Equal("Imported", _view.SnackbarMessage);
 
@@ -964,7 +964,7 @@ public partial class PhoneTests : UiTest
             File.WriteAllText(Store.BackupDir, "a file where the backups folder goes");
             PhoneView.PickImportFile = _ => Task.FromResult<Stream?>(new MemoryStream(Encoding.UTF8.GetBytes(json)));
             Await(_view.Import());
-            Choose("Replace everything (a copy of mine is kept)");
+            Choose("Replace everything");
             Assert.StartsWith("Import failed:", _view.SnackbarMessage);
             File.Delete(Store.BackupDir);
 

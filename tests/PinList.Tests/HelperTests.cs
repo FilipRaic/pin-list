@@ -44,7 +44,7 @@ public class SyncIconTests
     [InlineData(PinList.Sync.SyncStatus.UpToDate, 60 * 72, "Icon.CloudCheck", "Synced · 3 days ago", false)]
     [InlineData(PinList.Sync.SyncStatus.UpToDate, -1, "Icon.CloudCheck", "Synced", false)]
     [InlineData(PinList.Sync.SyncStatus.Syncing, 1, "Icon.Sync", "Syncing…", false)]
-    [InlineData(PinList.Sync.SyncStatus.Waiting, 1, "Icon.CloudWaiting", "Offline · changes will sync later", false)]
+    [InlineData(PinList.Sync.SyncStatus.Waiting, 1, "Icon.CloudWaiting", "Offline. Changes sync later.", false)]
     [InlineData(PinList.Sync.SyncStatus.Problem, 1, "Icon.CloudProblem", "Google signed you out.", true)]
     public void Each_status_has_its_icon_and_tooltip(PinList.Sync.SyncStatus status, int? minutesAgo, string icon, string tip, bool danger)
     {

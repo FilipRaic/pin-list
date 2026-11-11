@@ -70,7 +70,7 @@ public partial class MainWindow : Window
     {
         var available = App.Instance.UpdateCheck?.Available;
         UpdateDot.IsVisible = available != null;
-        string? text = available != null ? $"PinList {available.Version} is available" : null;
+        string? text = available != null ? $"PinList {available.Version} is out" : null;
         ToolTip.SetTip(NavSettings, text);
         AutomationProperties.SetName(NavSettings, text != null ? "Settings, " + text : "Settings");
     }

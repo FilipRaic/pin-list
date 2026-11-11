@@ -126,7 +126,7 @@ public class DesktopSettingsHostTests : UiTest
     {
         Assert.Null(ReminderSettings.Describe(0, 1, 1)); // not asked yet
         Assert.Null(ReminderSettings.Describe(2, 2, 2)); // all fine
-        Assert.Equal("Notifications are off for PinList, so reminders show in PinList's own window.", ReminderSettings.Describe(1, 2, 2));
+        Assert.Equal("Notifications are off, so reminders show in PinList's own window.", ReminderSettings.Describe(1, 2, 2));
         Assert.Equal("Reminders go away after a few seconds (choose Persistent Alerts) and aren't kept in Notification Center.",
             ReminderSettings.Describe(2, 1, 1));
         Assert.Equal("Reminders don't show on the screen (choose Persistent Alerts).", ReminderSettings.Describe(3, 2, 0));
@@ -194,7 +194,7 @@ public class DesktopSettingsHostTests : UiTest
 
         host.Sync!.Actions.Single(a => a.Text == "Sign out and delete cloud data").Run(); // Esc in the question
         Pump();
-        Assert.Contains(Dialogs.Shown, d => d.Contains("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device."));
+        Assert.Contains(Dialogs.Shown, d => d.Contains("Removes PinList's data from Google Drive for all your devices. Your lists stay on every device."));
         Assert.NotNull(SyncService.Current!.Account);
 
         Dialogs.ChooseAnswer = _ => 1;

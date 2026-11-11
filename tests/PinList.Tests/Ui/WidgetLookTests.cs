@@ -220,7 +220,7 @@ public class WidgetLookTests : UiTest
         var w = OpenNew(("Work", new[] { "a", "b" }));
         var cat = w.Board.Categories[0];
         Click(Find<Button>(Row(w, cat.Items[0]), b => b.Classes.Contains("check"))!);
-        Actions.SetWidget(w.Board, false); // "Remove from desktop" while the row is crossed out
+        Actions.SetWidget(w.Board, false); // "Hide widget" while the row is crossed out
         Assert.True(UiHost.WaitUntil(() => cat.Items.Count == 1));
         Assert.Single(Store.Data.Archive);
     }

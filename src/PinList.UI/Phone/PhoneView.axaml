@@ -129,6 +129,10 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="CornerRadius" Value="{StaticResource R.PhoneRow}"/>
         </Style>
+        <!-- an item opened from a home screen widget, for a moment -->
+        <Style Selector="local|AccessibleRow.row.active">
+            <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
+        </Style>
         <Style Selector="local|AccessibleRow.row.lifted">
             <Setter Property="Background" Value="{DynamicResource ActiveBg}"/>
             <Setter Property="BoxShadow" Value="0 4 12 0 #30000000"/>
@@ -366,10 +370,10 @@
                                                     </Border>
                                                     <TextBlock Grid.Column="3" Text="{Binding OpenCount}" FontSize="14" Margin="10,0,0,0"
                                                                Foreground="{Binding Muted}" VerticalAlignment="Center"/>
-                                                    <ToggleSwitch Grid.Column="4" OnContent="On desktop" OffContent="On desktop" IsVisible="{Binding ShowWidgetSwitch}"
+                                                    <ToggleSwitch Grid.Column="4" OnContent="Widget" OffContent="Widget" IsVisible="{Binding ShowWidgetSwitch}"
                                                                   IsChecked="{Binding IsWidget}" Foreground="{Binding Foreground}"
                                                                   Margin="12,0,0,0" MinHeight="0" MinWidth="0" VerticalAlignment="Center"
-                                                                  AutomationProperties.Name="Show as a widget on this computer"/>
+                                                                  AutomationProperties.Name="Show as a widget"/>
                                                 </Grid>
                                                 <ItemsControl ItemsSource="{Binding Preview}">
                                                     <ItemsControl.ItemTemplate>
@@ -534,7 +538,7 @@
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="local:TodoItem">
                                                                     <local:Collapser Classes.leaving="{Binding IsLeaving}">
-                                                                    <local:AccessibleRow Classes="row" Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
+                                                                    <local:AccessibleRow Classes="row" Classes.completing="{Binding IsCompleting}" Classes.active="{Binding IsActive}" Tag="{Binding}"
                                                                                          Padding="0,0,14,0" MinHeight="48"
                                                                                          AutomationProperties.Name="{Binding AccessibleName}">
                                                                         <Grid ColumnDefinitions="Auto,*">

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the launcher's list of widgets shows for PinList (Android 12 and newer): a small example list -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_shape"
+        android:tint="#FF202020"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Groceries"
+            android:textColor="#F2FFFFFF"
+            android:textSize="15sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Shop"
+            android:textColor="#FF7FD6FF"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:drawablePadding="10dp"
+            android:drawableStart="@drawable/widget_ring"
+            android:gravity="center_vertical"
+            android:text="Milk"
+            android:textColor="#F2FFFFFF"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:drawablePadding="10dp"
+            android:drawableStart="@drawable/widget_ring"
+            android:gravity="center_vertical"
+            android:text="Coffee beans"
+            android:textColor="#F2FFFFFF"
+            android:textSize="14sp"/>
+    </LinearLayout>
+</FrameLayout>

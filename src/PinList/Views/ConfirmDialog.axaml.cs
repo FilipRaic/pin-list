@@ -87,7 +87,7 @@ public partial class ConfirmDialog : Window
             HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
             Padding = new Thickness(0, 0, 12, 0), // room for the scroll bar
         };
-        var dlg = new ConfirmDialog($"PinList {update.Version} is available",
+        var dlg = new ConfirmDialog($"PinList {update.Version} is out",
             notes == null ? "Get it opens the download page." : "What's new:",
             new[] { ("Later", DialogButtonKind.Normal), ("Get it", DialogButtonKind.Accent) }, 1, extra);
         await DialogHost.Run(dlg, owner);

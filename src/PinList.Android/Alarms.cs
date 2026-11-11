@@ -47,6 +47,47 @@ static class Alarms
         }
         catch (Exception ex) { Store.Log("Alarm: " + ex.Message); }
     }
+
+    static PendingIntent MidnightIntent(Context context) =>
+        PendingIntent.GetBroadcast(context, 1, new Intent(context, typeof(MidnightReceiver)),
+            PendingIntentFlags.Immutable | PendingIntentFlags.UpdateCurrent)!;
+
+    /// <summary>
+    /// Home screen widgets say "Today" and "3 days overdue", so they are drawn again when the day changes. The
+    /// alarm doesn't need to be exact, and only exists while a widget is placed.
+    /// </summary>
+    public static void ScheduleMidnight(Context context)
+    {
+        try
+        {
+            var manager = (AlarmManager)context.GetSystemService(Context.AlarmService)!;
+            var intent = MidnightIntent(context);
+            manager.Cancel(intent);
+            if (!ListWidgetProvider.AnyPlaced(context)) return;
+            long at = new DateTimeOffset(DateTime.Today.AddDays(1).AddSeconds(5)).ToUnixTimeMilliseconds();
+            manager.SetAndAllowWhileIdle(AlarmType.Rtc, at, intent);
+        }
+        catch (Exception ex) { Store.Log("Midnight alarm: " + ex.Message); }
+    }
+
+    public static void CancelMidnight(Context context)
+    {
+        try { ((AlarmManager)context.GetSystemService(Context.AlarmService)!).Cancel(MidnightIntent(context)); }
+        catch (Exception ex) { Store.Log("Midnight alarm: " + ex.Message); }
+    }
+}
+
+/// <summary>A new day: the home screen widgets get their due texts for today, and the alarm is set for tomorrow.</summary>
+[BroadcastReceiver(Exported = false)]
+[System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage(Justification = "Started by Android's alarm.")]
+public class MidnightReceiver : BroadcastReceiver
+{
+    public override void OnReceive(Context? context, Intent? intent)
+    {
+        if (context == null) return;
+        ListWidgetProvider.RefreshAll(context);
+        Alarms.ScheduleMidnight(context);
+    }
 }
 
 /// <summary>The reminder alarm rang: show what's due (the app may not be running) and set the next alarm.</summary>
@@ -86,5 +127,8 @@ public class BootReceiver : BroadcastReceiver
         if (context == null || Array.IndexOf(Handled, intent?.Action) < 0) return;
         Alarms.EnsureData(context);
         Alarms.ScheduleNext(context);
+        // the home screen widgets too: Android forgets alarms on a restart, and a new date changes the due texts
+        ListWidgetProvider.RefreshAll(context);
+        Alarms.ScheduleMidnight(context);
     }
 }

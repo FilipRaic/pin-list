@@ -350,7 +350,7 @@ public class BoardKeyboardTests : UiTest
         w.Board.Locked = true;
         Press(w, Key.Right, KeyModifiers.Control);
         Assert.Equal(left, w.Left, 0); // locked: "unlock it first"
-        Assert.Equal("The list is locked. Unlock it to move or resize.", A11y.LastAnnouncement);
+        Assert.Equal("Locked. Unlock to move or resize.", A11y.LastAnnouncement);
 
         w.Board.Locked = false;
         var box = AddBox(w, w.Board.Categories[0]);
@@ -370,7 +370,7 @@ public class BoardMenuTests : UiTest
     {
         var w = OpenNew(("A", new string[0]));
         var menu = WidgetMenu(w);
-        Assert.Equal(new object?[] { "List color", "Transparent", null, "Copy all items", "New list", null, "All lists", "Archive", "Settings", null, "Remove from desktop", "Delete list" },
+        Assert.Equal(new object?[] { "List color", "Transparent", null, "Copy all items", "New list", null, "All lists", "Archive", "Settings", null, "Hide widget", "Delete list" },
             Entries(menu));
         Assert.All(menu.Items.OfType<Avalonia.Controls.MenuItem>(), m => Assert.Empty(m.Items));
         Assert.All(menu.Items.OfType<Avalonia.Controls.MenuItem>(), m => Assert.NotNull(m.Icon ?? (m is SwatchMenuItem ? new object() : null)));

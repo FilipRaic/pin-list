@@ -230,7 +230,7 @@ public partial class ArchiveView : UserControl
         if (restored.Count > 0) SelectNear(index);
         if (restored.Count == 0)
         {
-            ShowStatus("There is no category to restore into. Add a category to a widget first.");
+            ShowStatus("No category to restore into. Add one to a list first.");
             return;
         }
 

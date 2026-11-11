@@ -89,6 +89,17 @@ public class EdgeCaseTests : StoreTestBase
     }
 
     [Fact]
+    public void Hiding_a_widget_says_so_when_undone()
+    {
+        var board = MakeBoard(("A", new[] { "a" }));
+
+        Actions.SetWidget(board, false);
+        Assert.True(Actions.Undo(out var what));
+        Assert.Equal("hiding the widget of “Test”", what);
+        Assert.True(board.Widget);
+    }
+
+    [Fact]
     public void Setting_the_same_due_day_again_changes_nothing()
     {
         var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];

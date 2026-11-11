@@ -90,7 +90,7 @@
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          AutomationProperties.Name="Completed items"
                          DoubleTapped="List_DoubleTapped"/>
-                <TextBlock x:Name="EmptyText" Text="Nothing here yet. Completed items show up here with the date and time."
+                <TextBlock x:Name="EmptyText" Text="Nothing here yet. Completed items show up here."
                            Foreground="{DynamicResource Text3}" HorizontalAlignment="Center" VerticalAlignment="Center"
                            TextWrapping="Wrap" TextAlignment="Center" Margin="20" IsHitTestVisible="False"/>
             </Panel>

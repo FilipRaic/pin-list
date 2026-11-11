@@ -138,7 +138,7 @@ public class SyncUiTests : UiTest
         Assert.True(_cloud.Calls > calls);
 
         SettingsAction("Sign out and delete cloud data"); // Esc
-        Assert.True(UiHost.WaitUntil(() => Dialogs.Shown.Any(d => d.Contains("This removes PinList's data from Google Drive for all your devices. Your lists stay on every device."))));
+        Assert.True(UiHost.WaitUntil(() => Dialogs.Shown.Any(d => d.Contains("Removes PinList's data from Google Drive for all your devices. Your lists stay on every device."))));
         Assert.NotNull(s.Account);
         Dialogs.ChooseAnswer = _ => 1;
         SettingsAction("Sign out and delete cloud data");
@@ -231,7 +231,7 @@ public class SyncUiTests : UiTest
         _cloud.Offline = true;
         SyncNowFromSettings();
         Assert.Equal("Icon.CloudWaiting", IconKeyOf(w));
-        Assert.Equal("Offline · changes will sync later", ToolTip.GetTip(SyncBtn(w)));
+        Assert.Equal("Offline. Changes sync later.", ToolTip.GetTip(SyncBtn(w)));
         Assert.DoesNotContain("danger", SyncBtn(w).Classes);
         _cloud.Offline = false;
     }
@@ -263,7 +263,7 @@ public class SyncUiTests : UiTest
         Assert.Equal("Icon.CloudProblem", IconKeyOf(w));
         Dialogs.Shown.Clear();
         Click(SyncBtn(w));
-        Assert.Equal("Sync problem: Can't reach Google Drive. PinList keeps trying, and your changes stay on this device until it works again.",
+        Assert.Equal("Sync problem: Can't reach Google Drive. PinList keeps trying. Your changes are saved on this device.",
             Dialogs.Shown.Single());
         _cloud.Offline = false;
     }
@@ -332,7 +332,7 @@ public class SyncUiTests : UiTest
         var dlg = Assert.IsType<ConfirmDialog>(DialogHost.Current);
         Assert.Equal("Google sign-in", dlg.Title);
         Assert.False(dlg.Topmost); // the user works in the browser meanwhile: the dialog mustn't cover it
-        Assert.Equal("Waiting for Google sign-in in your browser…", AutomationProperties.GetHelpText(dlg));
+        Assert.Equal("Finish signing in to Google in your browser.", AutomationProperties.GetHelpText(dlg));
         Click((Button)dlg.ButtonPanel.Children.Single()); // Cancel
         Assert.True(token.IsCancellationRequested);
         done.SetResult(false);

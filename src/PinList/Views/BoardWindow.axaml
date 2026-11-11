@@ -275,7 +275,7 @@
                                                     </Border>
                                                     <Button Grid.Column="3" Classes="icon collapse" Classes.collapsed="{Binding Collapsed}"
                                                             Width="24" Height="24" Margin="0,-2" Tag="{Binding}" Focusable="False"
-                                                            ToolTip.Tip="Collapse / expand" Click="Collapse_Click"
+                                                            ToolTip.Tip="Collapse or expand" Click="Collapse_Click"
                                                             AutomationProperties.Name="Collapse or expand">
                                                         <PathIcon Classes="turns" Classes.collapsed="{Binding Collapsed}"/>
                                                     </Button>

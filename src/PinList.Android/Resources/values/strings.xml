@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shown under PinList in the launcher's list of widgets -->
+    <string name="widget_description">One of your lists on the home screen</string>
+    <string name="widget_narrow_description">One of your lists on the home screen, two cells wide</string>
+</resources>

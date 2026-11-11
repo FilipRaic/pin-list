@@ -19,6 +19,9 @@ namespace PinList.Android;
         | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize)]
 public class MainActivity : AvaloniaMainActivity
 {
+    /// <summary>A tap on a home screen widget opens PinList on this list, and on this item in it if given.</summary>
+    public const string BoardExtra = "pinlist.board", ItemExtra = "pinlist.item";
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         AndroidGoogleAuth.CurrentActivity = this; // Google's consent page opens over this screen
@@ -28,6 +31,26 @@ public class MainActivity : AvaloniaMainActivity
             && CheckSelfPermission(Manifest.Permission.PostNotifications) != Permission.Granted)
             RequestPermissions(new[] { Manifest.Permission.PostNotifications }, 1);
         Alarms.ScheduleNext(this);
+        // A force stop (some phones do one when the app is swiped away) drops the alarms and stops the widgets
+        // from being drawn again until PinList is opened: set the midnight alarm and bring the widgets up to date
+        Alarms.ScheduleMidnight(this);
+        ListWidgetProvider.RefreshAll(this);
+        OpenFromWidget(Intent);
+    }
+
+    /// <summary>PinList was already open (or in the background) when a home screen widget was tapped.</summary>
+    protected override void OnNewIntent(Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        OpenFromWidget(intent);
+    }
+
+    static void OpenFromWidget(Intent? intent)
+    {
+        if (intent?.GetStringExtra(BoardExtra) is not { } boardId) return;
+        PhoneApp.Open(boardId, intent.GetStringExtra(ItemExtra));
+        intent.RemoveExtra(BoardExtra); // once: not again when Android makes the screen anew
+        intent.RemoveExtra(ItemExtra);
     }
 
     protected override void OnResume()

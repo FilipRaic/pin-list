@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The home screen widget, 3 x 3 cells when placed: one list, chosen when the widget is placed
+    (ChooseListActivity). PinList refreshes it itself (after every save and at midnight), so Android's own
+    timer is off. Before Android 12 the size comes from minWidth and minHeight (180dp is 3 cells).
+    list_widget_narrow_info.xml is the same widget 2 cells wide.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+                    android:minWidth="180dp"
+                    android:minHeight="180dp"
+                    android:minResizeWidth="110dp"
+                    android:minResizeHeight="110dp"
+                    android:targetCellWidth="3"
+                    android:targetCellHeight="3"
+                    android:resizeMode="horizontal|vertical"
+                    android:updatePeriodMillis="0"
+                    android:initialLayout="@layout/list_widget"
+                    android:previewLayout="@layout/list_widget_preview"
+                    android:configure="com.pinlist.app.ChooseListActivity"
+                    android:widgetFeatures="reconfigurable"
+                    android:widgetCategory="home_screen"
+                    android:description="@string/widget_description"/>
