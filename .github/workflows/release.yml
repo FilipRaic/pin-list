@@ -7,8 +7,9 @@ on:
   push:
     tags: [ 'v*' ]
 
+# Read-only for every job; only the publish job below may write (it creates the release)
 permissions:
-  contents: write
+  contents: read
   actions: read   # to see the Build run of the tagged commit
 
 # Every job and test step has a time limit, so a hang fails in minutes instead of running for hours
@@ -93,17 +94,10 @@ jobs:
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
       # The file is written only here, from the repository secrets, and is never committed.
       - name: Add the Google client ID
-        shell: pwsh
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        run: |
-          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
-            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
-            exit 1
-          }
-          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
-            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
+        uses: ./.github/actions/google-client
+        with:
+          client-id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          client-secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       - name: Publish
         shell: pwsh
@@ -139,17 +133,10 @@ jobs:
       # Google sign-in for sync (see GOOGLE-REQUIREMENTS.md): the Desktop client ID goes into the app.
       # The file is written only here, from the repository secrets, and is never committed.
       - name: Add the Google client ID
-        shell: pwsh
-        env:
-          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-        run: |
-          if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
-            Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
-            exit 1
-          }
-          @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
-            ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM
+        uses: ./.github/actions/google-client
+        with:
+          client-id: ${{ secrets.GOOGLE_CLIENT_ID }}
+          client-secret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
 
       - name: Build PinList.app
         run: |
@@ -209,6 +196,8 @@ jobs:
     needs: [ windows, mac, android ]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write   # creates the GitHub release
     steps:
       - uses: actions/checkout@v7
 
@@ -226,7 +215,9 @@ jobs:
           path: release
           merge-multiple: true
 
-      - uses: softprops/action-gh-release@v3
+      # Not one of GitHub's own actions and it may write to the repository, so it's used at an exact commit:
+      # a tag can be moved to other code, a commit can't. Dependabot updates the commit and the version next to it.
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           # Every app and its checksum, by name: the release fails instead of going out with a file missing
           files: |

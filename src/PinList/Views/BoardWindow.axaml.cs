@@ -478,7 +478,8 @@ public partial class BoardWindow : Window
         int items = 0;
         foreach (var c in Board.Categories) items += c.Items.Count;
         string msg = items > 0
-            ? $"Deletes the list with its {Board.Categories.Count} categories and {items} items. They don't go to the archive."
+            ? $"Deletes the list with its {CountText.Of(Board.Categories.Count, "category", "categories")} and " +
+              $"{CountText.Of(items, "item")}. They don't go to the archive."
             : "Deletes the list.";
         if (Board.Synced) msg += " It will also be deleted from your other devices.";
         string title = string.IsNullOrWhiteSpace(Board.Title) ? "Delete this list?" : $"Delete \"{Board.Title}\"?";
@@ -628,12 +629,7 @@ public partial class BoardWindow : Window
     }
 
     /// <summary>The first line of a text in quotes, at most 60 characters.</summary>
-    internal static string Quote(string text)
-    {
-        var line = text.Split('\n')[0];
-        if (line.Length > 60) line = line[..60] + "…";
-        return $"“{line}”";
-    }
+    internal static string Quote(string text) => Actions.Quote(text);
 
     static void CancelEdit(TextBox tb)
     {

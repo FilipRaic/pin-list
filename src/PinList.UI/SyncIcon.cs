@@ -11,7 +11,7 @@ public static class SyncIcon
     {
         SyncStatus.Local => ("Icon.CloudOff", "Not synced", false),
         SyncStatus.UpToDate => ("Icon.CloudCheck", s.LastSyncUtc == null ? "Synced" : "Synced · " + Ago(s.LastSyncUtc, utcNow), false),
-        SyncStatus.Syncing => ("Icon.Sync", "Syncing…", false),
+        SyncStatus.Syncing => ("Icon.Sync", "Syncing", false),
         SyncStatus.Waiting => ("Icon.CloudWaiting", "Offline. Changes sync later.", false),
         SyncStatus.Problem => ("Icon.CloudProblem", s.Problem ?? "", true),
         _ => null,

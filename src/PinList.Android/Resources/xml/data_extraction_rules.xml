@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12 and newer: nothing of PinList goes into Google's backup of the phone or to a new phone during setup
+    (android:allowBackup="false" in the manifest covers older versions, but not the copy from phone to phone).
+
+    The data folder holds this phone's sync identity (its device id and change counter, in data.json and
+    sync-state.json). A copy of it on a second phone would make both write the same cloud file and reuse each
+    other's change stamps. It also keeps the promise that lists are saved only on the device unless sync is on.
+    Lists move to a new phone with sync, or with Export and Import.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

@@ -164,7 +164,7 @@ public class Category : Observable
     /// <summary>What a screen reader says for the category header, e.g. "Work, 5 items, collapsed".</summary>
     [JsonIgnore]
     public string AccessibleName =>
-        $"{Name}, {(Items.Count == 1 ? "1 item" : $"{Items.Count} items")}{(Collapsed ? ", collapsed" : "")}";
+        $"{Name}, {CountText.Of(Items.Count, "item")}{(Collapsed ? ", collapsed" : "")}";
 
     public override string ToString() => AccessibleName;
 

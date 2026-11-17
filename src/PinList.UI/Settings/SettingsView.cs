@@ -172,7 +172,7 @@ public class SettingsView : UserControl
             var everyday = sync.Actions.Where(a => !a.Danger).Select(a => SmallButton(a.Text, a.Run, false, false, a.Enabled));
             rows.Add(Row(who, Buttons(everyday)));
             foreach (var danger in sync.Actions.Where(a => a.Danger))
-                rows.Add(Row(Muted("Removes your lists from Google Drive and signs you out on this device."),
+                rows.Add(Row(Muted("Removes your lists from Google Drive and signs you out on every device."),
                     Buttons(new[] { SmallButton(danger.Text, danger.Run, true, false, danger.Enabled) })));
         }
         return Group("Google Drive sync", rows);

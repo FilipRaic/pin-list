@@ -63,7 +63,7 @@ public sealed class BoardCard : Observable, IDisposable
 
     /// <summary>What a screen reader says for the card, e.g. "Work, 5 items, 1 overdue".</summary>
     public string AccessibleName =>
-        $"{DisplayTitle}, {(OpenCount == 1 ? "1 item" : $"{OpenCount} items")}{(HasOverdue ? $", {OverdueText}" : "")}";
+        $"{DisplayTitle}, {CountText.Of(OpenCount, "item")}{(HasOverdue ? $", {OverdueText}" : "")}";
 
     readonly List<Category> _watchedCategories = new();
     readonly List<TodoItem> _watchedItems = new();

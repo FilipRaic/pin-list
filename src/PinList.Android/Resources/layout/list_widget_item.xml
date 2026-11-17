@@ -35,12 +35,31 @@
             android:maxLines="3"
             android:textSize="14sp"/>
 
-        <TextView
-            android:id="@+id/item_due"
+        <!-- The due date and the reminder mark, shown when the item has either -->
+        <LinearLayout
+            android:id="@+id/item_meta"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textSize="12sp"
-            android:visibility="gone"/>
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/item_due"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:textSize="12sp"
+                android:visibility="gone"/>
+
+            <ImageView
+                android:id="@+id/item_reminder"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/widget_bell"
+                android:visibility="gone"/>
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

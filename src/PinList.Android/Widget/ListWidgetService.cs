@@ -88,9 +88,12 @@ public class ListWidgetService : RemoteViewsService
 
             views.SetTextViewText(Resource.Id.item_text, row.Text);
             views.SetTextColor(Resource.Id.item_text, ListWidgetProvider.Color(look.Text));
+            views.SetViewVisibility(Resource.Id.item_meta, ListWidgetProvider.Shown(row.Due.Length > 0 || row.HasReminder));
             views.SetViewVisibility(Resource.Id.item_due, ListWidgetProvider.Shown(row.Due.Length > 0));
             views.SetTextViewText(Resource.Id.item_due, row.Due);
             views.SetTextColor(Resource.Id.item_due, ListWidgetProvider.Color(row.DueColor));
+            views.SetViewVisibility(Resource.Id.item_reminder, ListWidgetProvider.Shown(row.HasReminder));
+            ListWidgetProvider.Tint(views, Resource.Id.item_reminder, look.Muted); // the screen reader hears it in AccessibleName
             views.SetContentDescription(Resource.Id.item_body, row.AccessibleName);
             views.SetOnClickFillInIntent(Resource.Id.item_body, Tapped(WidgetTapActivity.Open, row.Id));
             return views;

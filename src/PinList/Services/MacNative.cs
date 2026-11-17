@@ -22,9 +22,10 @@ static class MacNative
     [DllImport(ObjC)] static extern IntPtr objc_getClass(string name);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern IntPtr SendGetPtr(IntPtr receiver, IntPtr selector);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern void SendSetLong(IntPtr receiver, IntPtr selector, long value);
-    [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern void SendSetBool(IntPtr receiver, IntPtr selector, bool value);
+    // An Objective-C BOOL is one byte (C# would pass and read four without MarshalAs)
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern void SendSetBool(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.I1)] bool value);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern void Send(IntPtr receiver, IntPtr selector);
-    [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern bool SendRespondsTo(IntPtr receiver, IntPtr selector, IntPtr asked);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")] [return: MarshalAs(UnmanagedType.I1)] static extern bool SendRespondsTo(IntPtr receiver, IntPtr selector, IntPtr asked);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern nuint SendGetULong(IntPtr receiver, IntPtr selector);
     [DllImport(ObjC, EntryPoint = "objc_msgSend")] static extern void SendSetULong(IntPtr receiver, IntPtr selector, nuint value);
 

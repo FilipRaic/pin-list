@@ -3,6 +3,25 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.9.1] - 2026-11-17
+
+Fixes from a pass over the whole code: safer loading, steadier sync, and Android keeps your lists out of the phone's backup.
+
+### Fixed
+- **Your lists are safe when another program holds the data file at start.** A backup or antivirus program that had `data.json` open while PinList started made PinList treat the file as damaged: it loaded the last backup and later saved that over your current lists. PinList now tries again for two seconds. If the file still can't be opened, it says so and saves nothing in that run, so the file stays as it is
+- **Android: PinList's data is no longer part of Android's backup to Google or of the copy to a new phone.** The copy carried the phone's sync identity along, so the old and the new phone could overwrite each other's synced changes. It also means lists really are saved only on the phone unless sync is on, as the privacy policy says. Move lists to a new phone with sync or with **Export** and **Import**
+- **Sync keeps trying behind a Wi-Fi login page.** A hotel or airport network that answers every request with its own page stopped sync without any sign. It now counts as no connection: the sync icon shows it and PinList tries again
+- **Sign out and delete cloud data** could leave a list's file in Google Drive when a sync started at the same moment. The sync now waits and uploads nothing
+- The delete question for a list says *1 category and 1 item* (was *1 categories and 1 items*), on the phone *with 1 item*
+- Setting a reminder to the time it already has no longer adds a step to **Undo**
+- **Settings** said that **Sign out and delete cloud data** signs you out *on this device*. It signs out every device, and now says so
+
+### Changed
+- **Android:** an item with a reminder shows a small bell on the home screen widget, next to its due date
+- The sync button's tooltip says *Syncing*, like Settings and the Android widget (was *Syncing…*)
+- The privacy policy says that the Android app's data stays out of Android's backup, and has a new section about the website itself: it is hosted by GitHub Pages and loads its fonts from Google Fonts (effective 16 November 2026)
+- For developers: the release workflow can only read the repository except in the job that creates the release, and its one third-party action is used at an exact commit. Dependabot also watches the packages of `PinList.Core.Tests`. `package-mac.sh` removes its build folder when it's done
+
 ## [2.9.0] - 2026-11-11
 
 Lists on the Android home screen, shorter texts in the app, and tidier docs.

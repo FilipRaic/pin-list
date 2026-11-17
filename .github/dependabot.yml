@@ -11,12 +11,14 @@ updates:
         patterns: [ "*" ]
 
   - package-ecosystem: nuget
-    # every project that references Avalonia, so all its packages move to the same version together
+    # every project that references Avalonia, so all its packages move to the same version together,
+    # and both test projects, so the test packages do too
     directories:
       - /src/PinList
       - /src/PinList.UI
       - /src/PinList.Android
       - /tests/PinList.Tests
+      - /tests/PinList.Core.Tests
     schedule:
       interval: monthly
     # only Avalonia and the test packages, the Android Google and AndroidX packages are updated by hand

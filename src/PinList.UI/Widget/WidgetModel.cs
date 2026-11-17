@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Media;
+using PinList.Sync;
 
 namespace PinList;
 
@@ -51,7 +52,7 @@ public sealed record WidgetChrome(uint Background, uint Field, uint Text, uint M
 /// <summary>A list to choose when a home screen widget is placed.</summary>
 public sealed record WidgetChoice(string BoardId, string Title, uint Swatch, int OpenCount)
 {
-    public string CountText => OpenCount == 1 ? "1 item" : $"{OpenCount} items";
+    public string CountText => PinList.CountText.Of(OpenCount, "item");
 }
 
 /// <summary>
@@ -71,7 +72,7 @@ public static class WidgetModel
     public const string SyncingText = "Syncing";
     public const string SyncedText = "Synced";
     public const string OfflineText = "Offline. Changes sync later.";
-    public const string SyncWaitingText = "Can't reach Google Drive. PinList keeps trying.";
+    public const string SyncWaitingText = SyncService.Unreachable + " PinList keeps trying.";
     public const string SyncProblemText = "Sync problem. Open PinList to fix it.";
 
     /// <summary>

@@ -178,6 +178,28 @@ public class DriveCloudStoreTests
         Assert.Equal(CloudError.Offline, ex.Kind);
     }
 
+    [Theory]
+    [InlineData("""{ "kind": "something else" }""")]
+    [InlineData("""{ "files": "none" }""")]
+    [InlineData("""{ "files": [ { "id": "1", "modifiedTime": "2026-11-01T10:00:00Z" } ] }""")]
+    [InlineData("""{ "files": [ { "id": "1", "name": "w-a.A.json", "modifiedTime": "yesterday" } ] }""")]
+    [InlineData("""{ "files": [ 5 ] }""")]
+    public async Task A_list_answer_that_isnt_Drives_is_an_error(string body)
+    {
+        _http.Answer(HttpStatusCode.OK, body);
+        var ex = await Assert.ThrowsAsync<CloudException>(() => Store().List(Ct));
+        Assert.Equal(CloudError.Offline, ex.Kind);
+    }
+
+    [Fact]
+    public async Task An_upload_answer_without_the_new_files_id_is_an_error()
+    {
+        _http.Answer(HttpStatusCode.OK, """{ "files": [] }""");
+        _http.Answer(HttpStatusCode.OK, """{ "kind": "something else" }""");
+        var ex = await Assert.ThrowsAsync<CloudException>(() => Store().Upload("w-b.A.json", "{}", Ct));
+        Assert.Equal(CloudError.Offline, ex.Kind);
+    }
+
     [Fact]
     public async Task An_empty_JSON_answer_is_an_error()
     {

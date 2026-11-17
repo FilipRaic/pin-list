@@ -1,6 +1,7 @@
 * text=auto
 *.cs   text diff=csharp
-*.xaml text
+*.axaml text
+*.sh   text eol=lf
 *.bat  text eol=crlf
 *.sln  text eol=crlf
 *.ico  binary

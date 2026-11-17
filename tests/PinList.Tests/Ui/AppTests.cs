@@ -637,13 +637,6 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
-    public void Plural()
-    {
-        Assert.Equal("1 item", App.Plural(1, "item"));
-        Assert.Equal("0 items", App.Plural(0, "item"));
-    }
-
-    [AvaloniaFact]
     public void Store_messages_use_the_app_dialog()
     {
         App.ShowStoreMessage("Backup loaded", false);

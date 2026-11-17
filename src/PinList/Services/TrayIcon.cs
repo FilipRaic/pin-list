@@ -25,9 +25,11 @@ public interface ITrayIcon : IDisposable
 /// <summary>
 /// One tray menu entry; <see cref="Separator"/> draws a line. A disabled entry is a line of text (e.g. the account).
 /// An entry with <paramref name="Checked"/> set is an on / off switch with a check mark. <paramref name="Gesture"/>
-/// is the shortcut shown next to it (the macOS app menu).
+/// is the shortcut shown next to it (the macOS app menu). <paramref name="Icon"/> is a Line.* resource key, drawn
+/// where the menu is PinList's own (the tray menu on Windows).
 /// </summary>
-public sealed record TrayEntry(string Text, Action? Action, bool Enabled = true, bool? Checked = null, KeyGesture? Gesture = null)
+public sealed record TrayEntry(string Text, Action? Action, bool Enabled = true, bool? Checked = null, KeyGesture? Gesture = null,
+    string? Icon = null)
 {
     public static readonly TrayEntry Separator = new("-", null);
 }
