@@ -160,6 +160,23 @@ public class ActionsTests : StoreTestBase
     }
 
     [Fact]
+    public void Setting_the_reminder_an_item_already_has_adds_no_undo_step()
+    {
+        var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];
+        Actions.SetReminder(item, null); // it has none
+        Assert.False(Actions.CanUndo);
+
+        var at = new DateTime(2030, 5, 6, 9, 30, 0);
+        Actions.SetReminder(item, at);
+        int version = Actions.UndoVersion;
+        Actions.SetReminder(item, at);
+
+        Assert.Equal(version, Actions.UndoVersion);
+        Assert.True(Actions.Undo());
+        Assert.Null(item.ReminderAt); // one Undo removes the reminder
+    }
+
+    [Fact]
     public void Due_date_and_reminder_can_be_undone()
     {
         var item = MakeBoard(("A", new[] { "a" })).Categories[0].Items[0];

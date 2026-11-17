@@ -99,12 +99,26 @@ public static class Store
 
     static int _failedSaves;
 
+    /// <summary>How often data.json is tried when another program holds it, and how long each wait is (2 seconds in all).</summary>
+    const int ReadTries = 5;
+    static readonly TimeSpan ReadRetryDelay = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Waits between two tries to read data.json. Tests replace it, so they don't really wait.</summary>
+    internal static Action<TimeSpan> ReadRetryWait { get; set; } = System.Threading.Thread.Sleep;
+
+    /// <summary>
+    /// data.json exists but couldn't be opened when PinList started. Nothing is saved in this run: the data in
+    /// memory is empty, and saving it would replace the lists in the file.
+    /// </summary>
+    static bool _unreadable;
+
     /// <summary>Uses another data folder (tests, or the PINLIST_DATA_DIR variable while developing). Clears the data in memory.</summary>
     public static void UseDirectory(string dir)
     {
         Dir = dir;
         Data = new AppData();
         _failedSaves = 0;
+        _unreadable = false;
     }
 
     /// <summary>Uses a folder and data that are already in memory (tests switch between simulated devices).</summary>
@@ -113,6 +127,7 @@ public static class Store
         Dir = dir;
         Data = data;
         _failedSaves = 0;
+        _unreadable = false;
     }
 
     /// <summary>data.json was written (sync uploads changes a few seconds later).</summary>
@@ -133,9 +148,24 @@ public static class Store
 
         if (!File.Exists(FilePath)) return false;
 
+        string json;
+        try { json = ReadMainFileText(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // The file is there but can't be opened. That says nothing about its content, so it isn't treated as
+            // damaged: loading a backup now and saving it later would replace lists that are fine.
+            Log("data.json can't be opened: " + ex);
+            _unreadable = true;
+            Notify("PinList can't open your lists, because another program is using the data file " +
+                   "(a backup or an antivirus program, for example). Close PinList and start it again in a moment. " +
+                   "Nothing is saved until then, so your lists stay as they are in:\n" + Dir, true);
+            Data = new AppData();
+            return true; // don't run first-run setup on top of lists that couldn't be read
+        }
+
         try
         {
-            Data = ReadMainFile();
+            Data = ReadMainFile(json);
             DailyBackup();
             Loaded();
             return true;
@@ -176,10 +206,26 @@ public static class Store
         ChangeTracker.StampChanges(Data, DateTime.UtcNow);
     }
 
-    /// <summary>Reads data.json. A file from a newer PinList is loaded too, after a copy of it was kept.</summary>
-    static AppData ReadMainFile()
+    /// <summary>
+    /// The text of data.json. A file that is held by another program for a moment (a backup tool, an antivirus or
+    /// a cloud folder right after login) is tried again a few times before the error goes to the caller.
+    /// </summary>
+    static string ReadMainFileText()
     {
-        var data = ReadFile(FilePath, out int fileVersion);
+        for (int tries = 1; ; tries++)
+        {
+            try { return File.ReadAllText(FilePath, Encoding.UTF8); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && tries < ReadTries)
+            {
+                ReadRetryWait(ReadRetryDelay);
+            }
+        }
+    }
+
+    /// <summary>Reads data.json's content. A file from a newer PinList is loaded too, after a copy of it was kept.</summary>
+    static AppData ReadMainFile(string json)
+    {
+        var data = Parse(json, out int fileVersion);
         if (fileVersion <= AppData.CurrentVersion) return data;
 
         var copy = Path.Combine(Dir, $"data.v{fileVersion}.json");
@@ -223,6 +269,7 @@ public static class Store
 
     public static void SaveNow()
     {
+        if (_unreadable) return; // see Load: the lists in the file must stay
         try
         {
             Directory.CreateDirectory(Dir);

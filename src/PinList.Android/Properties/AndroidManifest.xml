@@ -8,5 +8,7 @@
 	<!-- Reminders must ring at their time, also when the phone is idle -->
 	<uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 	<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-	<application android:label="PinList" android:icon="@drawable/icon" />
+	<!-- No backup to Google and no copy to a new phone: see Resources/xml/data_extraction_rules.xml -->
+	<application android:label="PinList" android:icon="@drawable/icon" android:allowBackup="false"
+	             android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" />
 </manifest>

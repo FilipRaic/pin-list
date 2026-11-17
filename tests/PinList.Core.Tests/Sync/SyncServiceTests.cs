@@ -1270,6 +1270,31 @@ public class SyncServiceTests : StoreTestBase
     }
 
     [Fact]
+    public void A_sync_pass_that_starts_while_the_cloud_data_is_deleted_uploads_nothing()
+    {
+        SignIn(A);
+        var first = NewList(A, "First", "a");
+        var second = NewList(A, "Second", "b");
+        Await(A.Service.SetSynced(first, true));
+        Await(A.Service.SetSynced(second, true));
+        Assert.Equal(2, _cloud.Names.Count());
+
+        // the 20 second timer fires when one of the two files is already deleted and the other isn't yet
+        Task? pass = null;
+        _cloud.OnCall = () =>
+        {
+            if (_cloud.Names.Count(n => n.StartsWith("w-")) != 1) return;
+            _cloud.OnCall = null;
+            pass = A.Service.SyncNow();
+        };
+        Await(A.Service.SignOut(true));
+        Await(pass!);
+
+        Assert.Equal(new[] { "reset.json" }, _cloud.Names);
+        Assert.Null(A.Service.Account);
+    }
+
+    [Fact]
     public void Seeing_the_reset_marker_removes_the_own_leftover_files()
     {
         var b = Shared();

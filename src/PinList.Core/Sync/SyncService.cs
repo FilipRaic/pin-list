@@ -27,7 +27,8 @@ public sealed class SyncService
         { TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30), TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(5) };
 
     const string ResetFile = "reset.json";
-    const string Unreachable = "Can't reach Google Drive.";
+    /// <summary>The problem a list shows after several passes couldn't reach Google Drive (the apps explain it).</summary>
+    public const string Unreachable = "Can't reach Google Drive.";
     const string SignedOut = "Google signed you out.";
     const string NewerFormat = "Update PinList to keep syncing this list.";
 
@@ -230,7 +231,19 @@ public sealed class SyncService
     {
         if (State.Account == null) return;
         var s = State;
-        if (deleteCloudData)
+        if (!deleteCloudData)
+        {
+            await RunOnce(CancellationToken.None);
+            // a list turned off just before: its content leaves the cloud now, not at some later sign-in
+            if (s.Stripping.Count > 0) await RunOnce(CancellationToken.None);
+            await Forget(s, revokeAccess: false);
+            return;
+        }
+
+        // No sync pass runs while the files are deleted: one that started in between (the 20 second timer) would
+        // upload a list again right after its file was deleted. It waits, and finds nobody signed in when it goes on.
+        await Gate.WaitAsync(CancellationToken.None);
+        try
         {
             try
             {
@@ -250,15 +263,15 @@ public sealed class SyncService
             foreach (var b in Store.Data.Boards) b.Synced = false;
             s.MergedFiles.Clear(); s.Uploaded.Clear(); s.Markers.Clear(); s.TurningOff.Clear(); s.Stripping.Clear();
             Store.MarkDirty();
+            await Forget(s, revokeAccess: true);
         }
-        else
-        {
-            await RunOnce(CancellationToken.None);
-            // a list turned off just before: its content leaves the cloud now, not at some later sign-in
-            if (s.Stripping.Count > 0) await RunOnce(CancellationToken.None);
-        }
+        finally { Gate.Release(); }
+    }
 
-        await _auth.SignOut(revokeAccess: deleteCloudData);
+    /// <summary>The sign-in is forgotten on this device (and, with <paramref name="revokeAccess"/>, at Google).</summary>
+    async Task Forget(SyncState s, bool revokeAccess)
+    {
+        await _auth.SignOut(revokeAccess);
         s.Account = null;
         _problem = null;
         _waiting = false;
@@ -354,6 +367,7 @@ public sealed class SyncService
         bool changed = false;
         try
         {
+            if (Account == null) return false; // signed out while this pass waited for its turn
             _syncing = true;
             Raise();
             await Pass(ct, () => changed = true);

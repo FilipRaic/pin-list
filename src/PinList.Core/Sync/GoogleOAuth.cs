@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
@@ -67,10 +68,25 @@ public sealed class GoogleOAuth(HttpClient http, string clientId, string? client
         var (code, body) = await Send(new HttpRequestMessage(HttpMethod.Post, TokenEndpoint) { Content = new FormUrlEncodedContent(form) }, ct);
         if (code == 400 && body.Contains("invalid_grant", StringComparison.Ordinal)) return null;
         Check(code, "token");
-        var json = JsonNode.Parse(body)!;
-        return new TokenResult((string)json["access_token"]!, (string?)json["refresh_token"],
-            DateTime.UtcNow.AddSeconds((double)json["expires_in"]!));
+        return Read(body, "token", json => new TokenResult(Text(json, "access_token"), (string?)json["refresh_token"],
+            DateTime.UtcNow.AddSeconds((double)(json["expires_in"] ?? throw new InvalidOperationException()))));
     }
+
+    /// <summary>
+    /// Reads Google's answer. Anything else (e.g. a hotel Wi-Fi's login page, which answers every request with
+    /// HTTP 200) counts as no connection, so sync tries again later instead of stopping on an error.
+    /// </summary>
+    static T Read<T>(string body, string what, Func<JsonNode, T> read)
+    {
+        try { return read(JsonNode.Parse(body) ?? throw new InvalidOperationException()); }
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
+        {
+            throw new CloudException(CloudError.Offline, $"Google's {what} answer wasn't readable.");
+        }
+    }
+
+    /// <summary>A text value that has to be there.</summary>
+    static string Text(JsonNode json, string name) => (string?)json[name] ?? throw new InvalidOperationException();
 
     /// <summary>Revokes a token at Google. Never fails: signing out must work offline too.</summary>
     public async Task Revoke(string token)
@@ -90,8 +106,7 @@ public sealed class GoogleOAuth(HttpClient http, string clientId, string? client
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         var (code, body) = await Send(request, ct);
         Check(code, "userinfo");
-        var json = JsonNode.Parse(body)!;
-        return new GoogleAccount((string)json["sub"]!, (string)json["email"]!);
+        return Read(body, "userinfo", json => new GoogleAccount(Text(json, "sub"), (string)json["email"]!));
     }
 
     async Task<(int code, string body)> Send(HttpRequestMessage request, CancellationToken ct)

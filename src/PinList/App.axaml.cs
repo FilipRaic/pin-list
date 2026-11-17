@@ -373,8 +373,8 @@ public partial class App : Application
                 await SignIn(owner);
             return;
         }
-        await Dialogs.Info(owner, "Sync problem", problem == "Can't reach Google Drive."
-            ? "Can't reach Google Drive. PinList keeps trying. Your changes are saved on this device."
+        await Dialogs.Info(owner, "Sync problem", problem == SyncService.Unreachable
+            ? SyncService.Unreachable + " PinList keeps trying. Your changes are saved on this device."
             : problem);
     }
 
@@ -437,7 +437,7 @@ public partial class App : Application
 
     /// <summary>"Get PinList x.y.z" at the top of the tray menu, while a newer version is available.</summary>
     IEnumerable<TrayEntry> UpdateEntries() => _updates?.Available is { } u
-        ? new[] { new TrayEntry($"Get PinList {u.Version}", GetUpdate), TrayEntry.Separator }
+        ? new[] { new TrayEntry($"Get PinList {u.Version}", GetUpdate, Icon: "Line.Download"), TrayEntry.Separator }
         : Array.Empty<TrayEntry>();
 
     // ================= Errors =================
@@ -766,7 +766,7 @@ public partial class App : Application
         int items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
         int archived = imported.Archive.Count;
         string message =
-            $"{Plural(lists, "list")} with {Plural(items, "item")}, and {Plural(archived, "completed item")} in the archive.\n\n" +
+            $"{CountText.Of(lists, "list")} with {CountText.Of(items, "item")}, and {CountText.Of(archived, "completed item")} in the archive.\n\n" +
             "Add them to your lists, or replace everything? " +
             "Replacing keeps a copy of your lists in the backups folder.";
         if (Store.HasSyncedBoards)
@@ -801,8 +801,6 @@ public partial class App : Application
         }
     }
 
-    internal static string Plural(int n, string word) => n == 1 ? $"1 {word}" : $"{n} {word}s";
-
     // ================= Tray icon =================
 
     void CreateTray()
@@ -823,13 +821,13 @@ public partial class App : Application
     /// <summary>The tray menu's entries (shared by the Windows menu and the macOS menu bar menu).</summary>
     internal IReadOnlyList<TrayEntry> TrayMenuEntries() => UpdateEntries().Concat(new[]
     {
-        new TrayEntry("All lists", ShowListsWindow),
-        new TrayEntry("New list", NewBoardAtCursor),
-        new TrayEntry("Archive", ShowArchive),
-        new TrayEntry("Show all widgets", ShowAllBoards),
+        new TrayEntry("All lists", ShowListsWindow, Icon: "Line.Grid"),
+        new TrayEntry("New list", NewBoardAtCursor, Icon: "Line.Add"),
+        new TrayEntry("Archive", ShowArchive, Icon: "Line.Archive"),
+        new TrayEntry("Show all widgets", ShowAllBoards, Icon: "Line.RemoveFromDesktop"),
         TrayEntry.Separator,
-        new TrayEntry("Settings", ShowSettings),
-        new TrayEntry(OsText.Exit, ExitApp),
+        new TrayEntry("Settings", ShowSettings, Icon: "Line.Settings"),
+        new TrayEntry(OsText.Exit, ExitApp, Icon: "Line.Exit"),
     }).ToList();
 
     /// <summary>
@@ -879,18 +877,9 @@ public partial class App : Application
         Native.BringToForeground(host);
 
         var menu = new ContextMenu { Placement = PlacementMode.TopEdgeAlignedLeft };
-        if (_updates?.Available is { } update)
-        {
-            menu.Items.Add(CreateMenuItem($"Get PinList {update.Version}", GetUpdate, icon: "Line.Download"));
-            menu.Items.Add(new Separator());
-        }
-        menu.Items.Add(CreateMenuItem("All lists", ShowListsWindow, icon: "Line.Grid"));
-        menu.Items.Add(CreateMenuItem("New list", NewBoardAtCursor, icon: "Line.Add"));
-        menu.Items.Add(CreateMenuItem("Archive", ShowArchive, icon: "Line.Archive"));
-        menu.Items.Add(CreateMenuItem("Show all widgets", ShowAllBoards, icon: "Line.RemoveFromDesktop"));
-        menu.Items.Add(new Separator());
-        menu.Items.Add(CreateMenuItem("Settings", ShowSettings, icon: "Line.Settings"));
-        menu.Items.Add(CreateMenuItem(OsText.Exit, ExitApp, icon: "Line.Exit"));
+        // the same entries as the system's own tray menu on a Mac, here with their icons
+        foreach (var entry in TrayMenuEntries())
+            menu.Items.Add(entry == TrayEntry.Separator ? new Separator() : CreateMenuItem(entry.Text, entry.Action!, icon: entry.Icon));
         menu.Open(host);
         LastTrayMenu = menu;
         return menu;

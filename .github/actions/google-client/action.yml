@@ -1,0 +1,28 @@
+name: Add the Google client ID
+description: >
+  Writes src/PinList/google-client.json, the Google sign-in client for sync on Windows and macOS
+  (see GOOGLE-REQUIREMENTS.md). The file only exists in the release build and is never committed.
+
+# An action can't read the repository secrets itself, so the release workflow passes them in
+inputs:
+  client-id:
+    description: The GOOGLE_CLIENT_ID secret
+    required: true
+  client-secret:
+    description: The GOOGLE_CLIENT_SECRET secret
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      env:
+        GOOGLE_CLIENT_ID: ${{ inputs.client-id }}
+        GOOGLE_CLIENT_SECRET: ${{ inputs.client-secret }}
+      run: |
+        if (-not $env:GOOGLE_CLIENT_ID -or -not $env:GOOGLE_CLIENT_SECRET) {
+          Write-Output "::error::The GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET secret is missing - see GOOGLE-REQUIREMENTS.md."
+          exit 1
+        }
+        @{ clientId = $env:GOOGLE_CLIENT_ID; clientSecret = $env:GOOGLE_CLIENT_SECRET } |
+          ConvertTo-Json | Set-Content src/PinList/google-client.json -Encoding utf8NoBOM

@@ -49,6 +49,7 @@ public abstract class StoreTestBase : IDisposable
     {
         for (int i = 0; i < EventFields.Length; i++) EventFields[i].SetValue(null, _appListeners[i]);
         UiTimers.Factory = _timerFactory;
+        Store.ReadRetryWait = Thread.Sleep;
         try { Directory.Delete(Dir, true); } catch { }
     }
 

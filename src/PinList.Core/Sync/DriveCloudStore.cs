@@ -33,11 +33,14 @@ public sealed class DriveCloudStore(HttpClient http, Func<CancellationToken, Tas
             var url = $"{Api}?spaces=appDataFolder&fields=nextPageToken,files(id,name,modifiedTime)&pageSize=1000"
                       + (page == null ? "" : "&pageToken=" + Uri.EscapeDataString(page));
             var json = ParseAnswer(await Send(HttpMethod.Get, url, null, ct));
-            foreach (var f in json["files"]!.AsArray())
-                files.Add(new CloudFile((string)f!["id"]!, (string)f["name"]!,
-                    DateTime.Parse((string)f["modifiedTime"]!, CultureInfo.InvariantCulture,
-                        DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal)));
-            page = (string?)json["nextPageToken"];
+            page = Read(json, j =>
+            {
+                foreach (var f in (j["files"] ?? throw new InvalidOperationException()).AsArray())
+                    files.Add(new CloudFile(Text(f, "id"), Text(f, "name"),
+                        DateTime.Parse(Text(f, "modifiedTime"), CultureInfo.InvariantCulture,
+                            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal)));
+                return (string?)j["nextPageToken"];
+            });
         } while (page != null);
 
         _ids = new Dictionary<string, string>();
@@ -67,7 +70,7 @@ public sealed class DriveCloudStore(HttpClient http, Func<CancellationToken, Tas
         var meta = new JsonObject { ["name"] = name, ["parents"] = new JsonArray("appDataFolder") };
         var body = new MultipartContent("related") { Json(meta.ToJsonString()), Json(json) };
         var created = ParseAnswer(await Send(HttpMethod.Post, $"{UploadApi}?uploadType=multipart", body, ct));
-        _ids[name] = (string)created["id"]!;
+        _ids[name] = Read(created, j => Text(j, "id"));
     }
 
     public async Task Delete(CloudFile f, CancellationToken ct)
@@ -84,6 +87,19 @@ public sealed class DriveCloudStore(HttpClient http, Func<CancellationToken, Tas
         try { return JsonNode.Parse(text) ?? throw new JsonException("Empty answer."); }
         catch (JsonException) { throw new CloudException(CloudError.Offline, "Google Drive's answer wasn't readable."); }
     }
+
+    /// <summary>Reads values from Drive's answer. An answer without them counts as no connection too.</summary>
+    static T Read<T>(JsonNode json, Func<JsonNode, T> read)
+    {
+        try { return read(json); }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException)
+        {
+            throw new CloudException(CloudError.Offline, "Google Drive's answer wasn't readable.");
+        }
+    }
+
+    /// <summary>A text value that has to be there.</summary>
+    static string Text(JsonNode? json, string name) => (string?)json?[name] ?? throw new InvalidOperationException();
 
     async Task<string> Send(HttpMethod method, string url, HttpContent? content, CancellationToken ct)
     {

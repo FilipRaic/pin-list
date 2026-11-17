@@ -101,6 +101,15 @@ public class SettingsViewTests : UiTest
     }
 
     [AvaloniaFact]
+    public void Deleting_the_cloud_data_says_that_it_signs_out_every_device()
+    {
+        // Google removes PinList's access for the whole account, not for one device (SyncService.SignOut)
+        _host.Sync = SignedIn();
+        var view = Show();
+        Assert.Contains("Removes your lists from Google Drive and signs you out on every device.", Texts(view));
+    }
+
+    [AvaloniaFact]
     public void Signed_in_shows_account_status_and_actions()
     {
         _host.Sync = SignedIn();

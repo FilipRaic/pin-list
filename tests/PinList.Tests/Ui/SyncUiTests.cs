@@ -220,7 +220,7 @@ public class SyncUiTests : UiTest
         var pass = s.SyncNow();
         Pump();
         Assert.Equal("Icon.Sync", IconKeyOf(w));
-        Assert.Equal("Syncing…", AutomationProperties.GetName(SyncBtn(w)));
+        Assert.Equal("Syncing",AutomationProperties.GetName(SyncBtn(w)));
         Assert.Contains("spinning", SyncBtn(w).Classes);
         var gate = _cloud.Gate;
         _cloud.Gate = null;

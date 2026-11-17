@@ -67,7 +67,7 @@ public static class Actions
     static readonly char[] LineBreaks = { '\r', '\n' };
 
     /// <summary>Text in quotes, shortened to its first line and 60 characters.</summary>
-    static string Quote(string text)
+    internal static string Quote(string text)
     {
         int end = text.IndexOfAny(LineBreaks);
         var line = end < 0 ? text : text[..end];
@@ -145,6 +145,7 @@ public static class Actions
     public static void SetReminder(TodoItem item, DateTime? at)
     {
         var (oldAt, oldShown) = (item.ReminderAt, item.ReminderShown);
+        if (oldAt == at && !oldShown) return;
         item.ReminderAt = at;
         item.ReminderShown = false;
         PushUndo($"reminder of {Quote(item.Text)}", () => { item.ReminderAt = oldAt; item.ReminderShown = oldShown; });

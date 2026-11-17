@@ -493,7 +493,7 @@ public partial class PhoneTests : UiTest
 
         LongPress(Card(a));
         Choose("Delete list");
-        Assert.Contains("1 items", _view.SheetTitleText);
+        Assert.Contains("with 1 item? It doesn't go", _view.SheetTitleText);
         Choose("Cancel");
         Assert.Contains(a, Store.Data.Boards);
         LongPress(Card(a));

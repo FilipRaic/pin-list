@@ -115,6 +115,34 @@ public class GoogleOAuthTests : StoreTestBase
         Assert.Null(await OAuth().Refresh("rt", Ct));
     }
 
+    // A hotel or airport Wi-Fi answers every request with its own login page (HTTP 200): that is no connection,
+    // not an error that stops sync
+
+    [Theory]
+    [InlineData("<html>Sign in to the hotel Wi-Fi</html>")]
+    [InlineData("null")]
+    [InlineData("""{ "expires_in": 3600 }""")]
+    [InlineData("""{ "access_token": "at" }""")]
+    [InlineData("""{ "access_token": 5, "expires_in": 3600 }""")]
+    public async Task A_token_answer_that_isnt_Googles_counts_as_no_connection(string body)
+    {
+        _http.Answer(HttpStatusCode.OK, body, "text/html");
+        var ex = await Assert.ThrowsAsync<CloudException>(() => OAuth().Refresh("rt", Ct));
+        Assert.Equal(CloudError.Offline, ex.Kind);
+    }
+
+    [Theory]
+    [InlineData("<html>Sign in to the hotel Wi-Fi</html>")]
+    [InlineData("null")]
+    [InlineData("""{ "email": "me@example.com" }""")]
+    [InlineData("""{ "sub": 5, "email": "me@example.com" }""")]
+    public async Task A_user_info_answer_that_isnt_Googles_counts_as_no_connection(string body)
+    {
+        _http.Answer(HttpStatusCode.OK, body, "text/html");
+        var ex = await Assert.ThrowsAsync<CloudException>(() => OAuth().UserInfo("at", Ct));
+        Assert.Equal(CloudError.Offline, ex.Kind);
+    }
+
     [Fact]
     public async Task Other_token_errors_throw()
     {

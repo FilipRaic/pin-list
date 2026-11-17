@@ -146,7 +146,7 @@ Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Hide widget** to 
 | Google sync | **Settings → Google Drive sync** to sign in, then **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
 | Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, a sheet shows what's new in it, the Settings tab gets a dot and **Settings → Get PinList x.y.z** downloads it. |
 | Home screen widget | Add it the way your launcher adds widgets (usually: press and hold an empty spot on the home screen, then **Widgets** → **PinList**) and choose the list it shows. It comes in two sizes, 3 × 3 cells and a narrow 2 × 3, and both can be resized after placing. Add another widget for another list. |
-| Use the widget | Tap a circle to complete an item. **Undo** shows for a few seconds. Tap a category to collapse or expand it. **+** opens a small box over the home screen: type, press Enter, and it stays open for the next item. Tap an item's text to open it in PinList, or the arrow to open the list. On a synced list, the round arrow syncs now: a short message says *Syncing*, then *Synced* or what went wrong. If the widget's list is deleted, the widget offers **Choose a list**. |
+| Use the widget | Items show their due date, and a small bell when they have a reminder. Tap a circle to complete an item. **Undo** shows for a few seconds. Tap a category to collapse or expand it. **+** opens a small box over the home screen: type, press Enter, and it stays open for the next item. Tap an item's text to open it in PinList, or the arrow to open the list. On a synced list, the round arrow syncs now: a short message says *Syncing*, then *Synced* or what went wrong. If the widget's list is deleted, the widget offers **Choose a list**. |
 
 ## Sync
 
@@ -197,7 +197,7 @@ On a Mac, use **⌘** (Cmd) where the table says Ctrl (⌘Z, ⌘C, ⌘F), **Retu
 |---|---|
 | Windows | `%APPDATA%\PinList\` |
 | macOS | `~/Library/Application Support/PinList/` |
-| Android | The app's private storage (removed when the app is uninstalled, so export first) |
+| Android | The app's private storage (removed when the app is uninstalled, so export first). It isn't part of Android's backup to Google or of the copy to a new phone: move lists with sync or with export and import |
 
 | File | Contents |
 |---|---|
@@ -209,7 +209,7 @@ On a Mac, use **⌘** (Cmd) where the table says Ctrl (⌘Z, ⌘C, ⌘F), **Retu
 | `sync-state.json` | Google sync's state: the signed-in account and which cloud files were merged (only after signing in) |
 | `google-token.dat` | Windows: your Google sign-in, encrypted for your Windows user (macOS keeps it in the **Keychain**, Android in Google Play services). Removed when you sign out. |
 
-`data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. The format is the same on every platform and is described on the [data format page](https://filipraic.github.io/pin-list/data-format).
+`data.json` is written 300 ms after every change, using a temp file + replace, so a crash or power cut can't corrupt it. If the file is ever damaged, the latest backup is loaded automatically. If another program holds the file when PinList starts (a backup or antivirus program), PinList tries again for two seconds, then says so and saves nothing in that run, so the file stays as it is. The format is the same on every platform and is described on the [data format page](https://filipraic.github.io/pin-list/data-format).
 
 On Windows, reminders tell Windows the name and icon of PinList's notifications under `HKEY_CURRENT_USER\Software\Classes\AppUserModelId\PinList`, and the icon is copied to `notification-icon.png` in the data folder. Nothing else is written outside the data folder except the **Start with Windows** entry.
 
@@ -276,14 +276,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props). It is the one version for every app (Android's version code follows from it). Add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md), which becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.9.0
-   git push origin master v2.9.0
+   git tag v2.9.1
+   git push origin master v2.9.1
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList.zip` and `PinList.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.9.0
-   git push -f origin v2.9.0
+   git tag -f v2.9.1
+   git push -f origin v2.9.1
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. Create it once, and keep the file and password safe, because a lost key means users must uninstall to update:
@@ -297,7 +297,7 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 **The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console (project with the Google Drive API enabled and the scopes `drive.appdata`, `openid` and `userinfo.email`). The Android app has nothing built in: Google recognizes it by an *Android* OAuth client with the package name `com.pinlist.app` and the **SHA-1 of the release signing key** (`keytool -list -v -keystore pinlist-release.keystore -alias pinlist`). Without it, sign-in fails in the released APK. Add a second Android client with your debug key's SHA-1 for local builds. While the consent screen's publishing status is *Testing*, only listed test users can sign in and sign-ins expire after 7 days. Set it to **In production** (no Google review needed for these non-sensitive scopes) before telling anyone else about sync.
 
-Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does. Commits that only change `docs/`, Markdown files (except `CHANGELOG.md`) or the license skip it, and a new push to a pull request stops the run for its old commit. It can also be started by hand under **Actions → Build → Run workflow**, for example for a tagged commit that wasn't the last one of its push. Dependabot opens pull requests when the GitHub Actions, Avalonia or test packages have updates (all action updates together in one, and all Avalonia packages of every project together in one).
+Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does. Commits that only change `docs/`, Markdown files (except `CHANGELOG.md`) or the license skip it, and a new push to a pull request stops the run for its old commit. It can also be started by hand under **Actions → Build → Run workflow**, for example for a tagged commit that wasn't the last one of its push. The release workflow can only read the repository, except its last job, which creates the release. The one action in it that isn't GitHub's own is used at an exact commit. Dependabot opens pull requests when the GitHub Actions, Avalonia or test packages have updates (all action updates together in one, and all Avalonia packages of every project together in one).
 
 ## Project structure
 
@@ -318,7 +318,7 @@ pin-list/
 │  │                        Reminders, Updates (the daily check for a new version on GitHub),
 │  │                        ReleaseNotes (reads a version's notes for the update popup),
 │  │                        BoardOrder (the synced order of the lists), WallClockConverter (times in data.json),
-│  │                        Feedback (the address of the feedback form)
+│  │                        Feedback (the address of the feedback form), CountText ("1 item", "3 items")
 │  ├─ Sync/                 Google Drive sync: SyncService, SyncMerge (merge engine), ChangeTracker (stamps),
 │  │                        ListCopy (cloud files), DriveCloudStore, GoogleOAuth, LoopbackSignIn, SyncState
 │  └─ Platform/             timers and work areas the apps provide

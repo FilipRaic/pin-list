@@ -5,6 +5,7 @@ set -euo pipefail
 VERSION="$1"
 OUT="${2:-release}"
 WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT   # the build folder goes, also when a step fails
 
 # Restore runs for every target framework, including net10.0-windows10.0.19041.0, even though only net10.0 is built.
 # EnableWindowsTargeting lets that restore work on macOS (NETSDK1100 otherwise).

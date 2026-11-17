@@ -293,8 +293,8 @@ public partial class PhoneView : UserControl
                 new SheetOption("Sign in again", () => _ = _sync.SignIn(System.Threading.CancellationToken.None), Icon: "Line.Sync"),
                 new SheetOption("Not now", () => { }));
         else
-            ShowSheet(state.Problem == "Can't reach Google Drive."
-                    ? "Can't reach Google Drive. PinList keeps trying. Your changes are saved on this phone."
+            ShowSheet(state.Problem == SyncService.Unreachable
+                    ? SyncService.Unreachable + " PinList keeps trying. Your changes are saved on this phone."
                     : state.Problem!,
                 new SheetOption("OK", () => { }));
     }
@@ -706,7 +706,8 @@ public partial class PhoneView : UserControl
 
     void CommitTitle()
     {
-        if (!BoardTitleBox.IsVisible || _board == null) return;        BoardTitleBox.IsVisible = false;
+        if (!BoardTitleBox.IsVisible || _board == null) return;
+        BoardTitleBox.IsVisible = false;
         BoardTitle.IsVisible = true;
         Actions.RenameBoard(_board, (BoardTitleBox.Text ?? "").Trim());
         UpdateBoardTitle();
@@ -1098,7 +1099,9 @@ public partial class PhoneView : UserControl
     void ConfirmDeleteBoard(Board board, string name)
     {
         int items = board.Categories.Sum(c => c.Items.Count);
-        var question = items > 0 ? $"Delete \"{name}\" with {items} items? They don't go to the archive." : $"Delete \"{name}\"?";
+        var question = items == 0
+            ? $"Delete \"{name}\"?"
+            : $"Delete \"{name}\" with {CountText.Of(items, "item")}? {(items == 1 ? "It doesn't" : "They don't")} go to the archive.";
         if (board.Synced) question += " It will also be deleted from your other devices.";
         ShowSheet(question,
             new SheetOption("Delete", () =>
@@ -1321,7 +1324,7 @@ public partial class PhoneView : UserControl
         }
 
         int lists = imported.Boards.Count, items = imported.Boards.SelectMany(b => b.Categories).Sum(c => c.Items.Count);
-        ShowSheet($"Import {lists} list{(lists == 1 ? "" : "s")} with {items} item{(items == 1 ? "" : "s")}?" +
+        ShowSheet($"Import {CountText.Of(lists, "list")} with {CountText.Of(items, "item")}?" +
                   " Replacing keeps a copy of your lists." +
                   (Store.HasSyncedBoards ? " Synced lists aren't replaced." : ""),
             new SheetOption("Add to my lists", () => { Store.Merge(imported); ShowMessage("Imported"); }, Icon: "Line.Import"),

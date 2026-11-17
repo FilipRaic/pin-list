@@ -689,6 +689,16 @@ public class BoardWindowTests : UiTest
     // ================= Deleting the widget =================
 
     [AvaloniaFact]
+    public void The_delete_question_counts_one_category_and_one_item_in_the_singular()
+    {
+        var w = OpenNew(("A", new[] { "a" }));
+        w.Board.Title = "Work";
+        Click(Named<Button>(w, "MenuBtn"));
+        ChooseFromMenu(w.LastMenu!, "Delete list"); // Esc
+        Assert.Contains("Delete \"Work\"?: Deletes the list with its 1 category and 1 item. They don't go to the archive.", Dialogs.Shown);
+    }
+
+    [AvaloniaFact]
     public void Delete_window_asks_first()
     {
         var w = OpenNew(("A", new[] { "a", "b" }), ("B", new string[0]));

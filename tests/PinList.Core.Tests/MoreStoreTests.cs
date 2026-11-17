@@ -97,6 +97,67 @@ public class MoreStoreTests : StoreTestBase
         Assert.Contains("Backup could not be read either", File.ReadAllText(Path.Combine(Dir, "log.txt")));
     }
 
+    /// <summary>Saves a list with one item, the way an earlier run of PinList left the data folder.</summary>
+    void SaveList(string itemText)
+    {
+        MakeBoard(("A", new[] { itemText }));
+        Store.SaveNow();
+        Store.UseDirectory(Dir);
+    }
+
+    [Fact]
+    public void A_file_another_program_holds_for_a_moment_is_read_on_the_next_try()
+    {
+        SaveList("current");
+        var held = new FileStream(DataFile, FileMode.Open, FileAccess.Read, FileShare.None);
+        int waits = 0;
+        Store.ReadRetryWait = _ => { waits++; held.Dispose(); }; // the other program lets go while PinList waits
+
+        Assert.True(Store.Load());
+
+        Assert.Equal(1, waits);
+        Assert.Equal("current", Store.Data.Boards.Single().Categories.Single().Items.Single().Text);
+        Assert.Empty(Messages);
+        Assert.Empty(Directory.GetFiles(Dir, "data.json.corrupt-*"));
+    }
+
+    [Fact]
+    public void A_file_another_program_keeps_holding_is_not_replaced_by_a_backup()
+    {
+        SaveList("current"); // also wrote today's backup, which a damaged file would fall back to
+        var before = File.ReadAllText(DataFile);
+        Store.ReadRetryWait = _ => { };
+        using (new FileStream(DataFile, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.True(Store.Load()); // not a first run: no setup on top of lists that can't be seen
+        }
+
+        Assert.Empty(Store.Data.Boards);
+        Assert.Contains(Messages, m => m.isError && m.message.Contains("another program"));
+        Assert.Empty(Directory.GetFiles(Dir, "data.json.corrupt-*"));
+
+        // nothing is saved over the lists that couldn't be read, also after the other program let go
+        MakeBoard(("B", new[] { "typed without seeing the lists" }));
+        Store.SaveNow();
+        Assert.Equal(before, File.ReadAllText(DataFile));
+        Assert.Equal(0, Saver.Requests); // and no retries either
+    }
+
+    [Fact]
+    public void Saving_works_again_in_another_data_folder_after_an_unreadable_file()
+    {
+        SaveList("current");
+        Store.ReadRetryWait = _ => { };
+        using (new FileStream(DataFile, FileMode.Open, FileAccess.Read, FileShare.None)) Store.Load();
+
+        var other = Path.Combine(Dir, "other");
+        Store.UseDirectory(other);
+        MakeBoard(("B", new[] { "b" }));
+        Store.SaveNow();
+
+        Assert.True(File.Exists(Path.Combine(other, "data.json")));
+    }
+
     [Fact]
     public void A_newer_file_still_loads_when_the_copy_cannot_be_made()
     {

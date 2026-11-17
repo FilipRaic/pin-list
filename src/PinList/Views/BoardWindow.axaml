@@ -180,90 +180,71 @@
                     Focusable="True" KeyboardNavigation.IsTabStop="False" FocusAdorner="{x:Null}"
                     BorderBrush="{DynamicResource BoardBorder}" BorderThickness="1" ClipToBounds="True">
                 <Panel>
-                <DockPanel>
+                    <DockPanel>
 
-                    <!-- ===== Header: title + buttons (drag to move) ===== -->
-                    <Grid x:Name="Header" DockPanel.Dock="Top" Height="44" Background="Transparent"
-                          ColumnDefinitions="*,Auto" PointerPressed="Header_PointerPressed">
-                        <Panel Margin="16,0,4,0" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Title}" FontSize="{StaticResource T.Title}" FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsEditingTitle}"/>
-                            <TextBox x:Name="TitleBox" Classes="bare edit" FontSize="{StaticResource T.Title}" FontWeight="SemiBold" Loaded="EditBox_Loaded"
-                                     IsVisible="{Binding IsEditingTitle}" AutomationProperties.Name="List title"/>
-                        </Panel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <!-- Google sync status; hidden while signed out (spec 4.4) -->
-                            <Button x:Name="SyncBtn" Classes="icon" IsVisible="False" Click="Sync_Click">
-                                <PathIcon/>
-                            </Button>
-                            <Button Classes="icon" ToolTip.Tip="New category" AutomationProperties.Name="New category"
-                                    Click="AddCategory_Click">
-                                <local:LineIcon Data="{StaticResource Line.NewCategory}"/>
-                            </Button>
-                            <Button x:Name="LockBtn" Classes="icon" Click="Lock_Click">
-                                <local:LineIcon x:Name="LockIcon"/>
-                            </Button>
-                            <Button x:Name="MenuBtn" Classes="icon" ToolTip.Tip="Menu" AutomationProperties.Name="List menu"
-                                    Click="Menu_Click">
-                                <local:LineIcon Data="{StaticResource Line.More}"/>
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Line}"/>
+                        <!-- ===== Header: title + buttons (drag to move) ===== -->
+                        <Grid x:Name="Header" DockPanel.Dock="Top" Height="44" Background="Transparent"
+                              ColumnDefinitions="*,Auto" PointerPressed="Header_PointerPressed">
+                            <Panel Margin="16,0,4,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontSize="{StaticResource T.Title}" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" IsVisible="{Binding !IsEditingTitle}"/>
+                                <TextBox x:Name="TitleBox" Classes="bare edit" FontSize="{StaticResource T.Title}" FontWeight="SemiBold" Loaded="EditBox_Loaded"
+                                         IsVisible="{Binding IsEditingTitle}" AutomationProperties.Name="List title"/>
+                            </Panel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <!-- Google sync status; hidden while signed out (spec 4.4) -->
+                                <Button x:Name="SyncBtn" Classes="icon" IsVisible="False" Click="Sync_Click">
+                                    <PathIcon/>
+                                </Button>
+                                <Button Classes="icon" ToolTip.Tip="New category" AutomationProperties.Name="New category"
+                                        Click="AddCategory_Click">
+                                    <local:LineIcon Data="{StaticResource Line.NewCategory}"/>
+                                </Button>
+                                <Button x:Name="LockBtn" Classes="icon" Click="Lock_Click">
+                                    <local:LineIcon x:Name="LockIcon"/>
+                                </Button>
+                                <Button x:Name="MenuBtn" Classes="icon" ToolTip.Tip="Menu" AutomationProperties.Name="List menu"
+                                        Click="Menu_Click">
+                                    <local:LineIcon Data="{StaticResource Line.More}"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource Line}"/>
 
-                    <!-- ===== Categories ===== -->
-                    <ScrollViewer x:Name="Scroller" Classes="slim" Focusable="False"
-                                  HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
-                                  Padding="6,6,4,6">
-                        <StackPanel>
-                            <ItemsControl x:Name="CategoryList" ItemsSource="{Binding Categories}"
-                                          AutomationProperties.Name="Categories">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="local:Category">
-                                        <StackPanel Margin="0,0,0,6">
+                        <!-- ===== Categories ===== -->
+                        <ScrollViewer x:Name="Scroller" Classes="slim" Focusable="False"
+                                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto"
+                                      Padding="6,6,4,6">
+                            <StackPanel>
+                                <ItemsControl x:Name="CategoryList" ItemsSource="{Binding Categories}"
+                                              AutomationProperties.Name="Categories">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="local:Category">
+                                            <StackPanel Margin="0,0,0,6">
 
-                                            <!-- Category header: dot, name and count in the category's shade -->
-                                            <local:AccessibleRow Classes="row header" Classes.active="{Binding IsActive}" Tag="{Binding}"
-                                                    AutomationProperties.Name="{Binding AccessibleName}"
-                                                    AutomationProperties.HelpText="{x:Static local:OsText.CategoryHelp}"
-                                                    KeyDown="Cat_KeyDown" GotFocus="Row_GotFocus"
-                                                    PointerPressed="Row_PointerPressed" ContextRequested="Cat_ContextRequested">
-                                                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                                    <!-- The dot sits in a 16 px cell next to the row's 6 px padding, so its center is 14 px from the
-                                                         left. The guide line below uses the same center. -->
-                                                    <Panel Width="16" VerticalAlignment="Center">
-                                                        <Ellipse Classes="catdot" Width="8" Height="8">
-                                                            <Ellipse.Fill>
-                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Dot">
-                                                                    <Binding Path="Color"/>
-                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                                </MultiBinding>
-                                                            </Ellipse.Fill>
-                                                        </Ellipse>
-                                                    </Panel>
-                                                    <TextBlock Grid.Column="1" Classes="catname" Text="{Binding Name}" Margin="6,0,0,0"
-                                                               FontSize="{StaticResource T.Category}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                                                               VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
-                                                        <TextBlock.Foreground>
-                                                            <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
-                                                                <Binding Path="Color"/>
-                                                                <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                            </MultiBinding>
-                                                        </TextBlock.Foreground>
-                                                    </TextBlock>
-                                                    <TextBox Grid.Column="1" Classes="bare edit" Margin="6,0,0,0" FontSize="{StaticResource T.Category}" FontWeight="SemiBold"
-                                                             Loaded="EditBox_Loaded" IsVisible="{Binding IsEditing}" AutomationProperties.Name="Category name"/>
-                                                    <Border Grid.Column="2" Classes="countpill">
-                                                        <Border.Background>
-                                                            <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Pill">
-                                                                <Binding Path="Color"/>
-                                                                <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                            </MultiBinding>
-                                                        </Border.Background>
-                                                        <TextBlock Text="{Binding Items.Count}" FontSize="{StaticResource T.Chip}" FontWeight="SemiBold">
+                                                <!-- Category header: dot, name and count in the category's shade -->
+                                                <local:AccessibleRow Classes="row header" Classes.active="{Binding IsActive}" Tag="{Binding}"
+                                                        AutomationProperties.Name="{Binding AccessibleName}"
+                                                        AutomationProperties.HelpText="{x:Static local:OsText.CategoryHelp}"
+                                                        KeyDown="Cat_KeyDown" GotFocus="Row_GotFocus"
+                                                        PointerPressed="Row_PointerPressed" ContextRequested="Cat_ContextRequested">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                                        <!-- The dot sits in a 16 px cell next to the row's 6 px padding, so its center is 14 px from the
+                                                             left. The guide line below uses the same center. -->
+                                                        <Panel Width="16" VerticalAlignment="Center">
+                                                            <Ellipse Classes="catdot" Width="8" Height="8">
+                                                                <Ellipse.Fill>
+                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Dot">
+                                                                        <Binding Path="Color"/>
+                                                                        <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                        <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                    </MultiBinding>
+                                                                </Ellipse.Fill>
+                                                            </Ellipse>
+                                                        </Panel>
+                                                        <TextBlock Grid.Column="1" Classes="catname" Text="{Binding Name}" Margin="6,0,0,0"
+                                                                   FontSize="{StaticResource T.Category}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                                   VerticalAlignment="Center" IsVisible="{Binding !IsEditing}">
                                                             <TextBlock.Foreground>
                                                                 <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
                                                                     <Binding Path="Color"/>
@@ -272,132 +253,151 @@
                                                                 </MultiBinding>
                                                             </TextBlock.Foreground>
                                                         </TextBlock>
-                                                    </Border>
-                                                    <Button Grid.Column="3" Classes="icon collapse" Classes.collapsed="{Binding Collapsed}"
-                                                            Width="24" Height="24" Margin="0,-2" Tag="{Binding}" Focusable="False"
-                                                            ToolTip.Tip="Collapse or expand" Click="Collapse_Click"
-                                                            AutomationProperties.Name="Collapse or expand">
-                                                        <PathIcon Classes="turns" Classes.collapsed="{Binding Collapsed}"/>
-                                                    </Button>
-                                                </Grid>
-                                            </local:AccessibleRow>
+                                                        <TextBox Grid.Column="1" Classes="bare edit" Margin="6,0,0,0" FontSize="{StaticResource T.Category}" FontWeight="SemiBold"
+                                                                 Loaded="EditBox_Loaded" IsVisible="{Binding IsEditing}" AutomationProperties.Name="Category name"/>
+                                                        <Border Grid.Column="2" Classes="countpill">
+                                                            <Border.Background>
+                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Pill">
+                                                                    <Binding Path="Color"/>
+                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                </MultiBinding>
+                                                            </Border.Background>
+                                                            <TextBlock Text="{Binding Items.Count}" FontSize="{StaticResource T.Chip}" FontWeight="SemiBold">
+                                                                <TextBlock.Foreground>
+                                                                    <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Text">
+                                                                        <Binding Path="Color"/>
+                                                                        <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                        <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Foreground>
+                                                            </TextBlock>
+                                                        </Border>
+                                                        <Button Grid.Column="3" Classes="icon collapse" Classes.collapsed="{Binding Collapsed}"
+                                                                Width="24" Height="24" Margin="0,-2" Tag="{Binding}" Focusable="False"
+                                                                ToolTip.Tip="Collapse or expand" Click="Collapse_Click"
+                                                                AutomationProperties.Name="Collapse or expand">
+                                                            <PathIcon Classes="turns" Classes.collapsed="{Binding Collapsed}"/>
+                                                        </Button>
+                                                    </Grid>
+                                                </local:AccessibleRow>
 
-                                            <!-- Items + "Add item" box. The guide line runs down from the dot, next to the items. -->
-                                            <!-- Collapsing and expanding: the items close and open smoothly, then hide (see Collapser) -->
-                                            <local:Collapser Classes="section" Classes.closed="{Binding Collapsed}" HidesWhenClosed="True">
-                                                <Grid RowDefinitions="Auto,Auto">
-                                                    <Border Classes="guide" Width="2" Margin="13,2,0,2" HorizontalAlignment="Left" CornerRadius="1">
-                                                        <Border.Background>
-                                                            <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Line">
-                                                                <Binding Path="Color"/>
-                                                                <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                            </MultiBinding>
-                                                        </Border.Background>
-                                                    </Border>
-                                                    <ItemsControl Margin="24,0,0,0" ItemsSource="{Binding Items}"
-                                                                  AutomationProperties.Name="{Binding Name, StringFormat='Items in {0}'}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="local:TodoItem">
-                                                                <local:Collapser Classes.leaving="{Binding IsLeaving}">
-                                                                <local:AccessibleRow Classes="row item" Classes.active="{Binding IsActive}"
-                                                                        Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
-                                                                        AutomationProperties.Name="{Binding AccessibleName}"
-                                                                        AutomationProperties.HelpText="{x:Static local:OsText.ItemHelp}"
-                                                                        KeyDown="Item_KeyDown" GotFocus="Row_GotFocus"
-                                                                        PointerPressed="Row_PointerPressed" ContextRequested="Item_ContextRequested">
-                                                                    <Grid ColumnDefinitions="Auto,*">
-                                                                        <!-- Not a tab stop: the focused row completes with Space -->
-                                                                        <Button Classes="check" Tag="{Binding}" Click="Check_Click" Focusable="False"
-                                                                                VerticalAlignment="Top" Margin="-4,-2,6,-4" ToolTip.Tip="Complete"
-                                                                                AutomationProperties.Name="{Binding Text, StringFormat='Complete {0}'}">
-                                                                            <Button.BorderBrush>
-                                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Ring">
-                                                                                    <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                                                </MultiBinding>
-                                                                            </Button.BorderBrush>
-                                                                            <Button.Foreground>
-                                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Fill">
-                                                                                    <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                                                </MultiBinding>
-                                                                            </Button.Foreground>
-                                                                            <Button.Background>
-                                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Tick">
-                                                                                    <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
-                                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
-                                                                                </MultiBinding>
-                                                                            </Button.Background>
-                                                                        </Button>
-                                                                        <StackPanel Grid.Column="1" IsVisible="{Binding !IsEditing}">
-                                                                            <Panel HorizontalAlignment="Left">
-                                                                                <TextBlock Classes="itemtext" Text="{Binding Text}" TextWrapping="Wrap"/>
-                                                                                <Border Classes="strike"/>
-                                                                            </Panel>
-                                                                            <WrapPanel>
-                                                                                <Border Classes="chipbox" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
-                                                                                        IsVisible="{Binding HasDue}">
-                                                                                    <StackPanel Classes="chip" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
-                                                                                                IsVisible="{Binding HasDue}" ToolTip.Tip="{Binding DueHint}">
-                                                                                        <local:LineIcon Data="{StaticResource Line.Calendar}"/>
-                                                                                        <TextBlock Text="{Binding DueText}" VerticalAlignment="Center"/>
-                                                                                    </StackPanel>
-                                                                                </Border>
-                                                                                <Border Classes="chipbox" IsVisible="{Binding HasPendingReminder}">
-                                                                                    <StackPanel Classes="chip" IsVisible="{Binding HasPendingReminder}" ToolTip.Tip="Reminder">
-                                                                                        <local:LineIcon Data="{StaticResource Line.Bell}"/>
-                                                                                        <TextBlock Text="{Binding ReminderText}" VerticalAlignment="Center"/>
-                                                                                    </StackPanel>
-                                                                                </Border>
-                                                                            </WrapPanel>
-                                                                        </StackPanel>
-                                                                        <TextBox Grid.Column="1" Classes="bare edit" FontSize="{StaticResource T.Body}" TextWrapping="Wrap" AcceptsReturn="True"
-                                                                                 Loaded="EditBox_Loaded" IsVisible="{Binding IsEditing}" AutomationProperties.Name="Item text"/>
-                                                                    </Grid>
-                                                                </local:AccessibleRow>
-                                                                </local:Collapser>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                <!-- Items + "Add item" box. The guide line runs down from the dot, next to the items. -->
+                                                <!-- Collapsing and expanding: the items close and open smoothly, then hide (see Collapser) -->
+                                                <local:Collapser Classes="section" Classes.closed="{Binding Collapsed}" HidesWhenClosed="True">
+                                                    <Grid RowDefinitions="Auto,Auto">
+                                                        <Border Classes="guide" Width="2" Margin="13,2,0,2" HorizontalAlignment="Left" CornerRadius="1">
+                                                            <Border.Background>
+                                                                <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Line">
+                                                                    <Binding Path="Color"/>
+                                                                    <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                    <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                </MultiBinding>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <ItemsControl Margin="24,0,0,0" ItemsSource="{Binding Items}"
+                                                                      AutomationProperties.Name="{Binding Name, StringFormat='Items in {0}'}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="local:TodoItem">
+                                                                    <local:Collapser Classes.leaving="{Binding IsLeaving}">
+                                                                        <local:AccessibleRow Classes="row item" Classes.active="{Binding IsActive}"
+                                                                                Classes.completing="{Binding IsCompleting}" Tag="{Binding}"
+                                                                                AutomationProperties.Name="{Binding AccessibleName}"
+                                                                                AutomationProperties.HelpText="{x:Static local:OsText.ItemHelp}"
+                                                                                KeyDown="Item_KeyDown" GotFocus="Row_GotFocus"
+                                                                                PointerPressed="Row_PointerPressed" ContextRequested="Item_ContextRequested">
+                                                                            <Grid ColumnDefinitions="Auto,*">
+                                                                                <!-- Not a tab stop: the focused row completes with Space -->
+                                                                                <Button Classes="check" Tag="{Binding}" Click="Check_Click" Focusable="False"
+                                                                                        VerticalAlignment="Top" Margin="-4,-2,6,-4" ToolTip.Tip="Complete"
+                                                                                        AutomationProperties.Name="{Binding Text, StringFormat='Complete {0}'}">
+                                                                                    <Button.BorderBrush>
+                                                                                        <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Ring">
+                                                                                            <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                                        </MultiBinding>
+                                                                                    </Button.BorderBrush>
+                                                                                    <Button.Foreground>
+                                                                                        <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Fill">
+                                                                                            <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                                        </MultiBinding>
+                                                                                    </Button.Foreground>
+                                                                                    <Button.Background>
+                                                                                        <MultiBinding Converter="{x:Static local:CategoryShadeConverter.Instance}" ConverterParameter="Tick">
+                                                                                            <Binding Path="$parent[ItemsControl].((local:Category)DataContext).Color"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].Board.Style"/>
+                                                                                            <Binding Path="$parent[local:BoardWindow].AppearanceVersion"/>
+                                                                                        </MultiBinding>
+                                                                                    </Button.Background>
+                                                                                </Button>
+                                                                                <StackPanel Grid.Column="1" IsVisible="{Binding !IsEditing}">
+                                                                                    <Panel HorizontalAlignment="Left">
+                                                                                        <TextBlock Classes="itemtext" Text="{Binding Text}" TextWrapping="Wrap"/>
+                                                                                        <Border Classes="strike"/>
+                                                                                    </Panel>
+                                                                                    <WrapPanel>
+                                                                                        <Border Classes="chipbox" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
+                                                                                                IsVisible="{Binding HasDue}">
+                                                                                            <StackPanel Classes="chip" Classes.today="{Binding IsDueToday}" Classes.overdue="{Binding IsOverdue}"
+                                                                                                        IsVisible="{Binding HasDue}" ToolTip.Tip="{Binding DueHint}">
+                                                                                                <local:LineIcon Data="{StaticResource Line.Calendar}"/>
+                                                                                                <TextBlock Text="{Binding DueText}" VerticalAlignment="Center"/>
+                                                                                            </StackPanel>
+                                                                                        </Border>
+                                                                                        <Border Classes="chipbox" IsVisible="{Binding HasPendingReminder}">
+                                                                                            <StackPanel Classes="chip" IsVisible="{Binding HasPendingReminder}" ToolTip.Tip="Reminder">
+                                                                                                <local:LineIcon Data="{StaticResource Line.Bell}"/>
+                                                                                                <TextBlock Text="{Binding ReminderText}" VerticalAlignment="Center"/>
+                                                                                            </StackPanel>
+                                                                                        </Border>
+                                                                                    </WrapPanel>
+                                                                                </StackPanel>
+                                                                                <TextBox Grid.Column="1" Classes="bare edit" FontSize="{StaticResource T.Body}" TextWrapping="Wrap" AcceptsReturn="True"
+                                                                                         Loaded="EditBox_Loaded" IsVisible="{Binding IsEditing}" AutomationProperties.Name="Item text"/>
+                                                                            </Grid>
+                                                                        </local:AccessibleRow>
+                                                                    </local:Collapser>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
 
-                                                    <Border Grid.Row="1" Classes="addrow" Margin="24,0,0,0" Padding="6,4" CornerRadius="{StaticResource R.Row}"
-                                                            Background="Transparent" Tag="{Binding}">
-                                                        <Grid ColumnDefinitions="Auto,*">
-                                                            <local:LineIcon Data="{StaticResource Line.Add}" Width="12" Height="12"
-                                                                            TextElement.Foreground="{DynamicResource TextMuted}" Margin="2,0,12,0" VerticalAlignment="Center"/>
-                                                            <TextBox Grid.Column="1" Classes="bare addbox" FontSize="{StaticResource T.Body}" TextWrapping="Wrap" AcceptsReturn="True"
-                                                                     PlaceholderText="Add item" Tag="{Binding}"
-                                                                     ToolTip.Tip="{x:Static local:OsText.AddItemTip}"
-                                                                     AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"/>
-                                                        </Grid>
-                                                    </Border>
-                                                </Grid>
-                                            </local:Collapser>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                                                        <Border Grid.Row="1" Classes="addrow" Margin="24,0,0,0" Padding="6,4" CornerRadius="{StaticResource R.Row}"
+                                                                Background="Transparent" Tag="{Binding}">
+                                                            <Grid ColumnDefinitions="Auto,*">
+                                                                <local:LineIcon Data="{StaticResource Line.Add}" Width="12" Height="12"
+                                                                                TextElement.Foreground="{DynamicResource TextMuted}" Margin="2,0,12,0" VerticalAlignment="Center"/>
+                                                                <TextBox Grid.Column="1" Classes="bare addbox" FontSize="{StaticResource T.Body}" TextWrapping="Wrap" AcceptsReturn="True"
+                                                                         PlaceholderText="Add item" Tag="{Binding}"
+                                                                         ToolTip.Tip="{x:Static local:OsText.AddItemTip}"
+                                                                         AutomationProperties.Name="{Binding Name, StringFormat='Add item to {0}'}"/>
+                                                            </Grid>
+                                                        </Border>
+                                                    </Grid>
+                                                </local:Collapser>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
 
-                            <!-- Empty space at the bottom: a category can be dropped here -->
-                            <Border x:Name="EndZone" Height="40" Background="Transparent"/>
+                                <!-- Empty space at the bottom: a category can be dropped here -->
+                                <Border x:Name="EndZone" Height="40" Background="Transparent"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+
+                    <!-- Undo pill: shows for a few seconds after an item was completed -->
+                    <Border x:Name="UndoPill" IsVisible="False" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="12,0,12,14"
+                            Padding="14,4,4,4" CornerRadius="{StaticResource R.Pill}" Background="{DynamicResource TextPrimary}"
+                            BoxShadow="0 4 14 0 #40000000">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock x:Name="UndoText" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource BoardBg}"/>
+                            <Button x:Name="UndoBtn" Classes="undo" Content="Undo" Click="Undo_Click" AutomationProperties.Name="Undo"/>
                         </StackPanel>
-                    </ScrollViewer>
-                </DockPanel>
-
-                <!-- Undo pill: shows for a few seconds after an item was completed -->
-                <Border x:Name="UndoPill" IsVisible="False" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="12,0,12,14"
-                        Padding="14,4,4,4" CornerRadius="{StaticResource R.Pill}" Background="{DynamicResource TextPrimary}"
-                        BoxShadow="0 4 14 0 #40000000">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock x:Name="UndoText" VerticalAlignment="Center" MaxWidth="220" TextTrimming="CharacterEllipsis"
-                                   Foreground="{DynamicResource BoardBg}"/>
-                        <Button x:Name="UndoBtn" Classes="undo" Content="Undo" Click="Undo_Click" AutomationProperties.Name="Undo"/>
-                    </StackPanel>
-                </Border>
+                    </Border>
                 </Panel>
             </Border>
         </LayoutTransformControl>

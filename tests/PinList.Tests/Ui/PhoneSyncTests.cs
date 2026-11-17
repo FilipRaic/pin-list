@@ -197,7 +197,7 @@ public partial class PhoneTests
         Show();
         LongPress(Card(b));
         Choose("Delete list");
-        Assert.Equal("Delete \"Groceries\" with 1 items? They don't go to the archive. It will also be deleted from your other devices.",
+        Assert.Equal("Delete \"Groceries\" with 1 item? It doesn't go to the archive. It will also be deleted from your other devices.",
             _view.SheetTitleText);
     }
 
