@@ -32,6 +32,8 @@ sealed class FakeSettingsHost : ISettingsHost
     public void OpenDataFolder() => FolderOpens++;
     public int FeedbackOpens;
     public void SendFeedback() => FeedbackOpens++;
+    public int NotesOpens;
+    public void ShowReleaseNotes() => NotesOpens++;
     public string? ExitText { get; set; } = "Exit";
     public void Exit() => Exits++;
     public event Action? Changed;
@@ -205,6 +207,9 @@ public class SettingsViewTests : UiTest
         Assert.Contains("Found a bug or have an idea?", Texts(view));
         Click(ButtonNamed(view, "Send feedback"));
         Assert.Equal(1, _host.FeedbackOpens);
+        Assert.Contains("What's new in PinList", Texts(view));
+        Click(ButtonNamed(view, "Release notes"));
+        Assert.Equal(1, _host.NotesOpens);
     }
 
     [AvaloniaFact]
@@ -285,6 +290,10 @@ public class SettingsViewTests : UiTest
         Assert.Contains("setrow", feedback.Classes);
         Click(feedback);
         Assert.Equal(1, _host.FeedbackOpens);
+        var notes = ButtonNamed(view, "Release notes");
+        Assert.Contains("setrow", notes.Classes);
+        Click(notes);
+        Assert.Equal(1, _host.NotesOpens);
     }
 
     [AvaloniaFact]

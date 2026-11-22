@@ -79,20 +79,35 @@ public partial class ConfirmDialog : Window
     /// <summary>A new version and what's new in it. Returns true for Get it, false for Later or Esc.</summary>
     public static async Task<bool> ShowUpdate(Window? owner, UpdateInfo update)
     {
-        var notes = ReleaseNotesView.Build(update.Notes, 13);
-        var extra = notes == null ? null : new ScrollViewer
-        {
-            Content = notes,
-            MaxHeight = 340,
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Padding = new Thickness(0, 0, 12, 0), // room for the scroll bar
-        };
+        var notes = NotesBox(update.Notes);
         var dlg = new ConfirmDialog($"PinList {update.Version} is out",
             notes == null ? "Get it opens the download page." : "What's new:",
-            new[] { ("Later", DialogButtonKind.Normal), ("Get it", DialogButtonKind.Accent) }, 1, extra);
+            new[] { ("Later", DialogButtonKind.Normal), ("Get it", DialogButtonKind.Accent) }, 1, notes);
         await DialogHost.Run(dlg, owner);
         return dlg._choice == 1;
     }
+
+    /// <summary>What's new in the installed version (Settings, Release notes), with a Close button.</summary>
+    public static Task ShowReleaseNotes(Window? owner, Version version, string? notes)
+    {
+        var box = NotesBox(notes);
+        var dlg = new ConfirmDialog($"What's new in {version.ToString(3)}",
+            box == null ? "This version has no release notes." : "",
+            new[] { ("Close", DialogButtonKind.Accent) }, 0, box);
+        return DialogHost.Run(dlg, owner);
+    }
+
+    /// <summary>The release notes in a box that scrolls when they're long; null when there are none.</summary>
+    static ScrollViewer? NotesBox(string? markdown) =>
+        ReleaseNotesView.Build(markdown, 13) is { } notes
+            ? new ScrollViewer
+            {
+                Content = notes,
+                MaxHeight = 340,
+                HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+                Padding = new Thickness(0, 0, 12, 0), // room for the scroll bar
+            }
+            : null;
 }
 
 /// <summary>Shows a dialog over its owner, or in the middle of the screen when there is none.</summary>

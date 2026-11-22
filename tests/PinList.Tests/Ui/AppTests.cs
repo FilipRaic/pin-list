@@ -445,6 +445,17 @@ public class AppTests : UiTest
     }
 
     [AvaloniaFact]
+    public void The_tray_menu_shows_above_the_hidden_icons_popup()
+    {
+        // The taskbar's hidden icons popup (^) is a topmost window. The menu's popup is owned by the host window
+        // and is only topmost when the host is, so with a normal host the menu opened behind that popup.
+        App.ShowTrayMenu();
+        var host = App.TrayMenuHost!;
+        Assert.True(host.Topmost);
+        Assert.False(host.ShowInTaskbar);
+    }
+
+    [AvaloniaFact]
     public void The_menu_bar_menu_has_the_same_commands()
     {
         // macOS shows these entries in its menu bar menu (Windows shows the menu above on right click)

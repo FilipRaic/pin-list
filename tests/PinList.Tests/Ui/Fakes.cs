@@ -63,6 +63,16 @@ public sealed class FakeDialogs : IDialogs
         return Task.FromResult(UpdateAnswer);
     }
 
+    /// <summary>The notes the last ShowReleaseNotes got.</summary>
+    public string? NotesShown;
+
+    public Task ShowReleaseNotes(Window? owner, Version version, string? notes)
+    {
+        Shown.Add($"release notes: {version.ToString(3)}");
+        NotesShown = notes;
+        return Task.CompletedTask;
+    }
+
     public Task<DateTime?> PickDueDate(Window owner, DateTime? current)
     {
         Shown.Add("due date");

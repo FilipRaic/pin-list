@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The site's pages for search engines. Submit https://filipraic.github.io/pin-list/sitemap.xml in Google Search Console. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+        <loc>https://filipraic.github.io/pin-list/</loc>
+    </url>
+    <url>
+        <loc>https://filipraic.github.io/pin-list/feedback</loc>
+    </url>
+    <url>
+        <loc>https://filipraic.github.io/pin-list/privacy</loc>
+    </url>
+    <url>
+        <loc>https://filipraic.github.io/pin-list/data-format</loc>
+    </url>
+</urlset>

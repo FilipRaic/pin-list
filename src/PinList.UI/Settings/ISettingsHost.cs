@@ -63,6 +63,12 @@ public interface ISettingsHost
     /// <summary>Opens the feedback form on the website in the browser.</summary>
     void SendFeedback();
 
+    /// <summary>
+    /// Shows what's new in the newest version: the new one's notes while one is out (with Get it), otherwise the
+    /// notes of the installed version.
+    /// </summary>
+    void ShowReleaseNotes();
+
     /// <summary>OsText.Exit on the desktop, null on the phone.</summary>
     string? ExitText { get; }
     void Exit();

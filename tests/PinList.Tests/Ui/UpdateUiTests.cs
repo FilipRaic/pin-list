@@ -204,6 +204,56 @@ public class UpdateUiTests : UiTest
         App.GetUpdate();
         Assert.Equal(new[] { Updates.DownloadsPage, Updates.DownloadsPage }, _opened);
     }
+
+    [AvaloniaFact]
+    public async Task Release_notes_show_the_installed_version_while_there_is_no_new_one()
+    {
+        Store.Data.Settings.CheckForUpdates = true; // checked, and 2.2.0 is the newest
+        UseUpdates();
+        Pump();
+        await App.ShowReleaseNotes();
+        Assert.Equal("release notes: 2.2.0", Assert.Single(Dialogs.Shown));
+        Assert.NotNull(Dialogs.NotesShown);
+        Assert.Equal(ReleaseNotes.ForVersion(new Version(2, 2, 0)), Dialogs.NotesShown);
+        Assert.Empty(_opened); // GitHub's page isn't opened
+    }
+
+    [AvaloniaFact]
+    public async Task Release_notes_show_the_new_version_and_Get_it_downloads_it()
+    {
+        Store.Data.Settings.CheckForUpdates = true;
+        _latest = new UpdateInfo(new Version(2, 3, 0), ExeUrl: Exe, Notes: "### Added\n- Thing");
+        UseUpdates();
+        Assert.True(UiHost.WaitUntil(() => Dialogs.Shown.Count == 1)); // announced once when found
+        Dialogs.UpdateAnswer = true;
+
+        new DesktopSettingsHost(App).ShowReleaseNotes(); // the button in Settings
+        Assert.True(UiHost.WaitUntil(() => _opened.Count == 1));
+        Assert.Equal(new[] { "update: 2.3.0", "update: 2.3.0" }, Dialogs.Shown);
+        Assert.Equal(new[] { Exe }, _opened);
+    }
+
+    [AvaloniaFact]
+    public async Task Release_notes_without_an_update_check_show_the_app_version()
+    {
+        App.UseUpdates(null); // a build without the check
+        await App.ShowReleaseNotes();
+        Assert.Equal($"release notes: {typeof(App).Assembly.GetName().Version!.ToString(3)}", Assert.Single(Dialogs.Shown));
+    }
+
+    [AvaloniaFact]
+    public void The_Release_notes_button_in_Settings_opens_them()
+    {
+        Store.Data.Settings.CheckForUpdates = false;
+        UseUpdates();
+        App.ShowSettings();
+        Pump();
+        var settings = App.MainWindow!.Settings;
+        Assert.Contains("What's new in PinList", FindAll<TextBlock>(settings).Select(t => t.Text));
+        Click(FindAll<Button>(settings).Single(b => b.Content as string == "Release notes"));
+        Assert.True(UiHost.WaitUntil(() => Dialogs.Shown.Count == 1));
+        Assert.Equal("release notes: 2.2.0", Dialogs.Shown[0]);
+    }
 }
 
 /// <summary>The update check on the phone: the question, the bar and the ⋮ menu.</summary>
@@ -307,6 +357,72 @@ public class PhoneUpdateTests : UiTest
         Assert.False(_view.SheetOpen);
         Assert.Empty(_opened);
         Assert.True(Named<Avalonia.Controls.Shapes.Ellipse>(_view, "UpdateDot").IsVisible); // stays until updated
+    }
+
+    [AvaloniaFact]
+    public void Release_notes_show_the_installed_version_with_one_Close_button()
+    {
+        Store.Data.Settings.CheckForUpdates = false; // not asked, no new version known
+        Show();
+        Assert.False(_view.SheetOpen);
+
+        _view.ShowSection(PhoneSection.Settings);
+        Pump();
+        var row = FindAll<Button>(_view.SettingsPage!).Single(b => b.Content as string == "Release notes");
+        Assert.Contains("setrow", row.Classes);
+        Click(row);
+        Pump();
+        Assert.True(_view.SheetOpen);
+        Assert.Equal("What's new in 2.2.0", _view.SheetTitleText);
+        Assert.Single(FindAll<StackPanel>(_view.SheetPanel!), p => p.Classes.Contains("releasenotes"));
+        Assert.Equal(new[] { "Close" }, Options());
+        Assert.Contains("accent", SheetButtons()[0].Classes);
+
+        Choose("Close");
+        Assert.False(_view.SheetOpen);
+        Assert.Empty(_opened);
+    }
+
+    [AvaloniaFact]
+    public void Release_notes_of_a_version_without_them_say_so()
+    {
+        Store.Data.Settings.CheckForUpdates = false;
+        _view = new PhoneView();
+        _window = new Window { Content = _view, Width = 400, Height = 760 };
+        _window.Show();
+        _view.Reload();
+        _view.UpdateCheck = new Updates(_ => Task.FromResult(_latest), new Version(0, 0, 1)); // not in the changelog
+        Pump();
+        _view.ShowReleaseNotes();
+        Assert.Equal("What's new in 0.0.1", _view.SheetTitleText);
+        Assert.Contains("This version has no release notes.", FindAll<TextBlock>(_view.SheetPanel!).Select(t => t.Text));
+
+        Choose("Close");
+        _view.UpdateCheck = null; // no update check and no app version: nothing to show
+        var real = PhoneApp.AppVersion;
+        PhoneApp.AppVersion = null;
+        try
+        {
+            _view.ShowReleaseNotes();
+            Assert.False(_view.SheetOpen);
+        }
+        finally { PhoneApp.AppVersion = real; }
+    }
+
+    [AvaloniaFact]
+    public void Release_notes_while_a_new_version_is_out_offer_Get_it()
+    {
+        Store.Data.Settings.CheckForUpdates = true;
+        _latest = _latest! with { Notes = "### Added\n- Thing" };
+        Show();
+        Assert.True(UiHost.WaitUntil(() => _view.SheetOpen));
+        Choose("Later");
+
+        _view.ShowReleaseNotes();
+        Assert.Equal("PinList 2.3.0 is out", _view.SheetTitleText);
+        Assert.Equal(new[] { "Later", "Get it" }, Options());
+        Choose("Get it");
+        Assert.Equal(new[] { Apk }, _opened);
     }
 
     [AvaloniaFact]

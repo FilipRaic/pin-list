@@ -30,6 +30,7 @@ src/PinList/google-client.json
 
 # Brainstorming mockups
 .superpowers/
+docs/superpowers/
 
 # Markdown: only README and CHANGELOG are tracked
 *.md

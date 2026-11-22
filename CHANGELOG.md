@@ -3,6 +3,19 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.10.0] - 2026-11-22
+
+Release notes in Settings, a tray menu you can see again, and a website that search engines understand better.
+
+### Added
+- **Release notes** in **Settings** (under *Help*) show what's new. While a newer version is out, you see its notes with **Get it** and **Later**, like when PinList first found it. Otherwise you see the notes of the version you have. Those come with the app, so they show offline and PinList doesn't ask GitHub for them
+
+### Fixed
+- **Windows:** right-clicking PinList's icon among the taskbar's hidden icons (the **^** popup) opened its menu behind that popup, out of reach. The menu now opens in front of it
+
+### Changed
+- The website tells search engines more: a sitemap, the address of each page, a clearer title for the home page and a description of PinList as a free app. Links to the website shared in chats and social media show its preview picture on every page, not only on the home page
+
 ## [2.9.1] - 2026-11-17
 
 Fixes from a pass over the whole code: safer loading, steadier sync, and Android keeps your lists out of the phone's backup.

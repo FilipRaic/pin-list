@@ -18,6 +18,9 @@ public interface IDialogs
     /// <summary>A new version and what's new in it. Returns true for Get it.</summary>
     Task<bool> ShowUpdate(Window? owner, UpdateInfo update);
 
+    /// <summary>What's new in <paramref name="version"/> (the installed one), with a Close button.</summary>
+    Task ShowReleaseNotes(Window? owner, Version version, string? notes);
+
     Task<DateTime?> PickDueDate(Window owner, DateTime? current);
     Task<DateTime?> PickReminder(Window owner, DateTime? current, DateTime? dueDate);
 
@@ -41,6 +44,9 @@ public sealed class AppDialogs : IDialogs
         ConfirmDialog.Choose(owner, title, message, defaultIndex, buttons);
 
     public Task<bool> ShowUpdate(Window? owner, UpdateInfo update) => ConfirmDialog.ShowUpdate(owner, update);
+
+    public Task ShowReleaseNotes(Window? owner, Version version, string? notes) =>
+        ConfirmDialog.ShowReleaseNotes(owner, version, notes);
 
     public Task<DateTime?> PickDueDate(Window owner, DateTime? current) => DateDialog.PickDueDate(owner, current);
 

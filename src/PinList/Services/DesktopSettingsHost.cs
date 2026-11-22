@@ -142,6 +142,8 @@ sealed class DesktopSettingsHost : ISettingsHost, IDisposable
     public void SendFeedback() =>
         App.OpenUrl(Feedback.Url(_app.UpdateCheck?.Current ?? typeof(App).Assembly.GetName().Version!, SystemName()));
 
+    public void ShowReleaseNotes() => _ = _app.ShowReleaseNotes();
+
     /// <summary>The system for the feedback form, like "Windows 11 26H2 (build 26300.9711)" or "macOS 15.1".</summary>
     static string SystemName()
     {

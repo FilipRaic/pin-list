@@ -107,6 +107,42 @@ public class ConfirmDialogTests : DialogTest
     }
 
     [AvaloniaFact]
+    public void Release_notes_show_the_notes_with_one_Close_button()
+    {
+        Run<bool, ConfirmDialog>(async () =>
+        {
+            await new AppDialogs().ShowReleaseNotes(null, new Version(2, 10, 0, 0), "### Added\n- **New** thing");
+            return true;
+        }, d =>
+        {
+            Assert.Equal("What's new in 2.10.0", d.Title);
+            Assert.False(Named<TextBlock>(d, "MessageText").IsVisible); // the notes say it all
+            var notes = Assert.IsType<ScrollViewer>(d.ExtraContent);
+            Assert.Contains("releasenotes", Assert.IsType<StackPanel>(notes.Content).Classes);
+            var b = Assert.Single(Buttons(d));
+            Assert.Equal("Close", b.Content);
+            Assert.True(b.IsDefault);
+            Assert.Contains("accent", b.Classes);
+            Click(b);
+        });
+    }
+
+    [AvaloniaFact]
+    public void Release_notes_of_a_version_without_them_say_so()
+    {
+        Run<bool, ConfirmDialog>(async () =>
+        {
+            await ConfirmDialog.ShowReleaseNotes(null, new Version(0, 0, 1), null);
+            return true;
+        }, d =>
+        {
+            Assert.Equal("This version has no release notes.", Named<TextBlock>(d, "MessageText").Text);
+            Assert.Null(d.ExtraContent);
+            Press(d, Key.Escape);
+        });
+    }
+
+    [AvaloniaFact]
     public void Opens_over_its_owner_and_hides_an_empty_message()
     {
         var owner = OpenNew(("A", new string[0]));
