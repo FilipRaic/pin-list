@@ -100,4 +100,57 @@ public class ReleaseNotesTests
         var block = Assert.Single(ReleaseNotes.Parse("-"));
         Assert.Equal((NoteKind.Text, "-"), (block.Kind, block.Plain));
     }
+
+    const string Changelog = """
+        # Changelog
+
+        Intro that belongs to no version.
+
+        ## [2.10.0] - 2026-11-22
+
+        Release notes in Settings.
+
+        ### Added
+        - **Release notes** in Settings
+
+        ## [2.9.1] - 2026-11-17
+
+        ### Fixed
+        - Safer loading
+
+        ## [2.9.0] - 2026-11-11
+
+        ## [2.8.0] - 2026-11-09
+        - Last one
+        """;
+
+    [Fact]
+    public void A_section_is_the_lines_under_its_version_up_to_the_next_one()
+    {
+        Assert.Equal("Release notes in Settings.\n\n### Added\n- **Release notes** in Settings",
+            ReleaseNotes.Section(Changelog.ReplaceLineEndings("\n"), new Version(2, 10, 0)));
+        // a changelog checked out with Windows line endings gives the same notes
+        Assert.Equal("### Fixed\n- Safer loading", ReleaseNotes.Section(Changelog.ReplaceLineEndings("\r\n"), new Version(2, 9, 1)));
+        Assert.Equal("- Last one", ReleaseNotes.Section(Changelog, new Version(2, 8, 0))); // the last one ends with the file
+        Assert.Equal("- Last one", ReleaseNotes.Section(Changelog, new Version(2, 8, 0, 0))); // the assembly's four parts
+        Assert.Equal("- Last one", ReleaseNotes.Section(Changelog, new Version(2, 8))); // no patch number is .0
+    }
+
+    [Fact]
+    public void A_missing_or_empty_section_is_null()
+    {
+        Assert.Null(ReleaseNotes.Section(Changelog, new Version(2, 9, 0))); // the heading has nothing under it
+        Assert.Null(ReleaseNotes.Section(Changelog, new Version(2, 1, 0))); // not in the changelog
+        Assert.Null(ReleaseNotes.Section(Changelog, new Version(2, 10, 1))); // 2.10.1 isn't 2.10.0
+        Assert.Null(ReleaseNotes.Section(null, new Version(2, 9, 1)));
+        Assert.Null(ReleaseNotes.Section("", new Version(2, 9, 1)));
+    }
+
+    [Fact]
+    public void The_changelog_is_built_into_the_app()
+    {
+        // an old version, so the test keeps passing when new versions are added
+        Assert.StartsWith("Fixes from a pass over the whole code", ReleaseNotes.ForVersion(new Version(2, 9, 1)));
+        Assert.Null(ReleaseNotes.ForVersion(new Version(0, 0, 1)));
+    }
 }

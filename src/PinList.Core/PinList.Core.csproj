@@ -9,6 +9,11 @@
     <AssemblyName>PinList.Core</AssemblyName>
   </PropertyGroup>
 
+  <!-- The release notes of the installed version (Settings, Release notes) come from here, without asking GitHub -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="PinList.CHANGELOG.md" Link="CHANGELOG.md" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="PinList" />
     <InternalsVisibleTo Include="PinList.Tests" />

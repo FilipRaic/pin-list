@@ -288,8 +288,16 @@ public class SettingsView : UserControl
 
     Control Help() =>
         Group("Help", Phone
-            ? TapRow("Send feedback", _host.SendFeedback)
-            : Row(Label("Found a bug or have an idea?"), Buttons(new[] { SmallButton("Send feedback", _host.SendFeedback) })));
+            ? new List<Control>
+            {
+                TapRow("Send feedback", _host.SendFeedback),
+                TapRow("Release notes", _host.ShowReleaseNotes),
+            }
+            : new List<Control>
+            {
+                Row(Label("Found a bug or have an idea?"), Buttons(new[] { SmallButton("Send feedback", _host.SendFeedback) })),
+                Row(Label("What's new in PinList"), Buttons(new[] { SmallButton("Release notes", _host.ShowReleaseNotes) })),
+            });
 
     Control? Footer(bool hasUpdateRow)
     {

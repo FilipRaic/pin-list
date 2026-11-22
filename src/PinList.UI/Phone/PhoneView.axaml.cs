@@ -366,31 +366,64 @@ public partial class PhoneView : UserControl
     /// <summary>A new version, found for the first time: a sheet with what's new in it, to get it now or later.</summary>
     void OnUpdateFound(UpdateInfo update)
     {
-        string title = $"PinList {update.Version} is out";
-        var notes = ReleaseNotesView.Build(update.Notes, 14);
-        var body = notes == null ? null : new ScrollViewer
-        {
-            Content = notes,
-            MaxHeight = 320,
-            HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-            Padding = new Thickness(22, 4, 22, 10),
-        };
-        ShowButtonSheet(title, body, stacked: false,
+        ShowUpdateSheet(update);
+        A11y.Announce(this, $"PinList {update.Version} is out. Get it now, or later in Settings.");
+    }
+
+    /// <summary>The new version's notes with Later and Get it.</summary>
+    void ShowUpdateSheet(UpdateInfo update) =>
+        ShowButtonSheet($"PinList {update.Version} is out", NotesBox(update.Notes), stacked: false,
             SheetButton("Later", null, () => { }),
             SheetButton("Get it", "Line.Download", OpenUpdate));
-        A11y.Announce(this, $"{title}. Get it now, or later in Settings.");
+
+    /// <summary>
+    /// Settings, Release notes: while a newer version is out, the same sheet as when it was found (with Get it).
+    /// Otherwise what's new in the installed version, from the changelog built into PinList (GitHub isn't asked).
+    /// </summary>
+    internal void ShowReleaseNotes()
+    {
+        if (_updates?.Available is { } update)
+        {
+            ShowUpdateSheet(update);
+            return;
+        }
+        if ((_updates?.Current ?? PhoneApp.AppVersion) is not { } version) return;
+        Control body = (Control?)NotesBox(ReleaseNotes.ForVersion(version)) ?? new TextBlock
+        {
+            Text = "This version has no release notes.",
+            FontSize = 14,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Thickness(22, 4, 22, 10),
+        };
+        ShowButtonSheet($"What's new in {version.ToString(3)}", body, stacked: false, null,
+            SheetButton("Close", null, () => { }));
     }
+
+    /// <summary>The release notes in a box that scrolls when they're long; null when there are none.</summary>
+    static ScrollViewer? NotesBox(string? markdown) =>
+        ReleaseNotesView.Build(markdown, 14) is { } notes
+            ? new ScrollViewer
+            {
+                Content = notes,
+                MaxHeight = 320,
+                HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+                Padding = new Thickness(22, 4, 22, 10),
+            }
+            : null;
 
     /// <summary>
     /// A sheet with <paramref name="body"/> (text, release notes) above two buttons: <paramref name="quiet"/> and the
     /// main one, filled with the accent color like New list. Side by side with the main one on the right, or
-    /// <paramref name="stacked"/> under each other with the main one at the bottom (for longer labels).
+    /// <paramref name="stacked"/> under each other with the main one at the bottom (for longer labels). Without
+    /// <paramref name="quiet"/> the main one fills the row.
     /// </summary>
-    void ShowButtonSheet(string title, Control? body, bool stacked, Button quiet, Button main)
+    void ShowButtonSheet(string title, Control? body, bool stacked, Button? quiet, Button main)
     {
         main.Classes.Add("accent");
         Panel buttons;
-        if (stacked)
+        if (quiet == null)
+            buttons = new StackPanel { Children = { main } };
+        else if (stacked)
             buttons = new StackPanel { Spacing = 10, Children = { quiet, main } };
         else
         {

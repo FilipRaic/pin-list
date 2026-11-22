@@ -114,6 +114,45 @@ public static class ReleaseNotes
         return spans;
     }
 
+    /// <summary>
+    /// The notes of <paramref name="version"/> in <paramref name="changelog"/>: the lines under its "## [x.y.z]"
+    /// heading, up to the next version. Null when the changelog has no such section or it's empty.
+    /// </summary>
+    public static string? Section(string? changelog, Version version)
+    {
+        if (string.IsNullOrEmpty(changelog)) return null;
+        string heading = $"## [{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}]";
+        var lines = new List<string>();
+        bool inside = false;
+        foreach (var line in changelog.Replace("\r\n", "\n").Split('\n'))
+        {
+            if (line.StartsWith("## [", StringComparison.Ordinal))
+            {
+                if (inside) break;
+                inside = line.StartsWith(heading, StringComparison.Ordinal);
+                continue;
+            }
+            if (inside) lines.Add(line);
+        }
+        var notes = string.Join("\n", lines).Trim();
+        return notes.Length == 0 ? null : notes;
+    }
+
+    /// <summary>The CHANGELOG.md that is built into PinList (null when it's missing).</summary>
+    static string? Bundled()
+    {
+        using var stream = typeof(ReleaseNotes).Assembly.GetManifestResourceStream("PinList.CHANGELOG.md");
+        if (stream == null) return null;
+        using var reader = new System.IO.StreamReader(stream);
+        return reader.ReadToEnd();
+    }
+
+    /// <summary>
+    /// What's new in <paramref name="version"/>, from the changelog built into the app, so it works offline and
+    /// without asking GitHub. Null when the changelog has nothing for that version.
+    /// </summary>
+    public static string? ForVersion(Version version) => Section(Bundled(), version);
+
     /// <summary>"[text](address)" at <paramref name="start"/>: its text and where it ends.</summary>
     static (string label, int end)? LinkEnd(string line, int start)
     {

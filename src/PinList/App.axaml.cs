@@ -415,6 +415,21 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// Settings, Release notes: while a newer version is out, the same dialog as when it was found (with Get it).
+    /// Otherwise what's new in the installed version, from the changelog built into PinList (GitHub isn't asked).
+    /// </summary>
+    internal async Task ShowReleaseNotes()
+    {
+        if (_updates?.Available is { } update)
+        {
+            await ShowUpdate(update);
+            return;
+        }
+        var version = _updates?.Current ?? typeof(App).Assembly.GetName().Version!;
+        await Dialogs.Current.ShowReleaseNotes(null, version, ReleaseNotes.ForVersion(version));
+    }
+
+    /// <summary>
     /// Downloads the new version for this computer in the browser (PinList.exe or, on a Mac, PinList.zip). Without
     /// that file in the release, or without a new version, it opens the Download section of PinList's website.
     /// </summary>
@@ -852,6 +867,9 @@ public partial class App : Application
                 TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent },
                 Background = Brushes.Transparent,
                 ShowInTaskbar = false,
+                // The menu's popup is owned by this window and is only topmost when it is. The taskbar's hidden
+                // icons popup (^) is topmost, so without this the menu opened behind it.
+                Topmost = true,
                 Width = 1,
                 Height = 1,
                 CanResize = false,
@@ -862,6 +880,9 @@ public partial class App : Application
         }
         return _menuHost;
     }
+
+    /// <summary>The window the tray menu belongs to, once it was opened (tests look at it).</summary>
+    internal Window? TrayMenuHost => _menuHost;
 
     /// <summary>The tray menu that was opened last (tests look at it).</summary>
     internal ContextMenu? LastTrayMenu { get; private set; }

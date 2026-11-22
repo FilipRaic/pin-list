@@ -124,6 +124,8 @@ sealed class PhoneSettingsHost : ISettingsHost
 
     public void SendFeedback() => _view.SendFeedback();
 
+    public void ShowReleaseNotes() => _view.ShowReleaseNotes();
+
     public string? ExitText => null;
     public void Exit() { }
 }

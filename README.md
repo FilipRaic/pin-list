@@ -97,6 +97,8 @@ If the check can't reach GitHub (no internet yet, GitHub down), it tries again w
 
 Change your answer at any time with **Check for updates** in **Settings** (on the desktop and on the phone).
 
+**Settings → Release notes** (under *Help*) shows what's new at any time. While a newer version is out, it shows that version's notes with **Get it**. Otherwise it shows the notes of the version you have, which come with the app, so they work offline and without the update check.
+
 ## Usage
 
 ### Desktop (Windows and macOS)
@@ -124,7 +126,7 @@ Change your answer at any time with **Check for updates** in **Settings** (on th
 | Sync a list | **⋯ → Sync this list** (signs in with Google first if needed). See [Sync](#sync). |
 | Export / import | **Settings → Your data → Export** saves all lists and the archive to a file. **Import** either adds a file's lists next to yours or replaces everything (a copy of your current lists is kept in `backups`). |
 | Tray / menu bar icon | Brings all widgets to the front (or opens **All lists** when no list is a widget). Its menu has **All lists**, **New list**, **Archive**, **Show all widgets**, **Settings** and exit (*Quit PinList* on a Mac). |
-| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import, the data folder and **Send feedback**. |
+| Settings | **⋯ → Settings** or the tray / menu bar menu. Appearance, Google Drive sync, start at login, check for updates, export, import, the data folder, **Send feedback** and **Release notes**. |
 | Updates | When a new version is out, PinList shows what's new in it, Settings gets a dot and the tray / menu bar menu starts with **Get PinList x.y.z**. See [Updating](#updating). |
 
 Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Hide widget** to hide one, or **⋯ → Delete list** to delete the list. Shutting down or restarting the computer closes PinList without asking.
@@ -142,7 +144,7 @@ Widgets can't be closed with Alt+F4 by accident. Use **⋯ → Hide widget** to 
 | Reorder | Press and hold, then drag: cards on the first screen, items and categories in a list. Hold near the top or bottom edge to scroll. The order of the cards syncs. |
 | Undo | The *Undo* button in the bar that appears after deleting, completing or moving. |
 | Archive | The **Archive** tab. Completed items are grouped by day. Tap one to restore or delete it. |
-| Theme, export / import, feedback | The **Settings** tab. |
+| Theme, export / import, feedback, release notes | The **Settings** tab. |
 | Google sync | **Settings → Google Drive sync** to sign in, then **press and hold** a card (or the list's ⋮ menu) → **Sync this list**. |
 | Updates | **Settings → Check for updates** turns the update check on or off. When a new version is out, a sheet shows what's new in it, the Settings tab gets a dot and **Settings → Get PinList x.y.z** downloads it. |
 | Home screen widget | Add it the way your launcher adds widgets (usually: press and hold an empty spot on the home screen, then **Widgets** → **PinList**) and choose the list it shows. It comes in two sizes, 3 × 3 cells and a narrow 2 × 3, and both can be resized after placing. Add another widget for another list. |
@@ -276,14 +278,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props). It is the one version for every app (Android's version code follows from it). Add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md), which becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.9.1
-   git push origin master v2.9.1
+   git tag v2.10.0
+   git push origin master v2.10.0
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList.zip` and `PinList.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.9.1
-   git push -f origin v2.9.1
+   git tag -f v2.10.0
+   git push -f origin v2.10.0
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. Create it once, and keep the file and password safe, because a lost key means users must uninstall to update:
@@ -297,6 +299,8 @@ keytool -genkeypair -v -keystore pinlist-release.keystore -alias pinlist -keyalg
 
 **The Google sign-in for sync.** The Windows and Mac builds include PinList's Google client ID, taken from two more repository secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The release stops if they're missing. They are the client ID and secret of a *Desktop app* OAuth client in the Google Cloud Console (project with the Google Drive API enabled and the scopes `drive.appdata`, `openid` and `userinfo.email`). The Android app has nothing built in: Google recognizes it by an *Android* OAuth client with the package name `com.pinlist.app` and the **SHA-1 of the release signing key** (`keytool -list -v -keystore pinlist-release.keystore -alias pinlist`). Without it, sign-in fails in the released APK. Add a second Android client with your debug key's SHA-1 for local builds. While the consent screen's publishing status is *Testing*, only listed test users can sign in and sign-ins expire after 7 days. Set it to **In production** (no Google review needed for these non-sensitive scopes) before telling anyone else about sync.
 
+**The website in Google search.** The site is a GitHub Pages project site, so it is set up in [Google Search Console](https://search.google.com/search-console) as a *URL prefix* property for `https://filipraic.github.io/pin-list/` (a *Domain* property needs DNS access to `github.io`). Verify it with the *HTML tag* method: add Google's `<meta name="google-site-verification" ...>` tag to the `<head>` of `docs/index.html` and push. Then submit `sitemap.xml` under **Sitemaps**. When a page is added to `docs/`, add it to `docs/sitemap.xml` and give it a `<link rel="canonical">` and the `og:` tags like the other pages. A `robots.txt` in `docs/` would have no effect, because search engines only read it at the root of `filipraic.github.io`.
+
 Every push and pull request to `master` is also built (warnings count as errors) and tested by `.github/workflows/build.yml`, which also builds the Windows exe, the Mac app and the Android APK the same way the release does. Commits that only change `docs/`, Markdown files (except `CHANGELOG.md`) or the license skip it, and a new push to a pull request stops the run for its old commit. It can also be started by hand under **Actions → Build → Run workflow**, for example for a tagged commit that wasn't the last one of its push. The release workflow can only read the repository, except its last job, which creates the release. The one action in it that isn't GitHub's own is used at an exact commit. Dependabot opens pull requests when the GitHub Actions, Avalonia or test packages have updates (all action updates together in one, and all Avalonia packages of every project together in one).
 
 ## Project structure
@@ -308,6 +312,7 @@ pin-list/
 │                           feedback.html (+ feedback.js, the form relayed to email by FormSubmit),
 │                           theme.js (the light / dark switch, dark by default),
 │                           plus the social preview image (social-preview.html is its source)
+│                           and sitemap.xml (the pages for search engines)
 ├─ scripts/                 run.bat, publish.bat, publish-android.bat, publish-mac.bat (+ .ps1), package-mac.sh
 ├─ Version.props            the version of every app
 ├─ Directory.Build.props    keeps build output small (see Building from source)
