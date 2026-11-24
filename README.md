@@ -87,7 +87,7 @@ Updates install over the old version and keep your lists.
 
 On first start PinList asks whether it may check for updates. If you say yes, it asks GitHub about once a day for the number and the release notes of the latest release (nothing about you or your lists is sent, see the [privacy policy](https://filipraic.github.io/pin-list/privacy)). When a new version is out:
 
-- **Everywhere:** PinList shows what's new in it once, with **Get it** and **Later**, and **Settings** gets a dot until you update.
+- **Everywhere:** PinList shows what's new in it once, with **Get it** and **Later**, and **Settings** gets a dot until you update. On Windows and macOS this window opens in front, but like any other window it can go behind the app you switch to.
 - **Windows and macOS:** the tray / menu bar menu gets **Get PinList x.y.z** at the top, and **Settings → Check for updates** a **Get it** button. **Get it** downloads the new `PinList.exe` (Windows) or `PinList.zip` (Mac) in your browser. Replace the old one with it.
 - **Android:** **Settings** gets **Get PinList x.y.z** at the top. **Get it** downloads the new `PinList.apk` in your browser. Open it to install it over the old version.
 
@@ -278,14 +278,14 @@ Releases are built by GitHub Actions (`.github/workflows/release.yml`):
 1. Update `<Version>` in [`Version.props`](Version.props). It is the one version for every app (Android's version code follows from it). Add a `## [x.y.z] - date` section to [CHANGELOG.md](CHANGELOG.md), which becomes the release notes.
 2. Commit, tag the commit with the same version and push both (they can go together):
    ```powershell
-   git tag v2.10.0
-   git push origin master v2.10.0
+   git tag v2.10.1
+   git push origin master v2.10.1
    ```
 3. The release workflow checks that the tag is on `master`, matches `Version.props` and has a CHANGELOG section. Then it **waits for the Build workflow of that commit** (tests, coverage, all three apps) and stops if it failed, so nothing is published from a broken commit. After that it builds `PinList.exe`, `PinList.zip` and `PinList.apk` and creates a GitHub release with all three, their `.sha256` checksums and the version's CHANGELOG section as release notes.
 4. If the Build failed: when it failed by chance, re-run it, then **Re-run failed jobs** on the release (the tag stays). When it needs a fix, commit the fix and move the tag to it:
    ```powershell
-   git tag -f v2.10.0
-   git push -f origin v2.10.0
+   git tag -f v2.10.1
+   git push -f origin v2.10.1
    ```
 
 **The Android signing key.** Phones only install an update that is signed with the same key as the installed app, so every release uses one key, kept in the repository secrets. Create it once, and keep the file and password safe, because a lost key means users must uninstall to update:

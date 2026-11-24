@@ -122,9 +122,12 @@ static class DialogHost
         dlg.Closed += (_, _) => { if (Current == dlg) Current = null; };
         if (owner != null && owner.IsVisible) return dlg.ShowDialog(owner);
 
+        // Without an owner (a new version found, or a question at start) it opens on top so it's seen,
+        // then behaves like any other window: other apps can go over it.
         dlg.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         var done = new TaskCompletionSource();
         dlg.Closed += (_, _) => done.TrySetResult();
+        dlg.Opened += (_, _) => dlg.Topmost = false;
         dlg.Show();
         return done.Task;
     }
