@@ -92,6 +92,28 @@ public class ConfirmDialogTests : DialogTest
     }
 
     [AvaloniaFact]
+    public void A_dialog_without_an_owner_comes_to_the_front_but_does_not_stay_on_top()
+    {
+        var update = new UpdateInfo(new Version(2, 7, 0));
+        Run<bool, ConfirmDialog>(() => ConfirmDialog.ShowUpdate(null, update), d =>
+        {
+            Assert.False(d.Topmost); // other apps can go over it, like over any other window
+            Click(Buttons(d)[0]);
+        });
+    }
+
+    [AvaloniaFact]
+    public void A_dialog_over_its_owner_stays_on_top()
+    {
+        var owner = OpenNew(("A", new string[0]));
+        Run<int, ConfirmDialog>(() => ConfirmDialog.Choose(owner, "Sure?", "", 0, ("OK", DialogButtonKind.Accent)), d =>
+        {
+            Assert.True(d.Topmost);
+            Click(Buttons(d)[0]);
+        });
+    }
+
+    [AvaloniaFact]
     public void A_new_version_without_notes_and_Later_returns_false()
     {
         var update = new UpdateInfo(new Version(2, 7, 0));

@@ -3,6 +3,13 @@
 All notable changes to PinList are listed here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [semantic versioning](https://semver.org/).
 
+## [2.10.1] - 2026-11-24
+
+The new version window no longer stays on top of every other window.
+
+### Fixed
+- **Windows and macOS:** the window that says a new version is out (and the question at first start whether PinList may check for updates) stayed on top of every other app until you closed it. It still opens in front so you see it, but other windows can now go over it like over any other window
+
 ## [2.10.0] - 2026-11-22
 
 Release notes in Settings, a tray menu you can see again, and a website that search engines understand better.
